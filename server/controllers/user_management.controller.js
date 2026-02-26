@@ -1,15 +1,17 @@
-import { getUsersByRole, getUserByName, createTeacher, getUserDetailsByID } from "../services/user.service.js";
+import { getUsersByRole, getUserByName, createTeacher, getUserDetailsByID, findUserByEmail } from "../services/user.service.js";
+import { createClerkUserAndSendInvite } from "../services/clerk.service.js";
 import { sendSuccess, sendPaginated, sendError, sendCreated } from "../utils/response.js";
 import { createAuditLog } from "../utils/auditLog.js";
 import prisma from "../utils/prisma.js";
-import bcrypt from "bcrypt";
 import { z } from "zod";
+
+const CLERK_INVITE_REDIRECT_URL = process.env.CLERK_INVITE_REDIRECT_URL || "http://localhost:3000/login";
 
 // Zod Schemas
 const addTeacherSchema = z.object({
     username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
     email: z.string().email().max(50),
-    password: z.string().min(8),
+    password: z.string().min(8).optional(), // optional when using Clerk invite
     collegeId: z.number().int().positive(),
     firstName: z.string().min(2).max(25),
     lastName: z.string().min(2).max(25),
@@ -130,16 +132,28 @@ export const getTeacherByUsername = async (req, res) => {
     }
 };
 
-// POST /users/teachers
+// POST /users/teachers — creates teacher in Clerk, sends invite, then in Prisma with id = clerkUserId
 export const addTeacher = async (req, res) => {
     try {
         const validated = addTeacherSchema.parse(req.body);
-        const hashedPassword = await bcrypt.hash(validated.password, 10);
-        validated.password = hashedPassword;
+        const existing = await findUserByEmail(validated.email);
+        if (existing) return sendError(res, 'Username or email already exists', 409);
 
-        const result = await createTeacher(validated);
+        const { clerkUserId } = await createClerkUserAndSendInvite({
+            email: validated.email,
+            username: validated.username,
+            firstName: validated.firstName,
+            lastName: validated.lastName,
+            redirectUrl: CLERK_INVITE_REDIRECT_URL,
+        });
+
+        const result = await createTeacher({
+            ...validated,
+            id: clerkUserId,
+            password: undefined,
+        });
         await createAuditLog(req.user.id, 'USER', 'CREATE', 'User', result.id, null, 'Teacher added');
-        return sendCreated(res, result, 'Teacher added successfully');
+        return sendCreated(res, result, 'Teacher added. Invitation sent to set password and sign in.');
     } catch (error) {
         if (error.name === 'ZodError') {
             return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));

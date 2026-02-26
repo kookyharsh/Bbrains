@@ -3,6 +3,14 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "@/context/AuthProvider";
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,16 +33,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <ThemeProvider>
+            <AuthProvider>
+              <header className="flex items-center justify-between px-4 py-2 border-b">
+                <div className="text-sm font-medium">Bbrains</div>
+                <div className="flex items-center gap-2">
+                  <SignedOut>
+                    <SignInButton />
+                    <SignUpButton />
+                  </SignedOut>
+                  <SignedIn>
+                    <UserButton />
+                  </SignedIn>
+                </div>
+              </header>
+              {children}
+            </AuthProvider>
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

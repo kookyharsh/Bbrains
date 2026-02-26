@@ -1,30 +1,29 @@
-import jwt from 'jsonwebtoken';
-import prisma from '../utils/prisma.js';
+import { getAuth, clerkClient } from "@clerk/express";
+import prisma from "../utils/prisma.js";
+import { findUserByClerkId } from "../services/user.service.js";
 
 const verifyToken = async (req, res, next) => {
-    const token = req.cookies.token;
-
-    if (!token) {
-        return res.status(401).json({ success: false, message: "Not authenticated" });
-    }
-
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const auth = getAuth(req);
 
-        // Fetch current user type from DB for accurate RBAC
-        const user = await prisma.user.findUnique({
-            where: { id: decoded.id },
-            select: { id: true, username: true, type: true, collegeId: true }
-        });
+        if (!auth || !auth.userId) {
+            return res.status(401).json({ success: false, message: "Not authenticated" });
+        }
+
+        const clerkUserId = auth.userId;
+
+        // Prisma `User.id` stores Clerk's `user_...` id
+        const user = await findUserByClerkId(clerkUserId);
 
         if (!user) {
-            return res.status(401).json({ success: false, message: "User not found" });
+            return res.status(403).json({ success: false, message: "User is authenticated with Clerk but not provisioned in the local database" });
         }
 
         req.user = user;
         next();
     } catch (error) {
-        return res.status(401).json({ success: false, message: "Invalid or expired token" });
+        console.error("Clerk authentication error:", error);
+        return res.status(401).json({ success: false, message: "Invalid or expired authentication" });
     }
 };
 

@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
+import { clerkMiddleware } from "@clerk/express";
 
 // Route imports
 import authRouter from "./routes/auth.routes.js";
@@ -31,6 +32,10 @@ import errorHandler from "./middleware/errorHandler.js";
 dotenv.config();
 
 const app = express();
+
+// Clerk middleware must run before other middleware
+app.use(clerkMiddleware());
+
 app.use(cors({
   origin: "http://localhost:3000",
   credentials: true

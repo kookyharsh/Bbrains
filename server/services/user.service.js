@@ -7,22 +7,30 @@ const findUserByEmail = async (email) => {
     });
 };
 
-const createUser = async (username, email, collegeId, password, avatar) => {
+const findUserByClerkId = async (clerkUserId) => {
+    // In this app, Prisma `User.id` stores Clerk's `user_...` id
+    return await prisma.user.findUnique({
+        where: { id: clerkUserId },
+        select: { id: true, username: true, type: true, collegeId: true },
+    });
+};
+
+const createUser = async (userId, username, email, collegeId, password, avatar, options = {}) => {
     return await prisma.user.create({
         data: {
+            id: userId,
             username,
             email,
             collegeId,
-            password,
-            // Use a nested create to automatically link the UserDetails
+            ...(password != null && { password }),
             userDetails: {
                 create: {
-                    avatar: avatar,
-                    firstName: "",
-                    lastName: "",
-                    sex: "other",
-                    dob: new Date("2005-07-08"), // Prisma requires a Date object
-                    phone: "7634928634"          // Use a string for phone numbers
+                    avatar: avatar ?? null,
+                    firstName: options.firstName ?? "",
+                    lastName: options.lastName ?? "",
+                    sex: options.sex ?? "other",
+                    dob: options.dob ? new Date(options.dob) : new Date("2005-07-08"),
+                    phone: options.phone ?? "7634928634"
                 }
             }
         },
@@ -163,9 +171,10 @@ const getUserByName = async (name) => {
 const createTeacher = async (data) => {
     return await prisma.user.create({
         data: {
+            id: data.id,
             username: data.username,
             email: data.email,
-            password: data.password, // Remember to hash in controller
+            ...(data.password != null && { password: data.password }),
             collegeId: data.collegeId,
             type: 'teacher',
             userDetails: {
@@ -174,11 +183,11 @@ const createTeacher = async (data) => {
                     lastName: data.lastName,
                     sex: data.sex,
                     dob: new Date(data.dob),
-                    phone: data.phone
+                    phone: data.phone ?? null
                 }
             }
         }
     });
 };
 
-export { findUserByEmail, createUser, getUserDetailsByID, getUserDataHandler, getUsersByRole, getUserByName, createTeacher };
+export { findUserByEmail, findUserByClerkId, createUser, getUserDetailsByID, getUserDataHandler, getUsersByRole, getUserByName, createTeacher };

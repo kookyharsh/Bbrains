@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { findUserByEmail, createUser, getUserDetailsByID } from "../services/user.service.js";
+import { createClerkUserAndSendInvite } from "../services/clerk.service.js";
 import dotenv from "dotenv";
 import { generateToken } from "../utils/tokengen.js";
 import { getRandomAvatar } from "../utils/randomavatar.js";
@@ -9,16 +10,13 @@ import { createAuditLog } from "../utils/auditLog.js";
 
 dotenv.config();
 
+const CLERK_INVITE_REDIRECT_URL = process.env.CLERK_INVITE_REDIRECT_URL || "http://localhost:3000/login";
+
 // Zod Schemas
 const registerSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/, "Username must be alphanumeric with underscores"),
   email: z.string().email("Invalid email format").max(50),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmpassword: z.string(),
   collegeId: z.number().int().positive().optional()
-}).refine(data => data.password === data.confirmpassword, {
-  message: "Passwords do not match",
-  path: ["confirmpassword"]
 });
 
 const loginSchema = z.object({
@@ -27,7 +25,7 @@ const loginSchema = z.object({
 });
 
 /* =========================
-   REGISTER
+   REGISTER (Clerk: create user + send invitation; create in Prisma with clerkUserId)
 ========================= */
 const register = async (req, res) => {
   try {
@@ -38,14 +36,26 @@ const register = async (req, res) => {
       return sendError(res, "User already exists", 409);
     }
 
-    const hashedPassword = await bcrypt.hash(validated.password, 10);
     const collegeId = validated.collegeId || 45;
 
-    const newUser = await createUser(validated.username, validated.email, collegeId, hashedPassword, getRandomAvatar());
+    const { clerkUserId } = await createClerkUserAndSendInvite({
+      email: validated.email,
+      username: validated.username,
+      redirectUrl: CLERK_INVITE_REDIRECT_URL,
+    });
+
+    const newUser = await createUser(
+      clerkUserId,
+      validated.username,
+      validated.email,
+      collegeId,
+      null,
+      getRandomAvatar()
+    );
 
     await createAuditLog(newUser.id, 'AUTH', 'REGISTER', 'User', newUser.id);
 
-    return sendCreated(res, { id: newUser.id, username: newUser.username }, "User registered successfully");
+    return sendCreated(res, { id: newUser.id, username: newUser.username }, "User registered. Check your email to set your password and sign in.");
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
@@ -65,6 +75,9 @@ const login = async (req, res) => {
     const user = await findUserByEmail(validated.email);
     if (!user) {
       return sendError(res, "Invalid credentials", 401);
+    }
+    if (!user.password) {
+      return sendError(res, "This account uses Clerk. Sign in via the app with the link sent to your email.", 401);
     }
 
     const isMatch = await bcrypt.compare(validated.password, user.password);
