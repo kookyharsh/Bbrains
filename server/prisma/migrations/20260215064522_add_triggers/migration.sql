@@ -9,8 +9,9 @@ CREATE OR REPLACE FUNCTION create_user_wallet_func()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Insert a new wallet linked to the new user ID
-  INSERT INTO "wallet" ("user_id", "balance", "pin")
-  VALUES (NEW."user_id", 500.00, '000000');
+  INSERT INTO "wallet" ("wallet_id", "user_id", "balance", "pin")
+  VALUES ('wallet_' || split_part(NEW."user_id", '_', 2), NEW."user_id", 500.00, '000000')
+  ON CONFLICT ("user_id") DO NOTHING;
   
   RETURN NEW;
 END;

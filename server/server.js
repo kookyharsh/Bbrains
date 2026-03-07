@@ -3,43 +3,52 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
-import { Server } from "socket.io";
 import { clerkMiddleware } from "@clerk/express";
 
 // Route imports
-import authRouter from "./routes/auth.routes.js";
-import marketRouter from "./routes/market.route.js";
-import dashboardRouter from "./routes/dashboard.routes.js";
-import userRouter from "./routes/user.routes.js";
-import academicRouter from "./routes/academic.routes.js";
-import walletRouter from "./routes/wallet.routes.js";
-import logRouter from "./routes/log.routes.js";
-import collegeRouter from "./routes/college.routes.js";
-import addressRouter from "./routes/address.routes.js";
-import courseRouter from "./routes/course.routes.js";
-import enrollmentRouter from "./routes/enrollment.routes.js";
-import gradeRouter from "./routes/grade.routes.js";
-import roleRouter from "./routes/role.routes.js";
-import xpRouter from "./routes/xp.routes.js";
-import leaderboardRouter from "./routes/leaderboard.routes.js";
-import achievementRouter from "./routes/achievement.routes.js";
-import transactionRouter from "./routes/transaction.routes.js";
-import orderRouter from "./routes/order.routes.js";
+import authRouter from "./modules/auth/auth.routes.js";
+import marketRouter from "./modules/market/market.routes.js";
+import dashboardRouter from "./modules/dashboard/dashboard.routes.js";
+import userRouter from "./modules/user/user.routes.js";
+import academicRouter from "./modules/academic/academic.routes.js";
+import walletRouter from "./modules/wallet/wallet.routes.js";
+import logRouter from "./modules/log/log.routes.js";
+import collegeRouter from "./modules/college/college.routes.js";
+import addressRouter from "./modules/user/address.routes.js";
+import courseRouter from "./modules/course/course.routes.js";
+import enrollmentRouter from "./modules/enrollment/enrollment.routes.js";
+import gradeRouter from "./modules/grade/grade.routes.js";
+import roleRouter from "./modules/academic/role.routes.js";
+import xpRouter from "./modules/xp/xp.routes.js";
+import leaderboardRouter from "./modules/leaderboard/leaderboard.routes.js";
+import achievementRouter from "./modules/achievement/achievement.routes.js";
+import transactionRouter from "./modules/transaction/transaction.routes.js";
+import orderRouter from "./modules/order/order.routes.js";
+import clerkRouter from "./modules/auth/clerk.routes.js";
+import eventRouter from "./modules/event/event.routes.js";
+import attendanceRouter from "./modules/attendance/attendance.routes.js";
+import streakRouter from "./modules/streak/streak.routes.js";
+import announcementRouter from "./modules/announcement/announcement.routes.js";
+import chatRouter from "./modules/chat/chat.routes.js";
 
 // Middleware imports
 import errorHandler from "./middleware/errorHandler.js";
+import { connectMongo, hasMongoConnection } from "./utils/mongo.js";
+import { initChatSocket } from "./modules/chat/chat.socket.js";
 
 dotenv.config();
 
 const app = express();
 
+app.use(cors({
+  origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
+}));
+
 // Clerk middleware must run before other middleware
 app.use(clerkMiddleware());
-
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
-}));
 
 // Global Middleware
 app.use(express.json());
@@ -52,6 +61,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use("/api/clerk", clerkRouter);
 app.use("/", authRouter);
 app.use("/user", userRouter);
 app.use("/market", marketRouter);
@@ -70,8 +80,13 @@ app.use("/leaderboard", leaderboardRouter);
 app.use("/achievements", achievementRouter);
 app.use("/transactions", transactionRouter);
 app.use("/orders", orderRouter);
+app.use("/events", eventRouter);
+app.use("/attendance", attendanceRouter);
+app.use("/streak", streakRouter);
+app.use("/announcements", announcementRouter);
+app.use("/chat", chatRouter);
 
-// 404 handler
+
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
@@ -79,37 +94,12 @@ app.use((req, res) => {
 // Global Error Handler (must be last)
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
+initChatSocket(server);
 
-let activeUsers = {};
-
-io.on("connection", (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-
-  socket.on("join", (user) => {
-    activeUsers[socket.id] = { ...user, socketId: socket.id };
-    io.emit("active_users", Object.values(activeUsers));
-  });
-
-  socket.on("send_message", (data) => {
-    io.emit("receive_message", data);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`Socket disconnected: ${socket.id}`);
-    delete activeUsers[socket.id];
-    io.emit("active_users", Object.values(activeUsers));
-  });
-});
+void connectMongo();
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

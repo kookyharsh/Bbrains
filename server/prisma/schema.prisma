@@ -330,7 +330,7 @@ model Announcement {
 
 model AuditLog {
   id        Int         @id @default(autoincrement())
-  userId    String      @map("user_id")
+  userId    String?     @map("user_id")
   category  LogCategory
   action    String
   entity    String
@@ -338,7 +338,7 @@ model AuditLog {
   change    Json?
   reason    String?
   createdAt DateTime    @default(now()) @map("created_at")
-  user      User        @relation(fields: [userId], references: [id])
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([category])
   @@index([userId])

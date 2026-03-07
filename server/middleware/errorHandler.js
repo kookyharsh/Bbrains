@@ -47,6 +47,13 @@ const errorHandler = (err, req, res, next) => {
         });
     }
 
+    if (err.code === 'P2000') {
+        return res.status(400).json({
+            success: false,
+            message: 'Input value is too long for one or more fields'
+        });
+    }
+
     // Default 500
     return res.status(500).json({
         success: false,
