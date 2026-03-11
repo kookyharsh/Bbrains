@@ -1,16 +1,21 @@
 "use client";
 
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Navbar } from "@/components/landing/Navbar";
+import { HeroSection } from "@/components/landing/HeroSection";
+import { AboutSection } from "@/components/landing/AboutSection";
+import { FeaturesSection } from "@/components/landing/FeaturesSection";
+import { CtaSection } from "@/components/landing/CtaSection";
+import { FooterSection } from "@/components/landing/FooterSection";
 
-const Index = () => {
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-hand-paper bg-paper-texture bg-[length:24px_24px] text-hand-pencil overflow-x-hidden selection:bg-hand-yellow selection:text-hand-pencil ">
+      <Navbar />
+      <HeroSection />
+      <AboutSection />
+      <FeaturesSection />
+      <CtaSection />
+      <FooterSection />
     </div>
   );
-};
-
-export default Index;
+}

@@ -1,10 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono, Inter, Kalam, Patrick_Hand } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+
+const kalam = Kalam({
+  weight: ["700"],
+  subsets: ["latin"],
+  variable: "--font-kalam",
+});
+
+const patrickHand = Patrick_Hand({
+  weight: ["400"],
+  subsets: ["latin"],
+  variable: "--font-patrick",
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${kalam.variable} ${patrickHand.variable}`} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >

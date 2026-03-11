@@ -6,16 +6,16 @@ import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase-client'
-import { Button } from '@/components/ui/button'
+import { HandButton } from '@/components/hand-drawn/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+  HandCard,
+  HandCardContent,
+  HandCardDescription,
+  HandCardHeader,
+  HandCardTitle,
+} from '@/components/hand-drawn/card'
+import { HandInput } from '@/components/hand-drawn/input'
+import { HandLabel } from '@/components/hand-drawn/label'
 import Link from 'next/link'
 import { validate, commonRules, hasErrors, ValidationErrors } from '@/lib/validation'
 
@@ -75,18 +75,18 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
   }, [])
 
   return (
-    <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className={cn('flex flex-col gap-6 rotate-1', className)} {...props}>
+      <HandCard decoration="tape">
+        <HandCardHeader>
+          <HandCardTitle className="text-4xl">Login</HandCardTitle>
+          <HandCardDescription>Enter your email below to login to your account</HandCardDescription>
+        </HandCardHeader>
+        <HandCardContent>
           <form onSubmit={handleLogin}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
+                <HandLabel htmlFor="email">Email</HandLabel>
+                <HandInput
                   id="email"
                   type="email"
                   placeholder="m@example.com"
@@ -94,53 +94,53 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
                   value={email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   disabled={isLoading}
-                  className={errors.email ? 'border-red-500' : ''}
+                  className={errors.email ? 'border-hand-red' : ''}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email}</p>
+                  <p className="text-sm text-hand-red font-patrick">{errors.email}</p>
                 )}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <HandLabel htmlFor="password">Password</HandLabel>
                   <Link
                     href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    className="ml-auto inline-block text-lg font-patrick text-hand-pencil underline-offset-4 hover:underline hover:text-hand-blue transition-colors"
                   >
                     Forgot your password?
                   </Link>
                 </div>
-                <Input
+                <HandInput
                   id="password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   disabled={isLoading}
-                  className={errors.password ? 'border-red-500' : ''}
+                  className={errors.password ? 'border-hand-red' : ''}
                 />
                 {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password}</p>
+                  <p className="text-sm text-hand-red font-patrick">{errors.password}</p>
                 )}
               </div>
               {errors.form && (
-                <p className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
+                <p className="text-lg font-patrick text-hand-red bg-hand-red/10 border-2 border-hand-red border-dashed p-3 rounded-wobbly">
                   {errors.form}
                 </p>
               )}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <HandButton type="submit" className="w-full mt-2" disabled={isLoading}>
                 {isLoading ? 'Logging in...' : 'Login'}
-              </Button>
+              </HandButton>
             </div>
-            <div className="mt-4 text-center text-sm">
+            <div className="mt-6 text-center text-lg font-patrick text-hand-pencil/80">
               Don&apos;t have an account?{' '}
-              <Link href="/auth/sign-up" className="underline underline-offset-4">
-                Sign up
+              <Link href="#" className="text-hand-pencil underline underline-offset-4 decoration-2 decoration-wavy hover:text-hand-blue">
+                Contact your Teacher
               </Link>
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </HandCardContent>
+      </HandCard>
     </div>
   )
 }
