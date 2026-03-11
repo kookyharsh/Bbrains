@@ -1,6 +1,7 @@
 import prisma from "../../utils/prisma.js";
+import bcrypt from "bcrypt";
 
-const transferFunds = async (senderId, recipientWalletId, amount, note, pin) => {
+const transferFunds = async (senderId, recipientEmail, amount, note, pin) => {
     return await prisma.$transaction(async (tx) => {
         // 1. Verify Sender Wallet & PIN
         const senderWallet = await tx.wallet.findUnique({
@@ -8,17 +9,24 @@ const transferFunds = async (senderId, recipientWalletId, amount, note, pin) => 
         });
 
         if (!senderWallet) throw new Error("Sender wallet not found");
-        if (senderWallet.pin !== pin) throw new Error("Invalid PIN");
+        
+        // Use bcrypt.compare for hashed PINs, or direct comparison for legacy plain-text PINs
+        let pinMatch = false;
+        if (senderWallet.pin && senderWallet.pin.length > 6) {
+            pinMatch = await bcrypt.compare(pin, senderWallet.pin);
+        } else {
+            pinMatch = senderWallet.pin === pin;
+        }
+        
+        if (!pinMatch) throw new Error("Invalid PIN");
 
         if (Number(senderWallet.balance) < Number(amount)) {
             throw new Error("Insufficient balance");
         }
 
-        // 2. Verify Recipient Wallet (by ID or User ID if you prefer, going by Wallet ID for QR)
-        // Assuming recipientWalletId is the Wallet ID (int). 
-        // If it's a UserID, adjust query.
+        // 2. Find recipient wallet by email (wallet ID)
         const recipientWallet = await tx.wallet.findUnique({
-            where: { id: parseInt(recipientWalletId) }
+            where: { id: recipientEmail }
         });
 
         if (!recipientWallet) throw new Error("Recipient wallet not found");
@@ -42,7 +50,7 @@ const transferFunds = async (senderId, recipientWalletId, amount, note, pin) => 
                 amount: amount,
                 type: 'debit',
                 status: 'success',
-                note: `Sent to Wallet #${recipientWallet.id}: ${note || ''}`
+                note: `Sent to ${recipientEmail}: ${note || ''}`
             }
         });
 
@@ -52,7 +60,7 @@ const transferFunds = async (senderId, recipientWalletId, amount, note, pin) => 
                 amount: amount,
                 type: 'credit',
                 status: 'success',
-                note: `Received from Wallet #${senderWallet.id}: ${note || ''}`
+                note: `Received from ${senderWallet.id}: ${note || ''}`
             }
         });
 

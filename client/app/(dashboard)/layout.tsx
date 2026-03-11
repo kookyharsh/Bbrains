@@ -8,17 +8,36 @@ import {
 } from "@/components/ui/sidebar"
 import React from 'react'
 
-function DashboardLayout({ children }: { children: React.ReactNode }) {
+import { createClient } from "@/lib/server"
+
+async function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let formattedUser = null;
+    if (user) {
+        const metadata = user.user_metadata || {};
+        formattedUser = {
+            id: user.id,
+            email: user.email,
+            imageUrl: metadata.avatar_url || metadata.image_url || "",
+            firstName: metadata.first_name || metadata.firstName || "",
+            lastName: metadata.last_name || metadata.lastName || "",
+            fullName: metadata.full_name || metadata.name || "",
+            username: metadata.username || user.email?.split('@')[0] || "",
+        };
+    }
+
     return (
         <SidebarProvider defaultOpen={true}>
             <div className="flex h-screen w-full overflow-hidden">
                 {/* Sidebar on the left - height: 100vh */}
-                <AppSidebar />
+                <AppSidebar user={formattedUser} />
 
                 {/* Main Content Area on the right */}
                 <SidebarInset className="flex flex-col h-full overflow-hidden min-w-0">
                     {/* Navbar starts after the sidebar and spans the remaining width */}
-                    <MainNavbar />
+                    <MainNavbar user={formattedUser} />
 
                     {/* Breadcrumb showing current page */}
                     <DashboardBreadcrumb />

@@ -3,7 +3,8 @@ import {
     getAllProducts, getProduct, createProduct, updateProduct, deleteProduct,
     searchProductsHandler, addToCartHandler, getCartHandler,
     removeFromCartHandler, checkoutHandler, buyNowHandler,
-    getMyProducts, getPendingProducts, approveProduct
+    getMyProducts, getPendingProducts, approveProduct,
+    getAllThemes, getTheme, getLibrary, getDownloadUrl, applyTheme, getActiveTheme
 } from './market.controller.js';
 import verifyToken from '../../middleware/auth.middleware.js';
 import authorize from '../../middleware/authorize.js';
@@ -25,6 +26,16 @@ router.get('/my-products', verifyToken, getMyProducts);
 // Pending products & approval (admin/teacher only)
 router.get('/pending', verifyToken, authorize('teacher', 'admin'), getPendingProducts);
 router.patch('/products/:id/approval', verifyToken, authorize('teacher', 'admin'), approveProduct);
+
+// Themes
+router.get('/themes', verifyToken, getAllThemes);
+router.get('/themes/:id', verifyToken, getTheme);
+
+// Library (purchased items)
+router.get('/library', verifyToken, getLibrary);
+router.get('/library/active-theme', verifyToken, getActiveTheme);
+router.get('/library/:productId/download', verifyToken, getDownloadUrl);
+router.post('/library/:productId/apply', verifyToken, applyTheme);
 
 // Cart
 router.get('/cart', verifyToken, getCartHandler);

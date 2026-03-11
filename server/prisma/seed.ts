@@ -1,7 +1,7 @@
 import { UserRole, Sex, TransactionType, TransactionStatus, LeaderboardCategory, LogCategory, ProductApproval } from '@prisma/client';
 import prisma from '../utils/prisma.js';
+import { createSupabaseUser, listSupabaseUsers, deleteSupabaseUser } from '../modules/auth/supabase-user.service.js';
 
-// Helper Utilities
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const getRandomItems = <T>(arr: T[], count: number): T[] => {
@@ -9,15 +9,12 @@ const getRandomItems = <T>(arr: T[], count: number): T[] => {
   return shuffled.slice(0, Math.min(count, arr.length));
 };
 
-// Generate Clerk-like ID: user_ + 27 random chars
-const generateClerkId = () => `user_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-
 async function main() {
   console.log("🌱 Starting Seeding Process...");
 
   try {
-    // 1. CLEANUP
     console.log("🧹 Cleaning database...");
+
     await prisma.streak.deleteMany();
     await prisma.attendance.deleteMany();
     await prisma.event.deleteMany();
@@ -45,9 +42,22 @@ async function main() {
     await prisma.level.deleteMany();
     await prisma.course.deleteMany();
     await prisma.address.deleteMany();
-    console.log("✅ Database cleaned.");
 
-    // 2. SEED ADDRESSES FOR COLLEGES
+    // Clean Supabase Users
+    console.log("🧹 Cleaning Supabase auth users...");
+    try {
+      const users = await listSupabaseUsers({ perPage: 1000 });
+      if (users && users.length > 0) {
+        for (const u of users) {
+          await deleteSupabaseUser(u.id);
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Could not clean up Supabase users. Ignoring if creating fails.", e);
+    }
+
+    console.log("✅ Database and Auth cleaned.");
+
     console.log("📍 Creating addresses...");
     const collegeAddresses = [];
     const addressData = [
@@ -69,7 +79,6 @@ async function main() {
       collegeAddresses.push(address);
     }
 
-    // 3. SEED LEVELS
     console.log("🎮 Seeding 40 Levels...");
     const levelsData = Array.from({ length: 40 }, (_, i) => ({
       levelNumber: i + 1,
@@ -78,7 +87,6 @@ async function main() {
     await prisma.level.createMany({ data: levelsData });
     console.log("✅ 40 Levels created.");
 
-    // 4. SEED COLLEGES
     console.log("🏫 Seeding Colleges...");
     const colleges = [];
     const collegeNames = ["Learnytics Tech Institute", "Global Business School", "Creative Arts Academy"];
@@ -96,7 +104,6 @@ async function main() {
     }
     console.log(`✅ ${colleges.length} Colleges created.`);
 
-    // 5. SEED ROLES
     console.log("👥 Seeding Roles...");
     const roles = await Promise.all([
       prisma.role.create({ data: { name: 'Student', description: 'Student role' } }),
@@ -105,21 +112,18 @@ async function main() {
     ]);
     console.log("✅ 3 Roles created.");
 
-    // 6. SEED USERS
     console.log("👥 Seeding Users...");
 
     const admins: any[] = [];
     const teachers: any[] = [];
     const students: any[] = [];
 
-    // Helper function to create user with details
-    async function createUserComplete(id: string, userData: any, detailsData: any, userType: 'admin' | 'teacher' | 'student') {
+    async function createUserComplete(supabaseUserId: string, userData: any, detailsData: any, userType: 'admin' | 'teacher' | 'student') {
       const user = await prisma.user.create({
         data: {
-          id: id,
+          id: supabaseUserId,
           email: userData.email,
           username: userData.username,
-          // Required by current DB migration (user.password is NOT NULL)
           password: userData.password ?? "seed_password_123",
           type: userData.type,
           collegeId: userData.collegeId,
@@ -154,7 +158,7 @@ async function main() {
           balance: userType === 'admin' ? 10000 : userType === 'teacher' ? 5000 : getRandomInt(500, 3000)
         },
         create: {
-          id: `wallet_${id.split('_')[1]}`,
+          id: userData.email,
           userId: user.id,
           balance: userType === 'admin' ? 10000 : userType === 'teacher' ? 5000 : getRandomInt(500, 3000)
         }
@@ -163,14 +167,18 @@ async function main() {
       return user;
     }
 
-    // Create 2 Admins
     console.log("  Creating 2 admins...");
     for (let i = 1; i <= 2; i++) {
-      const id = generateClerkId();
+      const email = `admin${i}@learnytics.com`;
+      const supabaseUser = await createSupabaseUser(email, "admin123", {
+        username: `admin_${i}`
+      });
+      const supabaseUserId = supabaseUser.id;
+
       const admin = await createUserComplete(
-        id,
+        supabaseUserId,
         {
-          email: `admin${i}@learnytics.com`,
+          email,
           username: `admin_${i}`,
           type: UserRole.admin,
           collegeId: colleges[0].id
@@ -190,18 +198,22 @@ async function main() {
         data: { userId: admin.id, roleId: roles[2].id }
       });
 
-      console.log(`    ✅ Admin ${i} created with ID: ${admin.id}`);
+      console.log(`    ✅ Admin ${i} created with Supabase ID: ${admin.id}`);
     }
 
-    // Create 5 Teachers
     console.log("  Creating 5 teachers...");
     const teacherNames = ["Snape", "McGonagall", "Flitwick", "Sprout", "Lupin"];
     for (let i = 0; i < 5; i++) {
-      const id = generateClerkId();
+      const email = `teacher${i + 1}@learnytics.com`;
+      const supabaseUser = await createSupabaseUser(email, "teacher123", {
+        username: `prof_${teacherNames[i].toLowerCase()}`
+      });
+      const supabaseUserId = supabaseUser.id;
+
       const teacher = await createUserComplete(
-        id,
+        supabaseUserId,
         {
-          email: `teacher${i + 1}@learnytics.com`,
+          email,
           username: `prof_${teacherNames[i].toLowerCase()}`,
           type: UserRole.teacher,
           collegeId: getRandomItem(colleges).id
@@ -221,14 +233,18 @@ async function main() {
         data: { userId: teacher.id, roleId: roles[1].id }
       });
 
-      console.log(`    ✅ Teacher ${i + 1} created with ID: ${teacher.id}`);
+      console.log(`    ✅ Teacher ${i + 1} created with Supabase ID: ${teacher.id}`);
     }
 
-    // Create 10 Students
     console.log("  Creating 10 students...");
     const studentNames = ["Harry", "Ron", "Hermione", "Draco", "Luna", "Neville", "Ginny", "Cedric", "Cho", "Viktor"];
     for (let i = 0; i < 10; i++) {
-      const id = generateClerkId();
+      const email = `student${i + 1}@learnytics.com`;
+      const supabaseUser = await createSupabaseUser(email, "student123", {
+        username: `student_${studentNames[i].toLowerCase()}`
+      });
+      const supabaseUserId = supabaseUser.id;
+
       const studentAddress = await prisma.address.create({
         data: {
           addressLine1: `Hostel Block ${String.fromCharCode(65 + i)}`,
@@ -240,9 +256,9 @@ async function main() {
       });
 
       const student = await createUserComplete(
-        id,
+        supabaseUserId,
         {
-          email: `student${i + 1}@learnytics.com`,
+          email,
           username: `student_${studentNames[i].toLowerCase()}`,
           type: UserRole.student,
           collegeId: getRandomItem(colleges).id
@@ -263,7 +279,6 @@ async function main() {
         data: { userId: student.id, roleId: roles[0].id }
       });
 
-      // Seed Attendance for student
       const attendanceDays = 15;
       for (let d = 0; d < attendanceDays; d++) {
         await prisma.attendance.create({
@@ -275,12 +290,11 @@ async function main() {
         });
       }
 
-      console.log(`    ✅ Student ${i + 1} created with ID: ${student.id}`);
+      console.log(`    ✅ Student ${i + 1} created with Supabase ID: ${student.id}`);
     }
 
     console.log(`✅ All users created: ${admins.length} admins, ${teachers.length} teachers, ${students.length} students`);
 
-    // 7. SEED COURSES
     console.log("📚 Seeding Courses...");
     const courseData = [
       { name: "Potions 101", desc: "Introduction to chemistry and potion making" },
@@ -309,12 +323,11 @@ async function main() {
               grade: getRandomItem(["A+", "A", "B+", "B", "C"]),
             }
           });
-        } catch (e) { /* Skip duplicates */ }
+        } catch (e) { }
       }
     }
     console.log(`✅ ${courses.length} Courses created.`);
 
-    // 8. SEED ASSIGNMENTS
     console.log("📝 Seeding Assignments...");
     const assignments = [];
     for (let i = 0; i < 15; i++) {
@@ -331,7 +344,6 @@ async function main() {
     }
     console.log(`✅ ${assignments.length} Assignments created.`);
 
-    // 9. SEED SUBMISSIONS & GRADES
     console.log("✏️ Seeding Submissions & Grades...");
     let submissionCount = 0;
     for (const assign of assignments) {
@@ -364,12 +376,11 @@ async function main() {
             }
           });
           submissionCount++;
-        } catch (e) { /* Skip duplicates */ }
+        } catch (e) { }
       }
     }
     console.log(`✅ ${submissionCount} Submissions & Grades created.`);
 
-    // 10. SEED PRODUCTS
     console.log("🛍️ Seeding Products...");
     const productData = [
       { name: "Invisibility Cloak", desc: "Premium stealth device", price: 500, stock: 5 },
@@ -398,12 +409,10 @@ async function main() {
     }
     console.log(`✅ ${products.length} Products created.`);
 
-    // 11. SEED CARTS & ORDERS
     console.log("🛒 Seeding Carts & Orders...");
     let cartCount = 0;
     let orderCount = 0;
     for (const student of students) {
-      // Seed Carts
       const cartItemsCount = getRandomInt(1, 3);
       const cartProducts = getRandomItems(products, cartItemsCount);
       for (const prod of cartProducts) {
@@ -417,10 +426,9 @@ async function main() {
             }
           });
           cartCount++;
-        } catch (e) { /* Skip duplicates */ }
+        } catch (e) { }
       }
 
-      // Seed Orders
       if (Math.random() > 0.5) {
         const orderItemsCount = getRandomInt(1, 4);
         const orderProducts = getRandomItems(products, orderItemsCount);
@@ -446,7 +454,6 @@ async function main() {
     }
     console.log(`✅ ${cartCount} Cart items and ${orderCount} Orders created.`);
 
-    // 12. SEED ANNOUNCEMENTS
     console.log("📢 Seeding Announcements...");
     const announcements = [
       { title: "Welcome to BBrains!", desc: "Start earning XP and climb the leaderboard today!" },
@@ -466,7 +473,6 @@ async function main() {
     }
     console.log(`✅ ${announcements.length} Announcements created.`);
 
-    // 13. SEED EVENTS
     console.log("📅 Seeding Events...");
     const eventData = [
       { title: "Triwizard Tournament", description: "The legendary magical contest between three schools.", type: "Tournament", location: "Hogwarts Stadium" },
@@ -484,7 +490,7 @@ async function main() {
           type: e.type,
           location: e.location,
           startDate: start,
-          endDate: new Date(start.getTime() + 4 * 60 * 60 * 1000), // 4 hours later
+          endDate: new Date(start.getTime() + 4 * 60 * 60 * 1000),
           date: start,
           banner: `https://placehold.co/800x400?text=${encodeURIComponent(e.title)}`
         }
@@ -492,7 +498,6 @@ async function main() {
     }
     console.log(`✅ ${eventData.length} Events created.`);
 
-    // 14. SEED LEADERBOARDS
     console.log("🏆 Seeding Leaderboards...");
     const categories = [LeaderboardCategory.allTime, LeaderboardCategory.weekly, LeaderboardCategory.monthly];
     let lbCount = 0;
@@ -509,12 +514,11 @@ async function main() {
             }
           });
           lbCount++;
-        } catch (e) { /* Skip duplicates */ }
+        } catch (e) { }
       }
     }
     console.log(`✅ ${lbCount} Leaderboard entries created.`);
 
-    // 15. SEED ACHIEVEMENTS
     console.log("🎖️ Seeding Achievements...");
     const achievementData = [
       { name: "First Steps", description: "Joined the BBrains community.", requiredXp: 0, category: "Milestone" },
@@ -541,12 +545,11 @@ async function main() {
             data: { userId: student.id, achievementId: ach.id }
           });
           achCount++;
-        } catch (e) { /* Skip duplicates */ }
+        } catch (e) { }
       }
     }
     console.log(`✅ ${achievements.length} Achievements, ${achCount} assigned.`);
 
-    // 16. SEED TRANSACTIONS
     console.log("💳 Seeding Transactions...");
     for (let i = 0; i < 30; i++) {
       const user = getRandomItem([...students, ...teachers]);
@@ -560,11 +563,10 @@ async function main() {
             note: `Market Purchase / Reward #${i + 1}`,
           }
         });
-      } catch (e) { /* Skip errors */ }
+      } catch (e) { }
     }
     console.log("✅ 30 Transactions created.");
 
-    // 17. SEED AUDIT LOGS
     console.log("🕵️ Seeding Audit Logs...");
     const logActions = ["CREATE", "UPDATE", "DELETE", "AUTH_LOGIN", "AUTH_LOGOUT", "PURCHASE"];
     const logEntities = ["Product", "Grade", "User", "Order", "Cart", "Event"];
@@ -582,17 +584,16 @@ async function main() {
             reason: "System seeding process",
           }
         });
-      } catch (e) { /* Skip errors */ }
+      } catch (e) { }
     }
     console.log("✅ 30 Audit logs created.");
 
-    // SUMMARY
     console.log("\n" + "=".repeat(70));
     console.log("✅ ✅ ✅ BBRAINS SEEDING COMPLETED SUCCESSFULLY! ✅ ✅ ✅");
     console.log("=".repeat(70));
     console.log("\n📊 Summary:");
     console.log(`  • ${colleges.length} Colleges`);
-    console.log(`  • ${admins.length} Admins (Clerk ID format)`);
+    console.log(`  • ${admins.length} Admins (Supabase UID)`);
     console.log(`  • ${teachers.length} Teachers`);
     console.log(`  • ${students.length} Students (+ Attendance & Streaks)`);
     console.log(`  • ${courses.length} Courses`);

@@ -3,7 +3,6 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
-import { clerkMiddleware } from "@clerk/express";
 
 // Route imports
 import authRouter from "./modules/auth/auth.routes.js";
@@ -24,7 +23,6 @@ import leaderboardRouter from "./modules/leaderboard/leaderboard.routes.js";
 import achievementRouter from "./modules/achievement/achievement.routes.js";
 import transactionRouter from "./modules/transaction/transaction.routes.js";
 import orderRouter from "./modules/order/order.routes.js";
-import clerkRouter from "./modules/auth/clerk.routes.js";
 import eventRouter from "./modules/event/event.routes.js";
 import attendanceRouter from "./modules/attendance/attendance.routes.js";
 import streakRouter from "./modules/streak/streak.routes.js";
@@ -33,7 +31,7 @@ import chatRouter from "./modules/chat/chat.routes.js";
 
 // Middleware imports
 import errorHandler from "./middleware/errorHandler.js";
-import { connectMongo, hasMongoConnection } from "./utils/mongo.js";
+// import { connectMongo, hasMongoConnection } from "./utils/mongo.js"; // MongoDB removed
 import { initChatSocket } from "./modules/chat/chat.socket.js";
 
 dotenv.config();
@@ -47,9 +45,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
-// Clerk middleware must run before other middleware
-app.use(clerkMiddleware());
-
 // Global Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -61,7 +56,6 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
-app.use("/api/clerk", clerkRouter);
 app.use("/", authRouter);
 app.use("/user", userRouter);
 app.use("/market", marketRouter);
@@ -99,7 +93,7 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 initChatSocket(server);
 
-void connectMongo();
+// void connectMongo(); // MongoDB removed
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

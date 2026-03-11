@@ -22,14 +22,12 @@ import {
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { useUser, useClerk } from "@clerk/nextjs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { sidebarItems } from "./sidebarData"
 
-export function AppSidebar() {
+export function AppSidebar({ user }: { user?: any }) {
     const pathname = usePathname()
-    const { user } = useUser()
-    const { openUserProfile } = useClerk()
+
     const { state } = useSidebar()
     const isCollapsed = state === "collapsed"
 
@@ -111,7 +109,6 @@ export function AppSidebar() {
                 {user && (
                     <div className="flex flex-col gap-4">
                         <button
-                            onClick={() => openUserProfile()}
                             className={`flex items-center gap-3 rounded-xl text-ui-light-textSecondary dark:text-ui-dark-textSecondary hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${isCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"}`}
                             title="Settings"
                         >
@@ -127,15 +124,15 @@ export function AppSidebar() {
                             )}
                             <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
                                 <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
-                                    <AvatarImage src={user.imageUrl} />
+                                    <AvatarImage src={user?.imageUrl} />
                                     <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-xs uppercase">
-                                        {user.firstName?.[0]}{user.lastName?.[0]}
+                                        {user?.firstName?.[0]}{user?.lastName?.[0]}
                                     </AvatarFallback>
                                 </Avatar>
                                 {!isCollapsed && (
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[13px] font-bold text-ui-light-textPrimary dark:text-ui-dark-textPrimary truncate">
-                                            {user.fullName || user.username || "Anonymous User"}
+                                            {user?.fullName || user?.username || "Anonymous User"}
                                         </p>
                                         <p className="text-[11px] text-ui-light-textSecondary dark:text-ui-dark-textSecondary truncate mt-0.5">
                                             Student
@@ -149,6 +146,6 @@ export function AppSidebar() {
             </SidebarFooter>
 
             <SidebarRail />
-        </Sidebar>
+        </Sidebar >
     )
 }

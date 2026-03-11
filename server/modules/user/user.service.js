@@ -1,5 +1,6 @@
 import prisma from "../../utils/prisma.js";
 import jwt from 'jsonwebtoken'
+import { deleteSupabaseUser } from '../auth/supabase-user.service.js';
 
 const findUserByEmail = async (email) => {
     return await prisma.user.findUnique({
@@ -7,11 +8,9 @@ const findUserByEmail = async (email) => {
     });
 };
 
-const findUserByClerkId = async (clerkUserId) => {
-    // In this app, Prisma `User.id` stores Clerk's `user_...` id
+const findUserBySupabaseId = async (supabaseId) => {
     return await prisma.user.findUnique({
-        where: { id: clerkUserId },
-        select: { id: true, username: true, type: true, collegeId: true },
+        where: { id: supabaseId },
     });
 };
 
@@ -190,4 +189,18 @@ const createTeacher = async (data) => {
     });
 };
 
-export { findUserByEmail, findUserByClerkId, createUser, getUserDetailsByID, getUserDataHandler, getUsersByRole, getUserByName, createTeacher };
+const deleteUser = async (userId) => {
+    try {
+        await deleteSupabaseUser(userId);
+        
+        const user = await prisma.user.delete({
+            where: { id: userId }
+        });
+        return user;
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        throw error;
+    }
+};
+
+export { findUserByEmail, findUserBySupabaseId, createUser, getUserDetailsByID, getUserDataHandler, getUsersByRole, getUserByName, createTeacher, deleteUser };

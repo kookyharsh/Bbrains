@@ -260,3 +260,277 @@ export const buyNowHandler = async (req, res) => {
     return sendError(res, error.message || 'Failed to purchase', 400);
   }
 };
+
+// GET /market/themes - Get all approved themes
+export const getAllThemes = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const skip = (page - 1) * limit;
+
+    const [themes, total] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          approval: 'approved',
+          metadata: {
+            path: ['category'],
+            equals: 'theme'
+          }
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          creator: {
+            select: { username: true, email: true }
+          }
+        }
+      }),
+      prisma.product.count({
+        where: {
+          approval: 'approved',
+          metadata: {
+            path: ['category'],
+            equals: 'theme'
+          }
+        }
+      })
+    ]);
+
+    return sendPaginated(res, themes, { page, limit, total });
+  } catch (error) {
+    console.error('Error fetching themes:', error);
+    return sendError(res, 'Failed to fetch themes', 500);
+  }
+};
+
+// GET /market/themes/:id - Get a specific theme
+export const getTheme = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return sendError(res, 'Invalid theme ID', 400);
+
+    const theme = await prisma.product.findFirst({
+      where: {
+        id,
+        approval: 'approved',
+        metadata: {
+          path: ['category'],
+          equals: 'theme'
+        }
+      },
+      include: {
+        creator: {
+          select: { username: true, email: true }
+        }
+      }
+    });
+
+    if (!theme) return sendError(res, 'Theme not found', 404);
+    return sendSuccess(res, theme);
+  } catch (error) {
+    return sendError(res, 'Failed to fetch theme', 500);
+  }
+};
+
+// GET /market/library - Get user's purchased items (themes, notes, etc.)
+export const getLibrary = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const category = req.query.category;
+    const skip = (page - 1) * limit;
+
+    const whereClause = {
+      userId: req.user.id,
+      status: 'completed'
+    };
+
+    let categoryFilter = {};
+    if (category) {
+      categoryFilter = {
+        product: {
+          metadata: {
+            path: ['category'],
+            equals: category
+          }
+        }
+      };
+    } else {
+      categoryFilter = {
+        product: {
+          metadata: {
+            path: ['category'],
+            not: null
+          }
+        }
+      };
+    }
+
+    const [items, total] = await Promise.all([
+      prisma.orderItem.findMany({
+        where: {
+          ...whereClause,
+          ...categoryFilter
+        },
+        skip,
+        take: limit,
+        orderBy: { order: { orderDate: 'desc' } },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              image: true,
+              metadata: true,
+              creator: { select: { username: true } }
+            }
+          },
+          order: {
+            select: { orderDate: true }
+          }
+        }
+      }),
+      prisma.orderItem.count({
+        where: {
+          ...whereClause,
+          ...categoryFilter
+        }
+      })
+    ]);
+
+    const formattedItems = items.map(item => ({
+      id: item.id,
+      productId: item.productId,
+      name: item.product.name,
+      description: item.product.description,
+      image: item.product.image,
+      category: item.product.metadata?.category || 'product',
+      fileUrl: item.product.metadata?.fileUrl,
+      fileType: item.product.metadata?.fileType,
+      themeConfig: item.product.metadata?.themeConfig,
+      version: item.product.metadata?.version,
+      purchasedAt: item.order.orderDate,
+      creator: item.product.creator.username
+    }));
+
+    return sendPaginated(res, formattedItems, { page, limit, total });
+  } catch (error) {
+    console.error('Error fetching library:', error);
+    return sendError(res, 'Failed to fetch library', 500);
+  }
+};
+
+// GET /market/library/:productId/download - Get download URL for purchased item
+export const getDownloadUrl = async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
+
+    // Check if user has purchased this item
+    const purchase = await prisma.orderItem.findFirst({
+      where: {
+        productId,
+        order: {
+          userId: req.user.id,
+          status: 'completed'
+        }
+      }
+    });
+
+    if (!purchase) return sendError(res, 'Item not purchased', 403);
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { metadata: true }
+    });
+
+    const fileUrl = product?.metadata?.fileUrl;
+    if (!fileUrl) return sendError(res, 'Download not available', 404);
+
+    return sendSuccess(res, { url: fileUrl });
+  } catch (error) {
+    return sendError(res, 'Failed to get download URL', 500);
+  }
+};
+
+// POST /market/library/:productId/apply - Apply a purchased theme
+export const applyTheme = async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId);
+    if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
+
+    // Check if user has purchased this theme
+    const purchase = await prisma.orderItem.findFirst({
+      where: {
+        productId,
+        order: {
+          userId: req.user.id,
+          status: 'completed'
+        }
+      },
+      include: {
+        product: {
+          select: { metadata: true }
+        }
+      }
+    });
+
+    if (!purchase) return sendError(res, 'Theme not purchased', 403);
+
+    const category = purchase.product.metadata?.category;
+    if (category !== 'theme') return sendError(res, 'Not a theme product', 400);
+
+    // Update or create user preference
+    await prisma.userPreference.upsert({
+      where: { userId: req.user.id },
+      create: {
+        userId: req.user.id,
+        theme: String(productId)
+      },
+      update: {
+        theme: String(productId)
+      }
+    });
+
+    return sendSuccess(res, { themeId: productId }, 'Theme applied');
+  } catch (error) {
+    console.error('Error applying theme:', error);
+    return sendError(res, 'Failed to apply theme', 500);
+  }
+};
+
+// GET /market/library/active-theme - Get user's current active theme
+export const getActiveTheme = async (req, res) => {
+  try {
+    const preference = await prisma.userPreference.findUnique({
+      where: { userId: req.user.id },
+      select: { theme: true }
+    });
+
+    if (!preference?.theme) {
+      return sendSuccess(res, null);
+    }
+
+    const themeId = parseInt(preference.theme);
+    if (isNaN(themeId)) {
+      return sendSuccess(res, null);
+    }
+
+    const theme = await prisma.product.findUnique({
+      where: { id: themeId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        image: true,
+        metadata: true
+      }
+    });
+
+    return sendSuccess(res, theme);
+  } catch (error) {
+    return sendError(res, 'Failed to get active theme', 500);
+  }
+};

@@ -23,6 +23,7 @@
   },
   "registries": {
     "@clerk": "https://clerk.com/r/{name}.json",
-    "@shadcn-editor": "https://shadcn-editor.vercel.app/r/{name}.json"
+    "@shadcn-editor": "https://shadcn-editor.vercel.app/r/{name}.json",
+    "@supabase": "https://supabase.com/ui/r/{name}.json"
   }
 }

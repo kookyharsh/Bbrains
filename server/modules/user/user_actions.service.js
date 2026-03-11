@@ -58,6 +58,7 @@ const claimDailyRewards = async (userId) => {
                 balance: { increment: rewardCoins }
             },
             create: {
+                id: crypto.randomUUID(),
                 userId: userId,
                 balance: rewardCoins,
                 pin: "000000"

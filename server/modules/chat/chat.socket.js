@@ -1,7 +1,6 @@
 import { Server } from "socket.io";
 import prisma from "../../utils/prisma.js";
-import { hasMongoConnection } from "../../utils/mongo.js";
-import ChatMessage from "../../models/chatMessage.model.js";
+import { insertChatMessage, getMessageById, updateChatMessage, deleteChatMessage } from '../../lib/supabase-chat.js';
 
 let activeUsers = {};
 const mentionPattern = /@([a-zA-Z0-9_]+)/g;
@@ -124,35 +123,29 @@ export const initChatSocket = (server) => {
                     return;
                 }
                 if (!content) return;
-                if (!hasMongoConnection()) {
-                    socket.emit("chat:error", { message: "Chat database unavailable. Set MONGODB_URI." });
-                    return;
-                }
-
-                let replyTo = null;
-                if (payload.replyToMessageId) {
-                    const original = await ChatMessage.findById(payload.replyToMessageId).lean();
-                    if (original) {
-                        replyTo = {
-                            messageId: String(original._id),
-                            username: original.username,
-                            content: original.content.slice(0, 160)
-                        };
-                    }
-                }
-
-                const message = await ChatMessage.create({
-                    userId: identity.userId,
+                // Persist to Supabase-based chat storage
+                const payloadToStore = {
+                    chat_id: payload.chatId ?? 'default',
+                    user_id: identity.userId,
                     username: identity.username,
                     displayName: identity.displayName,
                     avatar: identity.avatar,
                     role: identity.type,
                     content,
                     mentions: extractMentions(content),
-                    replyTo
-                });
-
-                io.emit("chat:new", message.toObject());
+                }
+                if (payload.replyToMessageId) {
+                    const original = await getMessageById(payload.replyToMessageId)
+                    if (original) {
+                        payloadToStore.replyTo = original.id
+                    }
+                }
+                const message = await insertChatMessage(payloadToStore)
+                if (message) {
+                    io.emit("chat:new", message)
+                } else {
+                    socket.emit("chat:error", { message: "Failed to save message" })
+                }
             } catch (error) {
                 console.error("chat:send failed", error);
                 socket.emit("chat:error", { message: "Failed to send message" });
@@ -166,27 +159,15 @@ export const initChatSocket = (server) => {
                 const content = String(payload.content || "").trim();
 
                 if (!identity || !messageId || !content) return;
-                if (!hasMongoConnection()) {
-                    socket.emit("chat:error", { message: "Chat database unavailable. Set MONGODB_URI." });
-                    return;
+                const updated = await updateChatMessage(messageId, {
+                    content,
+                    mentions: extractMentions(content),
+                })
+                if (updated) {
+                    io.emit("chat:edited", updated)
+                } else {
+                    socket.emit("chat:error", { message: "Failed to edit message" })
                 }
-
-                const existing = await ChatMessage.findById(messageId);
-                if (!existing) {
-                    socket.emit("chat:error", { message: "Message not found" });
-                    return;
-                }
-                if (existing.userId !== identity.userId) {
-                    socket.emit("chat:error", { message: "You can edit only your own messages" });
-                    return;
-                }
-
-                existing.content = content;
-                existing.mentions = extractMentions(content);
-                existing.editedAt = new Date();
-                await existing.save();
-
-                io.emit("chat:edited", existing.toObject());
             } catch (error) {
                 console.error("chat:edit failed", error);
                 socket.emit("chat:error", { message: "Failed to edit message" });
@@ -198,23 +179,12 @@ export const initChatSocket = (server) => {
                 const identity = socket.data.user;
                 const messageId = String(payload.messageId || "");
                 if (!identity || !messageId) return;
-                if (!hasMongoConnection()) {
-                    socket.emit("chat:error", { message: "Chat database unavailable. Set MONGODB_URI." });
-                    return;
+                const ok = await deleteChatMessage(messageId)
+                if (ok) {
+                    io.emit("chat:deleted", { messageId })
+                } else {
+                    socket.emit("chat:error", { message: "Failed to delete message" })
                 }
-
-                const existing = await ChatMessage.findById(messageId);
-                if (!existing) {
-                    socket.emit("chat:error", { message: "Message not found" });
-                    return;
-                }
-                if (existing.userId !== identity.userId) {
-                    socket.emit("chat:error", { message: "You can delete only your own messages" });
-                    return;
-                }
-
-                await ChatMessage.deleteOne({ _id: messageId });
-                io.emit("chat:deleted", { messageId });
             } catch (error) {
                 console.error("chat:delete failed", error);
                 socket.emit("chat:error", { message: "Failed to delete message" });

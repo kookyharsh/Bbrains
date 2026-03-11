@@ -13,6 +13,7 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ walletUser, balanceVisible, onToggleBalance }: BalanceCardProps) {
+    const displayBalance = Number(walletUser.balance ?? 0);
     return (
         <Card className="relative overflow-hidden bg-linear-to-br from-primary/90 to-primary dark:from-primary/80 dark:to-primary/60 text-primary-foreground border-0 shadow-xl shadow-primary/20">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.15)_0%,transparent_60%)]" />
@@ -36,7 +37,7 @@ export function BalanceCard({ walletUser, balanceVisible, onToggleBalance }: Bal
                     <p className="text-xs font-medium opacity-70 uppercase tracking-wider mb-1">Available Balance</p>
                     <div className="flex items-center gap-3">
                         <span className="text-4xl font-extrabold tracking-tight">
-                            {balanceVisible ? formatCurrency(walletUser.balance) : "₹ ••••••"}
+                            {balanceVisible ? formatCurrency(displayBalance) : "₹ ••••••"}
                         </span>
                         <button
                             onClick={onToggleBalance}

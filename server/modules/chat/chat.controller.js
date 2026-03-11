@@ -1,6 +1,5 @@
 import prisma from "../../utils/prisma.js";
-import ChatMessage from "../../models/chatMessage.model.js";
-import { hasMongoConnection } from "../../utils/mongo.js";
+import { getMessagesForChat, getMessageById, insertChatMessage, updateChatMessage, deleteChatMessage } from "../../lib/supabase-chat.js";
 import { sendError, sendSuccess } from "../../utils/response.js";
 
 const pronounBySex = {
@@ -33,14 +32,9 @@ const normalizeProfile = (user) => {
 export const getChatMessages = async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit || "200"), 10), 1), 500);
-        if (!hasMongoConnection()) return sendSuccess(res, []);
-
-        const messages = await ChatMessage.find()
-            .sort({ createdAt: -1 })
-            .limit(limit)
-            .lean();
-
-        return sendSuccess(res, messages.reverse());
+        const messages = await getMessagesForChat(req.query.chatId) // chatId optional
+        const sliced = messages.slice(-limit);
+        return sendSuccess(res, sliced);
     } catch (error) {
         console.error("Failed to fetch chat messages:", error);
         return sendError(res, "Failed to fetch chat messages", 500);

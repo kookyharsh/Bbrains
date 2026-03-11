@@ -15,7 +15,7 @@ const changePinSchema = z.object({
 });
 
 const transferSchema = z.object({
-    recipientWalletId: z.number().int().positive(),
+    recipientWalletId: z.string().email("Invalid email format"),
     amount: z.number().positive(),
     note: z.string().max(255).optional(),
     pin: z.string().length(6)
@@ -55,10 +55,11 @@ export const setupPin = async (req, res) => {
 
         const wallet = await prisma.wallet.findUnique({ where: { userId: req.user.id } });
         if (!wallet) {
-            // Create wallet with PIN
+            // Create wallet with email as ID and PIN
             const hashedPin = await bcrypt.hash(validated.pin, 10);
+            const userEmail = req.user.email;
             const newWallet = await prisma.wallet.create({
-                data: { userId: req.user.id, pin: hashedPin, balance: 500 }
+                data: { id: userEmail, userId: req.user.id, pin: hashedPin, balance: 500 }
             });
             await createAuditLog(req.user.id, 'FINANCE', 'SETUP_PIN', 'Wallet', newWallet.id);
             return sendCreated(res, { id: newWallet.id }, 'Wallet created and PIN set');

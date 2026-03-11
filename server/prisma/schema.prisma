@@ -49,6 +49,7 @@ model User {
   xp               Xp?
   attendances      Attendance[]
   streak           Streak?
+  preference        UserPreference?
 
   @@map("user")
 }
@@ -237,7 +238,7 @@ model UserAchievements {
 }
 
 model Wallet {
-  id      String  @id @map("wallet_id")
+  id      String  @id @map("wallet_id") @db.VarChar(255)
   userId  String  @unique @map("user_id")
   pin     String? @db.VarChar(255)
   balance Decimal @default(500.00) @db.Decimal(10, 2)
@@ -255,6 +256,7 @@ model Product {
   price       Decimal     @db.Decimal(10, 2)
   stock       Int
   approval    ProductApproval @default(pending)
+  metadata    Json?       // category, fileUrl, fileType, previewImages, themeConfig, version, downloads
   createdAt   DateTime    @default(now()) @map("created_at")
   cartItems   Cart[]
   orderItems  OrderItem[]
@@ -429,5 +431,17 @@ model Streak {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("streak")
+}
+
+model UserPreference {
+  id        String   @id @default(cuid()) @map("preference_id")
+  userId    String   @unique @map("user_id")
+  theme     String?  // active theme ID or name
+  settings  Json?    // other user settings (language, notifications, etc.)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preference")
 }
 

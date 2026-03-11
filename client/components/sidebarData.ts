@@ -6,9 +6,11 @@ import {
     Wallet,
     Book,
     ShoppingCart,
-    CreditCard,
     Wrench,
-    FileText
+    FileText,
+    Palette,
+    Library,
+    CreditCard
 } from "lucide-react"
 
 export type SubItem = {
@@ -66,6 +68,23 @@ export const sidebarItems: SidebarItem[] = [
         title: "Market",
         url: "/market",
         icon: ShoppingCart,
+        subItems: [
+            {
+                title: "Browse",
+                url: "/market",
+                icon: ShoppingCart,
+            },
+            {
+                title: "Themes",
+                url: "/market/themes",
+                icon: Palette,
+            },
+            {
+                title: "Library",
+                url: "/market/library",
+                icon: Library,
+            },
+        ]
     },
     {
         title: "Tools",

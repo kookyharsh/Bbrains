@@ -1,21 +1,21 @@
 import bcrypt from "bcrypt";
 import { z } from "zod";
 import { findUserByEmail, createUser, getUserDetailsByID } from "../user/user.service.js";
-import { createClerkUserAndSendInvite } from "../auth/clerk.service.js";
 import dotenv from "dotenv";
 import { generateToken } from "../../utils/tokengen.js";
 import { getRandomAvatar } from "../../utils/randomavatar.js";
 import { sendSuccess, sendCreated, sendError } from "../../utils/response.js";
 import { createAuditLog } from "../../utils/auditLog.js";
+import supabase from "../../utils/supabase.js";
 
 dotenv.config();
 
-const CLERK_INVITE_REDIRECT_URL = process.env.CLERK_INVITE_REDIRECT_URL || "http://localhost:3000/login";
+const SUPABASE_INVITE_REDIRECT_URL = process.env.SUPABASE_INVITE_REDIRECT_URL || "http://localhost:3000/auth/confirm";
 
-// Zod Schemas
 const registerSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/, "Username must be alphanumeric with underscores"),
   email: z.string().email("Invalid email format").max(50),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   collegeId: z.number().int().positive().optional()
 });
 
@@ -24,9 +24,6 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required")
 });
 
-/* =========================
-   REGISTER (Clerk: create user + send invitation; create in Prisma with clerkUserId)
-========================= */
 const register = async (req, res) => {
   try {
     const validated = registerSchema.parse(req.body);
@@ -38,24 +35,34 @@ const register = async (req, res) => {
 
     const collegeId = validated.collegeId || 45;
 
-    const { clerkUserId } = await createClerkUserAndSendInvite({
+    const { data: supabaseUser, error: supabaseError } = await supabase.auth.admin.createUser({
       email: validated.email,
-      username: validated.username,
-      redirectUrl: CLERK_INVITE_REDIRECT_URL,
+      password: validated.password,
+      email_confirm: true,
+      user_metadata: {
+        username: validated.username
+      }
     });
 
+    if (supabaseError) {
+      console.error('Supabase user creation error:', supabaseError);
+      return sendError(res, "Failed to create user in authentication system", 500);
+    }
+
+    const supabaseUserId = supabaseUser.user.id;
+
     const newUser = await createUser(
-      clerkUserId,
+      supabaseUserId,
       validated.username,
       validated.email,
       collegeId,
-      null,
+      validated.password,
       getRandomAvatar()
     );
 
     await createAuditLog(newUser.id, 'AUTH', 'REGISTER', 'User', newUser.id);
 
-    return sendCreated(res, { id: newUser.id, username: newUser.username }, "User registered. Check your email to set your password and sign in.");
+    return sendCreated(res, { id: newUser.id, username: newUser.username }, "User registered successfully.");
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
@@ -65,27 +72,24 @@ const register = async (req, res) => {
   }
 };
 
-/* =========================
-   LOGIN
-========================= */
 const login = async (req, res) => {
   try {
     const validated = loginSchema.parse(req.body);
 
+    const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
+      email: validated.email,
+      password: validated.password
+    });
+
+    if (supabaseError || !supabaseData.user) {
+      return sendError(res, "Invalid credentials", 401);
+    }
+
     const user = await findUserByEmail(validated.email);
     if (!user) {
-      return sendError(res, "Invalid credentials", 401);
-    }
-    if (!user.password) {
-      return sendError(res, "This account uses Clerk. Sign in via the app with the link sent to your email.", 401);
+      return sendError(res, "User not found in database. Please contact an administrator.", 404);
     }
 
-    const isMatch = await bcrypt.compare(validated.password, user.password);
-    if (!isMatch) {
-      return sendError(res, "Invalid credentials", 401);
-    }
-
-    // Include type in JWT for RBAC
     const token = generateToken({
       id: user.id,
       username: user.username,
@@ -102,7 +106,7 @@ const login = async (req, res) => {
 
     await createAuditLog(user.id, 'AUTH', 'LOGIN', 'User', user.id);
 
-    return sendSuccess(res, { user: userData }, "Login successful");
+    return sendSuccess(res, { user: userData, supabaseToken: supabaseData.session.access_token }, "Login successful");
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
@@ -112,9 +116,6 @@ const login = async (req, res) => {
   }
 };
 
-/* =========================
-   LOGOUT
-========================= */
 const logout = async (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
