@@ -1,8 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { redirect } from 'next/navigation'
-
 import { DailyRewardCard } from "@/components/dashboard/DailyRewardCard";
 import { WalletMiniCard } from "@/components/dashboard/WalletMiniCard";
 import { AttendanceCard } from "@/components/dashboard/AttendanceCard";
@@ -10,55 +5,47 @@ import { LeaderboardCard } from "@/components/dashboard/LeaderboardCard";
 import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import { AnnouncementsCard } from "@/components/dashboard/AnnouncementsCard";
 import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
-import { dashboardApi, User } from "@/lib/api-services";
-import { Skeleton } from "@/components/ui/skeleton";
+import { dashboardApi } from "@/lib/api-services";
 
-export default function DashboardOverview() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default async function DashboardOverview() {
+  let dashboardData = null;
+  let error = null;
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await dashboardApi.getUser();
-        if (response.success && response.data) {
-          setUser(response.data);
-        } else {
-          setError(response.message || "Failed to load user");
-        }
-      } catch (err) {
-        setError("Failed to load user data");
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    const response = await dashboardApi.getDashboard();
+    if (response.success && response.data) {
+      dashboardData = response.data;
+    } else {
+      error = response.message || "Failed to load dashboard data";
+    }
+  } catch (err) {
+    error = "Failed to load dashboard data";
+  }
 
-    fetchUser();
-  }, []);
+  // Handle Leaderboard transformation if data exists
+  const transformedLeaderboard = dashboardData?.leaderboard ? (dashboardData.leaderboard as any[]).map((entry) => ({
+    id: entry.userId || entry.id || "",
+    rank: entry.rank,
+    xp: entry.score ?? entry.xp ?? 0,
+    username: entry.user?.username || entry.username || 'Unknown',
+    firstName: entry.user?.userDetails?.firstName || entry.firstName || "",
+    lastName: entry.user?.userDetails?.lastName || entry.lastName || "",
+    avatar: entry.user?.userDetails?.avatar || entry.avatar || "",
+  })) : [];
 
-  const username = user?.firstName || user?.username || "User";
+  const username = dashboardData?.user?.firstName || dashboardData?.user?.username || "User";
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-          ) : (
-            <>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                Welcome back, {username}! 👋
-              </h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Here's what's happening with your studies today.
-              </p>
-            </>
-          )}
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            Welcome back, {username}! 👋
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Here's what's happening with your studies today.
+          </p>
         </div>
         <div className="text-xs text-muted-foreground bg-card border border-border px-3 py-1.5 rounded-lg self-start">
           {new Date().toLocaleDateString("en-US", {
@@ -72,21 +59,21 @@ export default function DashboardOverview() {
 
       {/* Top row cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <DailyRewardCard />
-        <WalletMiniCard />
-        <AttendanceCard />
+        <DailyRewardCard initialStreak={dashboardData?.streak} />
+        <WalletMiniCard initialWallet={dashboardData?.wallet} />
+        <AttendanceCard initialAttendance={dashboardData?.attendance} />
       </div>
 
       {/* Mid row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <LeaderboardCard />
+        <LeaderboardCard initialLeaderboard={transformedLeaderboard} />
         <MyTasksCard />
       </div>
 
       {/* Bottom row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <AnnouncementsCard />
-        <UpcomingEventsCard />
+        <AnnouncementsCard initialAnnouncements={dashboardData?.announcements?.slice(0, 5)} />
+        <UpcomingEventsCard initialEvents={dashboardData?.events?.slice(0, 5)} />
       </div>
     </div>
   );

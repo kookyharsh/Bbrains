@@ -1,0 +1,12 @@
+export { OverviewTab } from "./OverviewTab"
+export { TeachersTab } from "./TeachersTab"
+export { StudentsTab } from "./StudentsTab"
+export { AssignmentsTab } from "./AssignmentsTab"
+export { AnnouncementsTab } from "./AnnouncementsTab"
+export { RolesTab } from "./RolesTab"
+export { UserRolesTab } from "./UserRolesTab"
+export { ProductsTab } from "./ProductsTab"
+export { AchievementsTab } from "./AchievementsTab"
+export { AuditLogTab } from "./AuditLogTab"
+export { TransactionsTab } from "./TransactionsTab"
+

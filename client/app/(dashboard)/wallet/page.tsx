@@ -42,7 +42,9 @@ import { Scanner } from "@yudiel/react-qr-scanner";
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { walletApi, transactionApi, Transaction, WalletData } from "@/lib/api-services";
+import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
+import { walletApi, transactionApi, dashboardApi, Transaction, WalletData, User } from "@/lib/api-services";
 import { validate, hasErrors, ValidationErrors, commonRules } from "@/lib/validation";
 
 const chartData = [
@@ -53,6 +55,7 @@ const chartData = [
 
 export default function WalletPage() {
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,9 +81,10 @@ export default function WalletPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [walletRes, txnRes] = await Promise.all([
+        const [walletRes, txnRes, userRes] = await Promise.all([
           walletApi.getWallet(),
           transactionApi.getMyTransactions(),
+          dashboardApi.getUser(),
         ]);
 
         if (walletRes.success && walletRes.data) {
@@ -88,6 +92,9 @@ export default function WalletPage() {
         }
         if (txnRes.success && txnRes.data) {
           setTransactions(txnRes.data);
+        }
+        if (userRes.success && userRes.data) {
+          setUser(userRes.data);
         }
       } catch (err) {
         setError("Failed to load wallet data");
@@ -179,125 +186,222 @@ export default function WalletPage() {
     setFormErrors((prev) => ({ ...prev, [field]: undefined }));
   }, []);
 
+  const formatPoints = (amount: number | string) => {
+    return Number(amount).toLocaleString();
+  };
+
+  const walletBalance = Number(wallet?.balance ?? 0);
+  const xp = user?.xp ?? 0;
+  const level = user?.level ?? Math.floor(xp / 1000) + 1;
+  const nextLevel = {
+    levelNumber: level + 1,
+    requiredXp: level * 1000
+  };
+  const progressPercent = Math.min(Math.floor(((xp % 1000) / 1000) * 100), 100);
+
+  const last7Days = transactions.filter(t => {
+    const date = new Date(t.createdAt);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    return diff <= 7 * 24 * 60 * 60 * 1000;
+  });
+
+  const earnedPoints = last7Days
+    .filter(t => t.type === 'credit' || t.type === 'received')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const spentPoints = last7Days
+    .filter(t => t.type === 'debit')
+    .reduce((sum, t) => sum + t.amount, 0);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-foreground">Wallet</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Wallet Card */}
-        <Card className="lg:col-span-1 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground border-0">
-          <CardContent className="p-6">
-            {loading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-12 w-32" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-6">
-                  <CreditCard className="w-8 h-8 opacity-80" />
-                  <span className="text-xs opacity-70">B-Wallet</span>
-                </div>
-                <p className="text-sm opacity-80 mb-1">Total Balance</p>
-                <p className="text-4xl font-bold mb-4">{Number(wallet?.balance ?? 0).toLocaleString()}</p>
-                <p className="text-sm opacity-80">Wallet Holder</p>
-                <p className="text-xs opacity-60 mt-1">
-                  {wallet?.pinSet ? 'PIN Set' : 'PIN Not Set'}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+      <section className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-gradient-to-br from-[#fff7dd] via-white to-[#def2ff] p-6 shadow-sm">
+          <div className="pointer-events-none absolute right-6 top-6 hidden opacity-20 md:block">
+              <CreditCard className="w-14 h-14 text-slate-800" />
+          </div>
+          <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+              <div>
+                  <span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Student Wallet
+                  </span>
+                  <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-800">
+                      Your campus points, XP, and reward progress
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                      This wallet tracks what a student earns through assignments, attendance, streaks, and performance, then turns those points into store access and progress milestones.
+                  </p>
 
-        {/* Actions */}
-        <Card className="lg:col-span-2">
-          <CardContent className="p-6">
-            <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={async () => {
-                try {
-                  const balanceRes = await walletApi.getBalance();
-                  if (balanceRes.success && balanceRes.data && wallet) {
-                    setWallet({ ...wallet, balance: balanceRes.data.balance });
+                  <div className="mt-6 grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl bg-slate-900 p-5 text-white shadow-sm flex flex-col justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Available Points</p>
+                            <p className="mt-3 text-4xl font-semibold">{formatPoints(walletBalance)}</p>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-300">Ready to spend in the reward store.</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">XP Collected</p>
+                            <p className="mt-3 text-3xl font-semibold text-slate-800">{formatPoints(xp)}</p>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-500">Academic growth across tasks and milestones.</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/70 bg-white/80 p-5 shadow-sm flex flex-col justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Current Level</p>
+                            <p className="mt-3 text-3xl font-semibold text-slate-800">Level {level}</p>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-500">
+                              {nextLevel ? `${Math.max(Number(nextLevel.requiredXp) - Number(xp), 0)} XP to next level` : "Top tier reached"}
+                          </p>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-sm backdrop-blur">
+                  <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold text-slate-800">Level progress</h2>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {progressPercent}%
+                      </span>
+                  </div>
+                  <div className="mt-5">
+                      <Progress value={progressPercent} className="h-3" />
+                  </div>
+                  <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+                      <span>Level {level}</span>
+                      <span>{nextLevel ? `Level ${nextLevel.levelNumber}` : "Max"}</span>
+                  </div>
+
+                  <div className="mt-6 grid gap-3">
+                      <div className="rounded-2xl bg-slate-50/50 p-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Earn</p>
+                          <p className="mt-2 text-sm font-medium text-slate-700">Assignments, attendance, quiz performance, and streak bonuses.</p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50/50 p-4">
+                          <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Spend</p>
+                          <p className="mt-2 text-sm font-medium text-slate-700">Use points in the store for perks, unlocks, and student rewards.</p>
+                      </div>
+                      <div className="flex gap-3">
+                          <Link href="/store" className="flex-1 rounded-full bg-slate-900 px-4 py-3 text-center text-sm font-medium text-white transition hover:bg-slate-700">
+                              Open Store
+                          </Link>
+                          <Link href="/list/assignments" className="flex-1 rounded-full border border-slate-200 px-4 py-3 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                              Earn More
+                          </Link>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      {error ? (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              {error}
+          </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-6">
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="font-semibold text-foreground mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={async () => {
+                  try {
+                    const balanceRes = await walletApi.getBalance();
+                    if (balanceRes.success && balanceRes.data && wallet) {
+                      setWallet({ ...wallet, balance: balanceRes.data.balance });
+                    }
+                  } catch (err) {
+                    console.error("Failed to fetch latest balance");
                   }
-                } catch (err) {
-                  console.error("Failed to fetch latest balance");
-                }
-                setShowSendDialog(true);
-              }}>
-                <ArrowUpRight className="w-6 h-6 text-destructive" />
-                <span className="text-sm">Send Money</span>
-              </Button>
-              <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
-                <ArrowDownLeft className="w-6 h-6 text-green-600" />
-                <span className="text-sm">Receive</span>
-              </Button>
-              <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setShowQrDialog(true)}>
-                <QrCode className="w-6 h-6 text-primary" />
-                <span className="text-sm">Show QR</span>
-              </Button>
-              <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setShowScanDialog(true)}>
-                <ScanLine className="w-6 h-6 text-primary" />
-                <span className="text-sm">Scan QR</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Chart */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-lg">Spending Overview</CardTitle>
-          <Tabs value={chartFilter} onValueChange={setChartFilter}>
-            <TabsList className="h-8">
-              <TabsTrigger value="this-week" className="text-xs px-2">This Week</TabsTrigger>
-              <TabsTrigger value="this-month" className="text-xs px-2">This Month</TabsTrigger>
-              <TabsTrigger value="3-months" className="text-xs px-2">3 Months</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <RechartsTooltip />
-                <Bar dataKey="sent" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Sent" />
-                <Bar dataKey="received" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Received" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Transaction History */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <CardTitle className="text-lg">Transaction History</CardTitle>
-            <div className="flex gap-2">
-              <div className="relative flex-1 sm:w-48">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search..." value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} className="pl-9 h-9" />
+                  setShowSendDialog(true);
+                }}>
+                  <ArrowUpRight className="w-6 h-6 text-destructive" />
+                  <span className="text-sm">Send Money</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                  <ArrowDownLeft className="w-6 h-6 text-green-600" />
+                  <span className="text-sm">Receive</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setShowQrDialog(true)}>
+                  <QrCode className="w-6 h-6 text-primary" />
+                  <span className="text-sm">Show QR</span>
+                </Button>
+                <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setShowScanDialog(true)}>
+                  <ScanLine className="w-6 h-6 text-primary" />
+                  <span className="text-sm">Scan QR</span>
+                </Button>
               </div>
-              <Select value={txnFilter} onValueChange={setTxnFilter}>
-                <SelectTrigger className="w-[140px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="this-month">This Month</SelectItem>
-                  <SelectItem value="30-days">Last 30 Days</SelectItem>
-                  <SelectItem value="90-days">Last 90 Days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+            </CardContent>
+          </Card>
+
+          {/* Chart */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg">Spending Overview</CardTitle>
+              <Tabs value={chartFilter} onValueChange={setChartFilter}>
+                <TabsList className="h-8">
+                  <TabsTrigger value="this-week" className="text-xs px-2">This Week</TabsTrigger>
+                  <TabsTrigger value="this-month" className="text-xs px-2">This Month</TabsTrigger>
+                  <TabsTrigger value="3-months" className="text-xs px-2">3 Months</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                    <XAxis dataKey="month" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                    <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                    <RechartsTooltip />
+                    <Bar dataKey="sent" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Sent" />
+                    <Bar dataKey="received" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Received" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-xl font-semibold text-slate-800">Point summary</h2>
+              <div className="mt-5 grid gap-3">
+                  <div className="rounded-2xl bg-emerald-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-emerald-600">Earned recently</p>
+                      <p className="mt-2 text-3xl font-semibold text-slate-800">{formatPoints(earnedPoints)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-rose-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-rose-600">Spent recently</p>
+                      <p className="mt-2 text-3xl font-semibold text-slate-800">{formatPoints(spentPoints)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-sky-50 p-4">
+                      <p className="text-xs uppercase tracking-[0.16em] text-sky-600">Spendable now</p>
+                      <p className="mt-2 text-3xl font-semibold text-slate-800">{formatPoints(walletBalance)}</p>
+                  </div>
+              </div>
+          </Card>
+
+          {/* Transaction History Sub-Section */}
+          <Card className="border-0 shadow-none bg-transparent">
+            <CardHeader className="px-0 pt-0">
+              <div className="flex flex-col gap-3">
+                <CardTitle className="text-lg">Recent Transactions</CardTitle>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder="Search..." value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} className="pl-9 h-9" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-0">
           {loading ? (
             <div className="space-y-2">
               {[1, 2, 3, 4].map((i) => (
@@ -358,6 +462,8 @@ export default function WalletPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  </div>
 
       {/* Send Money Dialog */}
       <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>

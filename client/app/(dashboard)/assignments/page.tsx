@@ -160,23 +160,39 @@ export default function AssignmentsPage() {
         <p className="text-muted-foreground">View, search and submit your assignments</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Premium Filter Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card/50 backdrop-blur-sm p-3 rounded-[24px] border border-border/40 shadow-sm mt-2">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search assignments..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-10 bg-background/50 border-border/40 rounded-2xl h-11 focus-visible:ring-brand-purple"
           />
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+            <TabsList className="bg-muted/50 p-1 rounded-2xl h-11 flex items-center w-full sm:w-auto">
+              {["all", "incomplete", "submitted", "completed"].map((tab) => (
+                <TabsTrigger 
+                  key={tab} 
+                  value={tab} 
+                  className="rounded-xl px-4 h-9 text-xs font-medium capitalize data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                >
+                  {tab === "all" ? "All" : tab}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
           <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Date filter" />
+            <SelectTrigger className="w-full sm:w-[140px] h-11 bg-background/50 border-border/40 rounded-2xl text-xs font-medium">
+              <Calendar className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Date Filter" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl border-border/40">
               <SelectItem value="all">All dates</SelectItem>
               <SelectItem value="this-week">This week</SelectItem>
               <SelectItem value="this-month">This month</SelectItem>
@@ -186,14 +202,9 @@ export default function AssignmentsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="incomplete">Incomplete</TabsTrigger>
-          <TabsTrigger value="submitted">Submitted</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
+      {/* Content Area */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        {/* We keep the tabs triggers here for structure but the logic is linked to the bar above */}
 
         <TabsContent value={activeTab} className="mt-4">
           <div className="grid gap-4">

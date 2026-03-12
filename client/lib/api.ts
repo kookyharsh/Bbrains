@@ -19,26 +19,44 @@ export async function getAuthToken(): Promise<string | null> {
   // SSR path: use server-side helper to fetch the token from cookies/session
   if (typeof window === 'undefined') {
     try {
-      // Dynamic requires to avoid bundling server-only code in the client bundle
-      const { cookies } = require('next/headers');
-      const { createServerComponentClient } = require('@supabase/auth-helpers-nextjs');
-      const supabaseServer = createServerComponentClient({ cookies });
+      // Dynamic imports to avoid bundling server-only code in the client bundle
+      const { cookies } = await import('next/headers');
+      // Use createServerClient from @supabase/ssr as it's more modern and already in use in middleware
+      const { createServerClient } = await import('@supabase/ssr');
+      
+      const cookieStore = await cookies();
+      
+      const supabaseServer = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll() {
+              // Read-only in this context
+            },
+          },
+        }
+      );
+
       const { data: { session }, error } = await supabaseServer.auth.getSession();
       if (error || !session?.access_token) return null;
       return session.access_token;
-    } catch {
-      // fall back to client logic if SSR helpers are not available
+    } catch (e) {
+      console.error('SSR getAuthToken error:', e);
+      return null;
     }
   }
 
-  // Client path: use shared client session via cookies (no localStorage token handling)
+  // Client path: use shared client session via cookies
   try {
-    const { data: { session }, error } = await (supabase as any).auth.getSession();
+    if (!supabase) return null;
+    const { data: { session }, error } = await supabase.auth.getSession();
     if (error || !session?.access_token) {
-      console.log('No session or token');
       return null;
     }
-    console.log('Token found:', session.access_token.substring(0, 20) + '...');
     return session.access_token;
   } catch (e) {
     console.error('Error getting token:', e);
@@ -51,7 +69,6 @@ async function makeRequest<T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const token = await getAuthToken();
-  console.log('Making request to:', endpoint, 'Token:', token ? 'present' : 'MISSING');
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',

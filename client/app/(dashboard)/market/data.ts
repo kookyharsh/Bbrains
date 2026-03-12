@@ -16,10 +16,8 @@ export function mapApiProduct(p: ApiProduct): Product {
   }
 }
 
-export async function fetchProducts(
-  getToken: () => Promise<string | null>,
-): Promise<Product[]> {
-  const client = await getAuthedClient(getToken)
+export async function fetchProducts(): Promise<Product[]> {
+  const client = await getAuthedClient()
   const response = await client.get<{
     success: boolean
     data: ApiProduct[]
@@ -32,10 +30,8 @@ export async function fetchProducts(
   return response.data.data.map(mapApiProduct)
 }
 
-export async function fetchMyProducts(
-  getToken: () => Promise<string | null>,
-): Promise<Product[]> {
-  const client = await getAuthedClient(getToken)
+export async function fetchMyProducts(): Promise<Product[]> {
+  const client = await getAuthedClient()
   const response = await client.get<{
     success: boolean
     data: ApiProduct[]
@@ -48,10 +44,8 @@ export async function fetchMyProducts(
   return response.data.data.map(mapApiProduct)
 }
 
-export async function fetchPendingProducts(
-  getToken: () => Promise<string | null>,
-): Promise<(Product & { creatorName: string })[]> {
-  const client = await getAuthedClient(getToken)
+export async function fetchPendingProducts(): Promise<(Product & { creatorName: string })[]> {
+  const client = await getAuthedClient()
   const response = await client.get<{
     success: boolean
     data: ApiProduct[]
@@ -68,11 +62,10 @@ export async function fetchPendingProducts(
 }
 
 export async function approveRejectProduct(
-  getToken: () => Promise<string | null>,
   productId: string,
   status: "approved" | "rejected",
 ): Promise<Product> {
-  const client = await getAuthedClient(getToken)
+  const client = await getAuthedClient()
   const response = await client.patch<{
     success: boolean
     data: ApiProduct
@@ -86,10 +79,9 @@ export async function approveRejectProduct(
 }
 
 export async function addToCart(
-  getToken: () => Promise<string | null>,
   params: { productId: number; quantity: number },
 ) {
-  const client = await getAuthedClient(getToken)
+  const client = await getAuthedClient()
   await client.post("/market/cart", params)
 }
 
@@ -103,10 +95,9 @@ export interface CreateProductPayload {
 }
 
 export async function createProduct(
-  getToken: () => Promise<string | null>,
   payload: CreateProductPayload,
 ): Promise<Product> {
-  const client = await getAuthedClient(getToken)
+  const client = await getAuthedClient()
   const response = await client.post<{
     success: boolean
     data: ApiProduct

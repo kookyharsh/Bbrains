@@ -3,6 +3,7 @@
 import { Bell, LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/client"
+import { useNotifications } from "./providers/notification-provider"
 
 import { ModeToggle } from "./mode-toggle"
 import { SidebarTrigger } from "./ui/sidebar"
@@ -17,6 +18,7 @@ import Link from "next/link"
 
 export function MainNavbar({ user }: { user?: any }) {
     const router = useRouter()
+    const { unreadCount } = useNotifications()
 
     const handleLogout = async () => {
         const supabase = createClient()
@@ -42,7 +44,11 @@ export function MainNavbar({ user }: { user?: any }) {
                     <ModeToggle />
                     <button className="relative w-10 h-10 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-full border border-gray-100 dark:border-gray-800 transition-colors">
                         <Bell className="h-5 w-5" />
-                        <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-950"></span>
+                        {unreadCount > 0 && (
+                            <span className="absolute top-2 right-2 h-4 w-4 bg-red-500 rounded-full border-2 border-white dark:border-gray-950 text-[10px] font-bold text-white flex items-center justify-center">
+                                {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                        )}
                     </button>
                 </div>
 

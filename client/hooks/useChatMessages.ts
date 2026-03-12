@@ -13,6 +13,7 @@ export interface ChatMessageDisplay {
   avatar: string
   timestamp: Date
   mentions?: string[]
+  attachments?: { url: string; type: string; name?: string }[]
   isOwn: boolean
   replyToId?: string | null
 }
@@ -24,12 +25,14 @@ interface ChatMessageRow {
   created_at: string
   mentions: string[] | null
   reply_to_id: string | null
+  attachments: { url: string; type: string; name?: string }[] | null
 }
 
 export function useChatMessages() {
   const [messages, setMessages] = useState<ChatMessageDisplay[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [isConnected, setIsConnected] = useState(false)
 
   const browserClient = createClient()
 
@@ -97,6 +100,7 @@ export function useChatMessages() {
         avatar: details?.avatar || displayName.charAt(0).toUpperCase(),
         timestamp: new Date(msg.created_at),
         mentions: msg.mentions || undefined,
+        attachments: (msg.attachments as { url: string; type: string; name?: string }[]) ?? [],
         isOwn: msg.user_id === currentUserId,
         replyToId: msg.reply_to_id || null
       }
@@ -108,7 +112,6 @@ export function useChatMessages() {
 
   useEffect(() => {
     fetchMessages()
-
     const channel = supabase
       .channel('messages-changes')
       .on(
@@ -123,32 +126,51 @@ export function useChatMessages() {
           fetchMessages()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
+        } else {
+          setIsConnected(false)
+        }
+      })
 
     return () => {
-      supabase.removeChannel(channel)
+      if (typeof (supabase as any).removeChannel === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).removeChannel(channel)
+      }
     }
   }, [fetchMessages])
 
-  const sendMessage = useCallback(async (content: string, mentions?: string[], replyToId?: string) => {
+  const sendMessage = useCallback(async (
+    content: string,
+    attachments?: { url: string; type: string; name?: string }[],
+    mentions?: string[],
+    replyToId?: string
+  ) => {
     if (!currentUserId) {
       console.error('No current user ID')
       return
     }
 
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        content,
-        user_id: currentUserId,
-        mentions: mentions || null,
-        reply_to_id: replyToId || null
-      })
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          content,
+          user_id: currentUserId,
+          mentions: mentions || null,
+          reply_to_id: replyToId || null,
+          attachments: attachments || null
+        })
 
-    if (error) {
-      console.error('Error sending message:', error)
-    } else {
-      fetchMessages()
+      if (error) {
+        console.error('Error sending message:', error?.message ?? error, error?.details ?? '')
+      } else {
+        fetchMessages()
+      }
+    } catch (err) {
+      console.error('Error sending message (exception):', err)
     }
   }, [currentUserId, fetchMessages])
 
@@ -185,6 +207,7 @@ export function useChatMessages() {
     messages,
     loading,
     currentUserId,
+    isConnected,
     sendMessage,
     deleteMessage,
     editMessage

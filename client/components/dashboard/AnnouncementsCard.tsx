@@ -6,12 +6,21 @@ import { Bell, ExternalLink, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { announcementApi, Announcement } from "@/lib/api-services";
 
-export function AnnouncementsCard() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+interface AnnouncementsCardProps {
+  initialAnnouncements?: Announcement[];
+}
+
+export function AnnouncementsCard({ initialAnnouncements }: AnnouncementsCardProps) {
+  const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements || []);
+  const [loading, setLoading] = useState(!initialAnnouncements);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialAnnouncements) {
+      setLoading(false);
+      return;
+    }
+
     const fetchAnnouncements = async () => {
       try {
         const response = await announcementApi.getAnnouncements();
@@ -28,7 +37,7 @@ export function AnnouncementsCard() {
     };
 
     fetchAnnouncements();
-  }, []);
+  }, [initialAnnouncements]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

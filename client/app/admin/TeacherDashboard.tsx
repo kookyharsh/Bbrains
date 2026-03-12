@@ -8,10 +8,14 @@ import {
 import { cn } from "@/lib/utils"
 
 import {
-    TeacherOverview, TeacherStudentsTab, TeacherAssignmentsTab,
-    TeacherGradingTab, TeacherProductsTab, TeacherAnnouncementsTab,
-    TeacherAuditLogTab,
-} from "./TeacherTabs"
+    OverviewTab as TeacherOverview, 
+    StudentsTab as TeacherStudentsTab, 
+    AssignmentsTab as TeacherAssignmentsTab,
+    GradingTab as TeacherGradingTab, 
+    ProductsTab as TeacherProductsTab, 
+    AnnouncementsTab as TeacherAnnouncementsTab,
+    AuditLogTab as TeacherAuditLogTab,
+} from "@/components/teacher/tabs"
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
@@ -29,7 +33,7 @@ const TABS: { id: TeacherTab; label: string; icon: React.ReactNode; description:
 
 // ─── Teacher Dashboard ────────────────────────────────────────────────────────
 
-export function TeacherDashboard({ getToken }: { getToken: () => Promise<string | null> }) {
+export function TeacherDashboard() {
     const [activeTab, setActiveTab] = useState<TeacherTab>("overview")
 
     const active = TABS.find((t) => t.id === activeTab)!
@@ -93,13 +97,13 @@ export function TeacherDashboard({ getToken }: { getToken: () => Promise<string 
                 </div>
 
                 <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-                    {activeTab === "overview" && <TeacherOverview getToken={getToken} />}
-                    {activeTab === "students" && <TeacherStudentsTab getToken={getToken} />}
-                    {activeTab === "assignments" && <TeacherAssignmentsTab getToken={getToken} />}
-                    {activeTab === "grading" && <TeacherGradingTab getToken={getToken} />}
-                    {activeTab === "products" && <TeacherProductsTab getToken={getToken} />}
-                    {activeTab === "announcements" && <TeacherAnnouncementsTab getToken={getToken} />}
-                    {activeTab === "audit" && <TeacherAuditLogTab getToken={getToken} />}
+                    {activeTab === "overview" && <TeacherOverview />}
+                    {activeTab === "students" && <TeacherStudentsTab />}
+                    {activeTab === "assignments" && <TeacherAssignmentsTab />}
+                    {activeTab === "grading" && <TeacherGradingTab />}
+                    {activeTab === "products" && <TeacherProductsTab />}
+                    {activeTab === "announcements" && <TeacherAnnouncementsTab />}
+                    {activeTab === "audit" && <TeacherAuditLogTab />}
                 </div>
             </main>
         </div>

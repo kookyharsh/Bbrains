@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/auth-helpers-nextjs'
 
 // Central server-side Supabase client for SSR contexts
 export function getServerSupabase() {
-  return createServerComponentClient({ cookies })
+  return createServerClient({ cookies })
 }
 
 export async function getServerSession() {

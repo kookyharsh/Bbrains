@@ -8,11 +8,18 @@ import {
 import { cn } from "@/lib/utils"
 
 import {
-    AdminOverview, AdminTeachersTab, AdminStudentsTab,
-    AdminAssignmentsTab, AdminAnnouncementsTab, AdminRolesTab,
-    AdminUserRolesTab, AdminProductsTab, AdminAchievementsTab,
-    AdminAuditLogTab, AdminTransactionsTab,
-} from "./AdminTabs"
+    OverviewTab as AdminOverview, 
+    TeachersTab as AdminTeachersTab, 
+    StudentsTab as AdminStudentsTab,
+    AssignmentsTab as AdminAssignmentsTab, 
+    AnnouncementsTab as AdminAnnouncementsTab, 
+    RolesTab as AdminRolesTab,
+    UserRolesTab as AdminUserRolesTab, 
+    ProductsTab as AdminProductsTab, 
+    AchievementsTab as AdminAchievementsTab,
+    AuditLogTab as AdminAuditLogTab, 
+    TransactionsTab as AdminTransactionsTab,
+} from "@/components/admin/tabs"
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
@@ -52,7 +59,7 @@ const GROUPS = ["Users", "Academic", "Market", "Gamification", "System"]
 
 // ─── Admin Dashboard ──────────────────────────────────────────────────────────
 
-export function AdminDashboard({ getToken }: { getToken: () => Promise<string | null> }) {
+export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<AdminTab>("overview")
 
     const active = TABS.find((t) => t.id === activeTab)!
@@ -147,17 +154,17 @@ export function AdminDashboard({ getToken }: { getToken: () => Promise<string | 
                 </div>
 
                 <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-                    {activeTab === "overview" && <AdminOverview getToken={getToken} />}
-                    {activeTab === "teachers" && <AdminTeachersTab getToken={getToken} />}
-                    {activeTab === "students" && <AdminStudentsTab getToken={getToken} />}
-                    {activeTab === "assignments" && <AdminAssignmentsTab getToken={getToken} />}
-                    {activeTab === "announcements" && <AdminAnnouncementsTab getToken={getToken} />}
-                    {activeTab === "roles" && <AdminRolesTab getToken={getToken} />}
-                    {activeTab === "userroles" && <AdminUserRolesTab getToken={getToken} />}
-                    {activeTab === "products" && <AdminProductsTab getToken={getToken} />}
-                    {activeTab === "achievements" && <AdminAchievementsTab getToken={getToken} />}
-                    {activeTab === "audit" && <AdminAuditLogTab getToken={getToken} />}
-                    {activeTab === "transactions" && <AdminTransactionsTab getToken={getToken} />}
+                    {activeTab === "overview" && <AdminOverview />}
+                    {activeTab === "teachers" && <AdminTeachersTab />}
+                    {activeTab === "students" && <AdminStudentsTab />}
+                    {activeTab === "assignments" && <AdminAssignmentsTab />}
+                    {activeTab === "announcements" && <AdminAnnouncementsTab />}
+                    {activeTab === "roles" && <AdminRolesTab />}
+                    {activeTab === "userroles" && <AdminUserRolesTab />}
+                    {activeTab === "products" && <AdminProductsTab />}
+                    {activeTab === "achievements" && <AdminAchievementsTab />}
+                    {activeTab === "audit" && <AdminAuditLogTab />}
+                    {activeTab === "transactions" && <AdminTransactionsTab />}
                 </div>
             </main>
         </div>

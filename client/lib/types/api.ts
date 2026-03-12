@@ -1,4 +1,4 @@
-// ─── Shared API Types ─────────────────────────────────────────────────────────
+// Shared API Types
 
 export interface ApiUser {
     id: string
@@ -117,3 +117,4 @@ export interface ApiGrade {
 }
 
 export type LogCategory = "AUTH" | "ACADEMIC" | "MARKET" | "FINANCE" | "USER" | "SYSTEM"
+

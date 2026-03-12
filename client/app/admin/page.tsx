@@ -1,39 +1,44 @@
 "use client"
 
-import React from "react"
-import { useUser, useAuth } from "@clerk/nextjs"
-import { Loader2, ShieldX } from "lucide-react"
+import React, { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { AdminDashboard } from "./AdminDashboard"
-import { TeacherDashboard } from "./TeacherDashboard"
+import { dashboardApi } from "@/lib/api-services"
 
 export default function AdminPage() {
-    const { user, isLoaded } = useUser()
-    const { getToken } = useAuth()
+    const router = useRouter()
+    const [loading, setLoading] = useState(true)
 
-    if (!isLoaded) {
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const userResp = await dashboardApi.getUser()
+                if (userResp.success && userResp.data) {
+                    const userType = userResp.data.type
+                    if (userType !== 'admin') {
+                        router.push('/dashboard')
+                        return
+                    }
+                } else {
+                    router.push('/dashboard')
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err)
+                router.push('/dashboard')
+            } finally {
+                setLoading(false)
+            }
+        }
+        checkAuth()
+    }, [router])
+
+    if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center">
-                <Loader2 className="size-8 animate-spin text-muted-foreground/50" />
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         )
     }
 
-    const role = (user?.publicMetadata?.role as string) ?? "student"
-
-    if (role === "admin") {
-        return <AdminDashboard getToken={getToken} />
-    }
-
-    if (role === "teacher") {
-        return <TeacherDashboard getToken={getToken} />
-    }
-
-    // Student or unrecognized role → access denied
-    return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-muted-foreground">
-            <ShieldX className="size-12 opacity-30" />
-            <p className="text-base font-semibold">Access Denied</p>
-            <p className="text-sm">You don&apos;t have permission to view this page.</p>
-        </div>
-    )
+    return <AdminDashboard getToken={async () => null} />
 }

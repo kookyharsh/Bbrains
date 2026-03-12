@@ -7,15 +7,29 @@ import { Gift, Star, AlertCircle, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { dashboardApi, streakApi, StreakData } from "@/lib/api-services";
 
-export function DailyRewardCard() {
-  const [streak, setStreak] = useState<StreakData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface DailyRewardCardProps {
+  initialStreak?: StreakData | null;
+}
+
+export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
+  const [streak, setStreak] = useState<StreakData | null>(initialStreak || null);
+  const [loading, setLoading] = useState(!initialStreak);
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [claimedToday, setClaimedToday] = useState(false);
 
   useEffect(() => {
+    if (initialStreak) {
+      const today = new Date().toDateString();
+      const lastActive = initialStreak.lastActiveDate
+        ? new Date(initialStreak.lastActiveDate).toDateString()
+        : null;
+      setClaimedToday(lastActive === today);
+      setLoading(false);
+      return;
+    }
+
     const fetchStreak = async () => {
       try {
         const response = await streakApi.getStreak();
@@ -37,7 +51,7 @@ export function DailyRewardCard() {
     };
 
     fetchStreak();
-  }, []);
+  }, [initialStreak]);
 
   const handleClaim = async () => {
     setClaiming(true);

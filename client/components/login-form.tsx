@@ -56,9 +56,32 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
       }
 
       // Tokens and session are managed by the shared Supabase client via cookies
-
       toast.success('Login successful!')
-      router.push('/dashboard')
+      
+      try {
+        // Import dashboardApi dynamically or use a direct fetch to avoid circular deps if any
+        // Assuming we can just import it at top but let's check if it needs to be imported
+        const { dashboardApi } = await import('@/lib/api-services')
+        const userResp = await dashboardApi.getUser()
+        
+        if (userResp.success && userResp.data) {
+          const role = userResp.data.type
+          if (role === 'admin') {
+            router.push('/admin')
+          } else if (role === 'teacher') {
+            router.push('/teacher')
+          } else {
+            router.push('/dashboard')
+          }
+        } else {
+          // Fallback if we can't get role
+          router.push('/dashboard')
+        }
+      } catch (err) {
+        console.error("Failed to fetch user role:", err)
+        router.push('/dashboard')
+      }
+
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrors({ form: error.message })

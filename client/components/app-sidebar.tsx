@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import {
     Sidebar,
     SidebarContent,
@@ -18,18 +18,43 @@ import {
 
 import {
     Settings,
-    BarChart3
+    BarChart3,
+    Circle
 } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { sidebarItems } from "./sidebarData"
+import { sidebarItems, baseSidebarItems, adminExtraItems, teacherExtraItems } from "./sidebarData"
+import { UserProfileCard, UserStatus, statusColors, statusLabels } from "./user-profile-card"
+import { useNotifications } from "./providers/notification-provider"
+import { dashboardApi } from "@/lib/api-services"
 
 export function AppSidebar({ user }: { user?: any }) {
     const pathname = usePathname()
-
     const { state } = useSidebar()
     const isCollapsed = state === "collapsed"
+    const { unreadCount } = useNotifications()
+    
+    const [showProfileCard, setShowProfileCard] = useState(false)
+    const [userStatus, setUserStatus] = useState<UserStatus>("online")
+    const [userType, setUserType] = useState<string>('student')
+
+    useEffect(() => {
+        const fetchUserType = async () => {
+            try {
+                const resp = await dashboardApi.getUser()
+                if (resp.success && resp.data) {
+                    setUserType(resp.data.type?.toLowerCase() || 'student')
+                }
+            } catch (err) {
+                console.error('Failed to fetch user type:', err)
+            }
+        }
+        fetchUserType()
+    }, [])
+
+    const extraItems = userType === 'admin' ? adminExtraItems : userType === 'teacher' ? teacherExtraItems : []
+    const items = [...extraItems, ...baseSidebarItems]
 
     return (
         <Sidebar collapsible="icon" className="border-r border-gray-100 dark:border-gray-800">
@@ -54,8 +79,9 @@ export function AppSidebar({ user }: { user?: any }) {
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu className={`${isCollapsed ? "space-y-2" : "space-y-1.5"}`}>
-                            {sidebarItems.map((item) => {
+                            {items.map((item) => {
                                 const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
+                                const isChat = item.url === "/chat";
                                 return (
                                     <React.Fragment key={item.url}>
                                         <SidebarMenuItem>
@@ -67,8 +93,18 @@ export function AppSidebar({ user }: { user?: any }) {
                                                         : "text-ui-light-textSecondary dark:text-ui-dark-textSecondary hover:bg-black/5 dark:hover:bg-white/5"
                                                         }`}
                                                 >
-                                                    <item.icon className={`${isCollapsed ? "h-[22px] w-[22px]" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
-                                                    <span className="text-[13px] group-data-[collapsible=icon]:hidden">{item.title}</span>
+                                                    <div className="relative">
+                                                        <item.icon className={`${isCollapsed ? "h-[22px] w-[22px]" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
+                                                        {isChat && unreadCount > 0 && isCollapsed && (
+                                                            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[13px] group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
+                                                    {isChat && unreadCount > 0 && !isCollapsed && (
+                                                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full group-data-[collapsible=icon]:hidden">
+                                                            {unreadCount}
+                                                        </span>
+                                                    )}
                                                 </Link>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
@@ -122,24 +158,38 @@ export function AppSidebar({ user }: { user?: any }) {
                             {!isCollapsed && (
                                 <h3 className="text-[10px] font-bold text-ui-light-textSecondary dark:text-ui-dark-textSecondary uppercase tracking-[0.1em] mb-4">Account</h3>
                             )}
-                            <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-                                <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
-                                    <AvatarImage src={user?.imageUrl} />
-                                    <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-xs uppercase">
-                                        {user?.firstName?.[0]}{user?.lastName?.[0]}
-                                    </AvatarFallback>
-                                </Avatar>
+                            <button
+                                onClick={() => setShowProfileCard(!showProfileCard)}
+                                className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} w-full ${isCollapsed ? "" : "hover:bg-black/5 dark:hover:bg-white/5 rounded-xl p-2 -mx-2"} transition-colors`}
+                            >
+                                <div className="relative">
+                                    <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
+                                        <AvatarImage src={user?.imageUrl} />
+                                        <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-xs uppercase">
+                                            {user?.firstName?.[0]}{user?.lastName?.[0]}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className={`absolute -bottom-0.5 -right-0.5 ${statusColors[userStatus]} w-3 h-3 rounded-full border-2 border-white dark:border-gray-800`} />
+                                </div>
                                 {!isCollapsed && (
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex-1 min-w-0 text-left">
                                         <p className="text-[13px] font-bold text-ui-light-textPrimary dark:text-ui-dark-textPrimary truncate">
                                             {user?.fullName || user?.username || "Anonymous User"}
                                         </p>
                                         <p className="text-[11px] text-ui-light-textSecondary dark:text-ui-dark-textSecondary truncate mt-0.5">
-                                            Student
+                                            {statusLabels[userStatus]}
                                         </p>
                                     </div>
                                 )}
-                            </div>
+                            </button>
+                            
+                            {showProfileCard && !isCollapsed && (
+                                <UserProfileCard 
+                                    user={user} 
+                                    userStatus={userStatus} 
+                                    setUserStatus={setUserStatus} 
+                                />
+                            )}
                         </div>
                     </div>
                 )}

@@ -7,15 +7,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { walletApi, WalletData } from "@/lib/api-services";
 
 interface WalletMiniCardProps {
+  initialWallet?: WalletData | null;
   initialBalance?: number;
 }
 
-export function WalletMiniCard({ initialBalance }: WalletMiniCardProps) {
-  const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function WalletMiniCard({ initialWallet, initialBalance }: WalletMiniCardProps) {
+  const [wallet, setWallet] = useState<WalletData | null>(initialWallet || null);
+  const [loading, setLoading] = useState(!initialWallet);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialWallet) {
+      setLoading(false);
+      return;
+    }
+
     const fetchWallet = async () => {
       try {
         const response = await walletApi.getWallet();
@@ -32,7 +38,7 @@ export function WalletMiniCard({ initialBalance }: WalletMiniCardProps) {
     };
 
     fetchWallet();
-  }, []);
+  }, [initialWallet]);
 
   const balance = Number(wallet?.balance ?? initialBalance ?? 0);
 

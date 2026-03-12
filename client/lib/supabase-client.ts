@@ -7,6 +7,10 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 let _supabaseClient: ReturnType<typeof createBrowserClient> | null = null;
 
 export function getSupabaseClient() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  
   if (!_supabaseClient) {
     _supabaseClient = createBrowserClient(
       SUPABASE_URL,
@@ -19,17 +23,20 @@ export function getSupabaseClient() {
         // Fallback cookie adapter to ensure cross-env compatibility
         cookies: {
           getAll() {
+            if (typeof document === 'undefined') return [];
             return document.cookie.split('; ').map((c) => {
               const [name, ...v] = c.split('=')
               return { name, value: v.join('=') }
             })
           },
           setAll(cookiesToSet: any[]) {
+            if (typeof document === 'undefined') return;
             cookiesToSet.forEach(({ name, value, options }) => {
               document.cookie = `${name}=${value}; path=/; ${options?.maxAge ? `max-age=${options.maxAge}; ` : ''}${options?.secure ? 'secure; ' : ''}${options?.sameSite ? `samesite=${options.sameSite}; ` : ''}`
             })
           },
           removeItem(key: string) {
+            if (typeof document === 'undefined') return;
             document.cookie = `${key}=; path=/; max-age=0`;
           },
         },

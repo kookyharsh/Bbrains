@@ -6,12 +6,21 @@ import { Calendar, MapPin, Clock, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { eventApi, Event } from "@/lib/api-services";
 
-export function UpcomingEventsCard() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
+interface UpcomingEventsCardProps {
+  initialEvents?: Event[];
+}
+
+export function UpcomingEventsCard({ initialEvents }: UpcomingEventsCardProps) {
+  const [events, setEvents] = useState<Event[]>(initialEvents || []);
+  const [loading, setLoading] = useState(!initialEvents);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialEvents) {
+      setLoading(false);
+      return;
+    }
+
     const fetchEvents = async () => {
       try {
         const response = await eventApi.getUpcomingEvents();
@@ -28,7 +37,7 @@ export function UpcomingEventsCard() {
     };
 
     fetchEvents();
-  }, []);
+  }, [initialEvents]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

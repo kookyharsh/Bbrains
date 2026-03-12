@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -40,6 +43,12 @@ import {
   X,
 } from "lucide-react";
 import { useChatMessages, type ChatMessageDisplay } from "@/hooks/useChatMessages";
+import { useNotifications } from "@/components/providers/notification-provider";
+
+type ChatMessageWithAttachments = ChatMessageDisplay & {
+  attachments?: { url: string; type: string; name?: string }[];
+};
+import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import { supabase } from "@/integrations/supabase/client";
 
 // ── Helpers ──
@@ -103,7 +112,13 @@ function extractMentions(content: string): string[] {
 // ── Component ──
 
 export default function ChatPage() {
-  const { messages, loading, currentUserId, sendMessage, deleteMessage, editMessage } = useChatMessages();
+  const { messages, loading, isConnected, sendMessage, deleteMessage, editMessage, currentUserId } = useChatMessages();
+  const { markAsRead } = useNotifications();
+  const { uploadFile } = useCloudinaryUpload();
+  const [attachmentsDraft, setAttachmentsDraft] = useState<{ url: string; type: string; name?: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [lightbox, setLightbox] = useState<{ url: string; type: string; name?: string } | null>(null);
 
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -117,7 +132,7 @@ export default function ChatPage() {
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [membersList, setMembersList] = useState<{ id: string; name: string; username: string; role: string }[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Current user's username for mention highlighting
@@ -164,11 +179,13 @@ export default function ChatPage() {
 
   // Mention autocomplete
   const mentionSuggestions = mentionQuery !== null
-    ? membersList.filter(
-        (m) =>
-          m.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
-          m.username.toLowerCase().includes(mentionQuery.toLowerCase())
-      )
+    ? membersList
+        .filter(
+          (m) =>
+            m.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+            m.username.toLowerCase().includes(mentionQuery.toLowerCase())
+        )
+        .slice(0, 3)
     : [];
 
   const detectMention = (value: string, cursorPos: number) => {
@@ -209,20 +226,25 @@ export default function ChatPage() {
     : messages;
   const grouped = groupMessagesByDate(filteredMessages);
 
-  // Auto-scroll on new messages
+  // Auto-scroll on new messages or when sending
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    // Mark as read when messages change while on this page
+    if (messages.length > 0) {
+      markAsRead();
     }
-  }, [messages.length]);
+  }, [messages.length, attachmentsDraft.length, markAsRead]);
 
   const handleSend = async () => {
     if (!message.trim()) return;
     const content = message.trim();
     const mentions = extractMentions(content);
-    await sendMessage(content, mentions, replyingMsg?.id || undefined);
+    await sendMessage(content, attachmentsDraft, mentions, replyingMsg?.id || undefined);
     setMessage("");
     setReplyingMsg(null);
+    setAttachmentsDraft([]);
     inputRef.current?.focus();
   };
 
@@ -270,13 +292,14 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)]">
+    <div className="flex flex-col h-full">
       {/* Channel Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card rounded-t-lg">
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <Hash className="w-5 h-5 text-muted-foreground" />
           <h2 className="font-semibold text-foreground">Global Chat</h2>
-          <Badge variant="secondary" className="text-xs">{messages.length} messages</Badge>
+            <Badge variant="secondary" className="text-xs">{messages.length} messages</Badge>
+            <span className={`h-2 w-2 rounded-full ml-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} title={isConnected ? 'Connected' : 'Disconnected'} />
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -304,7 +327,7 @@ export default function ChatPage() {
         {/* Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <ScrollArea className="flex-1 p-4">
-            <div ref={scrollRef} className="space-y-1">
+            <div className="space-y-1">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -326,12 +349,15 @@ export default function ChatPage() {
                     </div>
                     {group.messages.map((msg) => {
                       const isMentioned = currentUsername ? msg.mentions?.includes(currentUsername) : false;
+                      const isReplyToMe = msg.replyToId && messages.find(m => m.id === msg.replyToId)?.userId === currentUserId;
                       const isEditing = editingMsg === msg.id;
                       return (
                         <div
                           key={msg.id}
-                          className={`group flex items-start gap-3 px-3 py-1.5 rounded-md transition-colors relative ${
-                            isMentioned ? "bg-primary/5 border-l-2 border-primary" : "hover:bg-muted/50"
+                          className={`group flex items-start gap-3 px-3 py-1.5 rounded-md transition-colors relative animate-in fade-in slide-in-from-bottom-4 duration-300 ${
+                            isMentioned ? "bg-primary/5 border-l-2 border-primary" : 
+                            isReplyToMe ? "bg-accent/5 border-l-2 border-accent" :
+                            "hover:bg-muted/50"
                           }`}
                           onMouseEnter={() => setHoveredMsg(msg.id)}
                           onMouseLeave={() => setHoveredMsg(null)}
@@ -341,7 +367,7 @@ export default function ChatPage() {
                               <AvatarFallback className="bg-primary/10 text-primary text-xs">{msg.avatar}</AvatarFallback>
                             </Avatar>
                           </button>
-                          <div className="min-w-0 flex-1">
+                              <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-2">
                               <button
                                 onClick={() => setProfileUser({ id: msg.userId, name: msg.displayName, username: msg.username, role: "student" })}
@@ -376,8 +402,36 @@ export default function ChatPage() {
                                     </p>
                                   ) : null;
                                 })()}
-                                <p className="text-sm text-foreground/90 break-words">{renderContent(msg.content, msg.mentions)}</p>
+                                <p className="text-sm text-foreground/90 wrap-break-word">{renderContent(msg.content, msg.mentions)}</p>
                               </>
+                            )}
+                            {/* Attachments */}
+                            {Array.isArray((msg as any).attachments) && (msg as any).attachments.length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                {(msg as any).attachments.map((att: { url: string; type: string; name?: string }, idx: number) => (
+                                  att.type?.startsWith('image') ? (
+                                    <Image
+                                      key={idx}
+                                      src={att.url}
+                                      alt={att.name || 'attachment'}
+                                      width={80}
+                                      height={80}
+                                      className="h-20 w-20 object-cover rounded cursor-pointer"
+                                      onClick={() => setLightbox(att)}
+                                    />
+                                  ) : att.type?.startsWith('video') ? (
+                                    <video
+                                      key={idx}
+                                      src={att.url}
+                                      controls
+                                      className="h-20 w-32 cursor-pointer"
+                                      onClick={() => setLightbox(att)}
+                                    />
+                                  ) : (
+                                    <a key={idx} href={att.url} target="_blank" rel="noreferrer" className="text-sm text-primary">{att.name || 'attachment'}</a>
+                                  )
+                                ))}
+                              </div>
                             )}
                           </div>
 
@@ -429,6 +483,18 @@ export default function ChatPage() {
                 ))
               )}
             </div>
+            {attachmentsDraft.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {attachmentsDraft.map((att, idx) => (
+                  att.type.startsWith('image') ? (
+                    <Image key={idx} src={att.url} alt={att.name ?? 'attachment'} width={48} height={48} className="h-12 w-12 object-cover rounded cursor-pointer" onClick={() => setLightbox(att)} />
+                  ) : (
+                    <video key={idx} src={att.url} className="h-12 w-24" controls />
+                  )
+                ))}
+              </div>
+            )}
+            <div ref={messagesEndRef} className="h-px w-full" />
           </ScrollArea>
 
           {/* Message Input */}
@@ -444,10 +510,19 @@ export default function ChatPage() {
               </div>
             )}
             <div className="flex items-center gap-1.5">
-              <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8">
+              <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => fileInputRef.current?.click()}>
                 <ImagePlus className="w-4 h-4" />
               </Button>
-              <div className="flex-1 relative flex items-center bg-background border border-input rounded-md focus-within:ring-1 focus-within:ring-ring">
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={async (e) => {
+                const f = e.target.files?.[0]
+                if (f) {
+                  const url = await uploadFile(f)
+                  if (url) {
+                    setAttachmentsDraft(prev => [...prev, { url, type: f.type, name: f.name }])
+                  }
+                }
+              }} />
+              <div className="flex-1 relative flex items-center bg-background border border-input rounded-full transition-all duration-300 focus-within:ring-1 focus-within:ring-ring">
                 {mentionQuery !== null && mentionSuggestions.length > 0 && (
                   <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border rounded-md shadow-md overflow-hidden z-50">
                     {mentionSuggestions.map((member, i) => (
@@ -482,15 +557,17 @@ export default function ChatPage() {
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder="Message #Global Chat"
-                  className="flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+                  className={`flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground ${message.trim() ? 'w-[calc(100%-40px)]' : 'w-full'}`}
                 />
                 <button className="px-2 text-muted-foreground hover:text-foreground transition-colors">
                   <Smile className="w-4 h-4" />
                 </button>
               </div>
-              <Button size="icon" onClick={handleSend} disabled={!message.trim()} className="shrink-0 h-8 w-8">
-                <Send className="w-4 h-4" />
-              </Button>
+              {message.trim() && (
+                <Button size="icon" onClick={handleSend} className="shrink-0 h-8 w-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <Send className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -537,7 +614,9 @@ export default function ChatPage() {
                 {profileUser?.name.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <h3 className="font-bold text-foreground mt-2">{profileUser?.name}</h3>
+            <DialogHeader>
+              <DialogTitle className="font-bold text-center text-foreground mt-2">{profileUser?.name}</DialogTitle>
+            </DialogHeader>
             <p className="text-sm text-muted-foreground">@{profileUser?.username}</p>
             <Badge variant="secondary" className="mt-2 capitalize">{profileUser?.role}</Badge>
           </div>
@@ -566,6 +645,17 @@ export default function ChatPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {lightbox && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={()=>setLightbox(null)}>
+          <div className="bg-white rounded overflow-hidden" onClick={(e)=>e.stopPropagation()}>
+            {lightbox.type?.startsWith('image') ? (
+              <Image src={lightbox.url} alt={lightbox.name ?? 'attachment'} width={1920} height={1080} className="max-w-screen max-h-screen" />
+            ) : (
+              <video src={lightbox.url} controls className="max-w-screen max-h-screen" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

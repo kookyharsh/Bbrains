@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { useAuth, useUser } from "@clerk/nextjs"
 import Link from "next/link"
 import {
     ArrowLeft, ShieldCheck, Loader2, Check, X, Package, User,
@@ -11,27 +10,47 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Product } from "../types"
 import { fetchPendingProducts, approveRejectProduct } from "../data"
+import { dashboardApi, type User as ApiUser } from "@/lib/api-services"
 
 interface PendingProduct extends Product {
     creatorName: string
 }
 
 export default function ApprovalsPage() {
-    const { user } = useUser()
-    const { getToken } = useAuth()
+    const [user, setUser] = useState<ApiUser | null>(null)
     const [products, setProducts] = useState<PendingProduct[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadingAuth, setLoadingAuth] = useState(true)
     const [processing, setProcessing] = useState<string | null>(null)
 
-    const userRole = (user?.publicMetadata?.role as string) ?? "student"
+    useEffect(() => {
+        async function loadUser() {
+            try {
+                const res = await dashboardApi.getUser()
+                if (res.success && res.data) {
+                    setUser(res.data)
+                }
+            } catch (err) {
+                console.error("Failed to load user:", err)
+            } finally {
+                setLoadingAuth(false)
+            }
+        }
+        loadUser()
+    }, [])
+
+    const userRole = user?.role ?? "student"
     const hasAccess = userRole === "admin" || userRole === "teacher"
 
     useEffect(() => {
-        if (!hasAccess) return
+        if (loadingAuth || !hasAccess) {
+            if (!loadingAuth) setLoading(false)
+            return
+        }
         async function load() {
             try {
                 setLoading(true)
-                const list = await fetchPendingProducts(getToken)
+                const list = await fetchPendingProducts()
                 setProducts(list)
             } catch (err) {
                 console.error("Failed to load pending products:", err)
@@ -40,18 +59,26 @@ export default function ApprovalsPage() {
             }
         }
         load()
-    }, [getToken, hasAccess])
+    }, [hasAccess, loadingAuth])
 
     async function handleDecision(productId: string, status: "approved" | "rejected") {
         try {
             setProcessing(productId)
-            await approveRejectProduct(getToken, productId, status)
+            await approveRejectProduct(productId, status)
             setProducts((prev) => prev.filter((p) => p.id !== productId))
         } catch (err) {
             console.error(`Failed to ${status} product:`, err)
         } finally {
             setProcessing(null)
         }
+    }
+
+    if (loadingAuth || loading) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+        )
     }
 
     if (!hasAccess) {
@@ -63,14 +90,6 @@ export default function ApprovalsPage() {
                 <Link href="/market">
                     <Button size="sm" variant="outline">Back to Market</Button>
                 </Link>
-            </div>
-        )
-    }
-
-    if (loading) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <Loader2 className="size-8 animate-spin text-primary" />
             </div>
         )
     }

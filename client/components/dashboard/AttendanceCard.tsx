@@ -6,12 +6,21 @@ import { Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { attendanceApi, AttendanceData } from "@/lib/api-services";
 
-export function AttendanceCard() {
-  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface AttendanceCardProps {
+  initialAttendance?: AttendanceData | null;
+}
+
+export function AttendanceCard({ initialAttendance }: AttendanceCardProps) {
+  const [attendance, setAttendance] = useState<AttendanceData | null>(initialAttendance || null);
+  const [loading, setLoading] = useState(!initialAttendance);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialAttendance) {
+      setLoading(false);
+      return;
+    }
+
     const fetchAttendance = async () => {
       try {
         const response = await attendanceApi.getAttendance();
@@ -28,7 +37,7 @@ export function AttendanceCard() {
     };
 
     fetchAttendance();
-  }, []);
+  }, [initialAttendance]);
 
   return (
     <Card>

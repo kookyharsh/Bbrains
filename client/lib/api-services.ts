@@ -6,7 +6,7 @@ export interface User {
   username: string;
   firstName?: string;
   lastName?: string;
-  role: string;
+  type: string;
   avatar?: string;
   xp?: number;
   level?: number;
@@ -68,7 +68,7 @@ export interface LeaderboardEntry {
 export interface Announcement {
   id: string;
   title: string;
-  content: string;
+  description: string;
   category: string;
   createdAt: string;
   author?: string;
@@ -120,6 +120,18 @@ export interface Grade {
   submittedAt: string;
 }
 
+export interface Assignment {
+  id: number;
+  title: string;
+  description?: string;
+  dueDate: string;
+  courseId: number;
+  course?: {
+    name: string;
+  };
+  status?: string;
+}
+
 export const dashboardApi = {
   getDashboard: async (): Promise<ApiResponse<DashboardData>> => {
     return api.get<DashboardData>('/dashboard');
@@ -135,6 +147,35 @@ export const dashboardApi = {
 
   claimDaily: async (): Promise<ApiResponse<{ xp: number; streak: number }>> => {
     return api.post<{ xp: number; streak: number }>('/user/claim-daily');
+  },
+};
+
+export interface Assignment {
+  id: number;
+  title: string;
+  description?: string;
+  dueDate: string;
+  courseId: number;
+  course?: {
+    name: string;
+  };
+  status?: string;
+}
+
+export interface AssignmentSubmission {
+  assignmentId: number;
+  content: string;
+  fileUrl?: string;
+}
+
+export const assignmentApi = {
+  getAssignments: async (courseId?: number): Promise<ApiResponse<Assignment[]>> => {
+    const url = courseId ? `/academic/assignments?courseId=${courseId}` : '/academic/assignments';
+    return api.get<Assignment[]>(url);
+  },
+
+  submitAssignment: async (data: AssignmentSubmission): Promise<ApiResponse<any>> => {
+    return api.post('/academic/submissions', data);
   },
 };
 
@@ -191,7 +232,7 @@ export const announcementApi = {
 
   createAnnouncement: async (data: {
     title: string;
-    content: string;
+    description: string;
     category?: string;
   }): Promise<ApiResponse<Announcement>> => {
     return api.post<Announcement>('/announcements', data);

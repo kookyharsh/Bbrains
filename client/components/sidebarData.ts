@@ -10,7 +10,17 @@ import {
     FileText,
     Palette,
     Library,
-    CreditCard
+    CreditCard,
+    Users,
+    UserCheck,
+    Shield,
+    LayoutDashboard,
+    Award,
+    ShoppingBag,
+    Trophy,
+    ClipboardList,
+    UserCog,
+    Settings
 } from "lucide-react"
 
 export type SubItem = {
@@ -24,9 +34,10 @@ export type SidebarItem = {
     url: string;
     icon: any;
     subItems?: SubItem[];
+    roles?: string[];
 }
 
-export const sidebarItems: SidebarItem[] = [
+export const baseSidebarItems: SidebarItem[] = [
     {
         title: "Dashboard",
         url: "/dashboard",
@@ -92,3 +103,21 @@ export const sidebarItems: SidebarItem[] = [
         icon: Wrench,
     }
 ]
+
+export const adminExtraItems: SidebarItem[] = [
+    {
+        title: "Admin Panel",
+        url: "/admin",
+        icon: LayoutDashboard,
+    },
+]
+
+export const teacherExtraItems: SidebarItem[] = [
+    {
+        title: "Teacher Panel",
+        url: "/teacher",
+        icon: LayoutDashboard,
+    },
+]
+
+export const sidebarItems = baseSidebarItems

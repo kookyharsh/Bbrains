@@ -4,13 +4,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogHeader,
     DialogTitle,
     VisuallyHidden,
 } from "@/components/ui/dialog"
 import type { Member } from "../data"
 import { getAvatarColor, getInitials } from "../utils"
+import { Shield, School, Calendar } from "lucide-react"
 
 interface ProfileDialogProps {
     open: boolean
@@ -19,55 +18,106 @@ interface ProfileDialogProps {
 }
 
 export function ProfileDialog({ open, onOpenChange, member }: ProfileDialogProps) {
+    if (!member) return null
+
+    const statusColors: Record<string, string> = {
+        "online": "bg-green-500",
+        "idle": "bg-yellow-500", 
+        "offline": "bg-gray-400"
+    }
+    const memberStatus = member.status || "offline"
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>
-                        {member ? "Profile" : <VisuallyHidden>Profile</VisuallyHidden>}
-                    </DialogTitle>
-                    <DialogDescription>Member details</DialogDescription>
-                </DialogHeader>
-                {!member ? null : (
-                    <div className="space-y-4">
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-16 w-16">
-                                    <AvatarImage src={member.avatar || undefined} alt={member.name} />
-                                    <AvatarFallback className={`text-base font-bold text-white ${getAvatarColor(member.name)}`}>
-                                        {getInitials(member.name)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="min-w-0">
-                                    <p className="truncate text-lg font-semibold">{member.name}</p>
-                                    <p className="truncate text-sm text-muted-foreground">@{member.username}</p>
+            <DialogContent 
+                className="p-0 border-none bg-transparent shadow-none w-fit max-w-md sm:max-w-md [&>button]:right-5 [&>button]:top-5 [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-1.5 [&>button]:z-50 [&>button>svg]:h-5 [&>button>svg]:w-5" 
+            >
+                <DialogTitle>
+                    <VisuallyHidden>Profile Details for {member.name}</VisuallyHidden>
+                </DialogTitle>
+                
+                <div className="w-[340px] bg-background-light dark:bg-[#221610] rounded-xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.24)] border border-gray-200 dark:border-gray-800 relative">
+                    <div className="relative h-24 bg-gradient-to-r from-brand-purple to-purple-400">
+                    </div>
+                    
+                    <div className="px-4 pb-4">
+                        <div className="relative flex justify-between items-end -mt-12 mb-3">
+                            <div className="relative">
+                                <div className="h-24 w-24 rounded-full border-[6px] border-background-light dark:border-[#221610] bg-gray-300 overflow-hidden relative">
+                                    <Avatar className="h-full w-full rounded-none">
+                                        <AvatarImage src={member.avatar || undefined} className="object-cover" />
+                                        <AvatarFallback className={`text-2xl font-bold text-white rounded-none flex items-center justify-center ${getAvatarColor(member.name)}`}>
+                                            {getInitials(member.name)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </div>
+                                <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-[4px] border-background-light dark:border-[#221610] ${statusColors[memberStatus] || "bg-gray-400"}`}></div>
+                            </div>
+                            
+                            <div className="flex flex-wrap justify-end gap-1 mb-1 max-w-[120px]">
+                                {member.roles.includes('admin') && (
+                                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700" title="Admin">
+                                        <Shield className="text-brand-purple h-[18px] w-[18px]" />
+                                    </div>
+                                )}
+                                {(member.roles.includes('teacher') || member.type === 'teacher') && (
+                                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700" title="Teacher">
+                                        <School className="text-brand-orange h-[18px] w-[18px]" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="bg-gray-100/50 dark:bg-gray-900/50 rounded-xl p-3 mb-3 border border-gray-200/50 dark:border-gray-800/50">
+                            <h1 className="text-gray-900 dark:text-gray-100 text-xl font-bold leading-tight truncate">
+                                {member.name}
+                            </h1>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium truncate">@{member.username}</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                    {member.pronouns || "Member"}
+                                </span>
+                                {member.grade && (
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                        {member.grade}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-4 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                            <div className="space-y-1.5">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Roles</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {member.roles.length > 0 ? (
+                                        member.roles.map((role) => (
+                                            <span key={role} className="rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-300 capitalize">
+                                                {role}
+                                            </span>
+                                        ))
+                                    ) : (
+                                        <span className="text-gray-500 text-xs capitalize">{member.type}</span>
+                                    )}
                                 </div>
                             </div>
-                            <div className="grid gap-3 text-sm">
-                                <div className="rounded-md border p-3">
-                                    <p className="text-xs text-muted-foreground">Pronouns</p>
-                                    <p className="font-medium">{member.pronouns}</p>
-                                </div>
-                                <div className="rounded-md border p-3">
-                                    <p className="text-xs text-muted-foreground">Grade</p>
-                                    <p className="font-medium">{member.grade}</p>
-                                </div>
-                                <div className="rounded-md border p-3">
-                                    <p className="text-xs text-muted-foreground">Roles</p>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {member.roles.length > 0 ? (
-                                            member.roles.map((role) => (
-                                                <span key={role} className="rounded-full border px-2 py-0.5 text-xs font-medium">
-                                                    {role}
-                                                </span>
-                                            ))
-                                        ) : (
-                                            <span className="text-muted-foreground">{member.type}</span>
-                                        )}
-                                    </div>
+                            
+                            <div className="space-y-1.5">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">About Me</h3>
+                                <p className="text-gray-700 dark:text-gray-300 text-[13px] leading-relaxed">
+                                    A vibrant member of the Bbrains community.
+                                </p>
+                            </div>
+                            
+                            <div className="space-y-1.5">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Bbrains Member Since</h3>
+                                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 text-xs">
+                                    <Calendar className="h-4 w-4" />
+                                    <span>Just Recently</span>
                                 </div>
                             </div>
                         </div>
-                )}
+                    </div>
+                </div>
             </DialogContent>
         </Dialog>
     )
