@@ -71,8 +71,18 @@ export interface Announcement {
   description: string;
   category: string;
   createdAt: string;
-  author?: string;
+  user?: {
+    id: string;
+    username: string;
+    type: string;
+    userDetails?: {
+      avatar?: string | null;
+      firstName: string;
+      lastName: string;
+    };
+  };
 }
+
 
 export interface Event {
   id: string;

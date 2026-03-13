@@ -104,12 +104,12 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12 border-2 border-primary/20">
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                          {((announcement as any).author?.userDetails?.firstName?.[0]) || 'S'}
+                          {(announcement.user?.userDetails?.firstName?.[0]) || 'S'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h4 className="font-bold text-foreground">
-                          {((announcement as any).author?.userDetails?.firstName) || 'System'} {((announcement as any).author?.userDetails?.lastName) || ''}
+                          {announcement.user?.userDetails?.firstName || 'System'} {announcement.user?.userDetails?.lastName || ''}
                         </h4>
                         <p className="text-xs text-muted-foreground capitalize">
                           {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })} • {announcement.category}

@@ -60,7 +60,23 @@ async function studentDashboard(userId, res) {
             }),
             prisma.announcement.findMany({
                 take: 5,
-                orderBy: { createdAt: 'desc' }
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            type: true,
+                            userDetails: {
+                                select: {
+                                    avatar: true,
+                                    firstName: true,
+                                    lastName: true
+                                }
+                            }
+                        }
+                    }
+                }
             }),
             prisma.auditLog.findMany({
                 where: {

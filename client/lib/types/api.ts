@@ -36,7 +36,15 @@ export interface ApiAnnouncement {
     title: string
     description?: string
     createdAt: string
-    user?: { username: string; type: string }
+    user?: { 
+        username: string; 
+        type: string;
+        userDetails?: {
+            firstName: string;
+            lastName: string;
+            avatar?: string;
+        }
+    }
 }
 
 export interface ApiProduct {
