@@ -12,7 +12,6 @@ import { FormSelect } from "@/components/admin/form/FormSelect"
 import { FormTextarea } from "@/components/admin/form/FormTextarea"
 import type { ApiAssignment, ApiCourse } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
 function fmtDate(s: string) {
     return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
@@ -23,7 +22,7 @@ interface AssignmentForm {
 }
 const emptyAssForm: AssignmentForm = { title: "", description: "", courseId: "", dueDate: "" }
 
-export function AssignmentsTab({ getToken }: { getToken: GetToken }) {
+export function AssignmentsTab() {
     const [assignments, setAssignments] = useState<ApiAssignment[]>([])
     const [courses, setCourses] = useState<ApiCourse[]>([])
     const [loading, setLoading] = useState(true)
@@ -37,7 +36,7 @@ export function AssignmentsTab({ getToken }: { getToken: GetToken }) {
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const [aRes, cRes] = await Promise.all([
                 c.get<{ success: boolean; data: ApiAssignment[] }>("/academic/assignments"),
                 c.get<{ success: boolean; data: ApiCourse[] }>("/courses"),
@@ -45,7 +44,7 @@ export function AssignmentsTab({ getToken }: { getToken: GetToken }) {
             setAssignments(aRes.data.data)
             setCourses(cRes.data.data)
         } catch (e) { console.error(e) } finally { setLoading(false) }
-    }, [getToken])
+    }, [])
 
     useEffect(() => { load() }, [load])
 
@@ -60,7 +59,7 @@ export function AssignmentsTab({ getToken }: { getToken: GetToken }) {
         if (!form.title.trim() || !form.courseId) return
         try {
             setSubmitting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const payload = { title: form.title, description: form.description || undefined, courseId: Number(form.courseId), dueDate: form.dueDate || undefined }
             if (editing) {
                 const r = await c.put<{ success: boolean; data: ApiAssignment }>(`/academic/assignments/${editing.id}`, payload)
@@ -77,7 +76,7 @@ export function AssignmentsTab({ getToken }: { getToken: GetToken }) {
         if (!deleteTarget) return
         try {
             setDeleting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             await c.delete(`/academic/assignments/${deleteTarget.id}`)
             setAssignments((prev) => prev.filter((a) => a.id !== deleteTarget.id))
             setDeleteTarget(null)

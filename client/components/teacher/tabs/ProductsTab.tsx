@@ -9,13 +9,12 @@ import { SectionHeader } from "@/components/admin/SectionHeader"
 import { RoleBadge } from "@/components/admin/RoleBadge"
 import type { ApiProduct } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
 function fmtCurrency(n: number | string) {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(n))
 }
 
-export function ProductsTab({ getToken }: { getToken: GetToken }) {
+export function ProductsTab() {
     const [products, setProducts] = useState<ApiProduct[]>([])
     const [loading, setLoading] = useState(true)
     const [actionLoading, setActionLoading] = useState<number | null>(null)
@@ -23,18 +22,18 @@ export function ProductsTab({ getToken }: { getToken: GetToken }) {
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: ApiProduct[] }>("/market/pending")
             setProducts(res.data.data)
         } catch (e) { console.error(e) } finally { setLoading(false) }
-    }, [getToken])
+    }, [])
 
     useEffect(() => { load() }, [load])
 
     async function approve(id: number, status: "approved" | "rejected") {
         try {
             setActionLoading(id)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             await c.patch(`/market/products/${id}/approval`, { status })
             setProducts((prev) => prev.filter((p) => p.id !== id))
         } catch (e) { console.error(e) } finally { setActionLoading(null) }

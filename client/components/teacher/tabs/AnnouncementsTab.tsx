@@ -11,7 +11,6 @@ import { FormInput } from "@/components/admin/form/FormInput"
 import { FormTextarea } from "@/components/admin/form/FormTextarea"
 import type { ApiAnnouncement } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
 function fmtDate(s: string) {
     return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
@@ -20,7 +19,7 @@ function fmtDate(s: string) {
 interface AnnForm { title: string; description: string }
 const emptyAnnForm: AnnForm = { title: "", description: "" }
 
-export function AnnouncementsTab({ getToken }: { getToken: GetToken }) {
+export function AnnouncementsTab() {
     const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
@@ -32,11 +31,11 @@ export function AnnouncementsTab({ getToken }: { getToken: GetToken }) {
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: ApiAnnouncement[] }>("/announcements")
             setAnnouncements(res.data.data)
         } catch (e) { console.error(e) } finally { setLoading(false) }
-    }, [getToken])
+    }, [])
 
     useEffect(() => { load() }, [load])
 
@@ -44,7 +43,7 @@ export function AnnouncementsTab({ getToken }: { getToken: GetToken }) {
         if (!form.title.trim()) return
         try {
             setSubmitting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.post<{ success: boolean; data: ApiAnnouncement }>("/announcements", { title: form.title, description: form.description || undefined })
             setAnnouncements((prev) => [res.data.data, ...prev])
             setModalOpen(false); setForm(emptyAnnForm)
@@ -55,7 +54,7 @@ export function AnnouncementsTab({ getToken }: { getToken: GetToken }) {
         if (!deleteTarget) return
         try {
             setDeleting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             await c.delete(`/announcements/${deleteTarget.id}`)
             setAnnouncements((prev) => prev.filter((a) => a.id !== deleteTarget.id))
             setDeleteTarget(null)

@@ -12,7 +12,6 @@ import { SectionHeader } from "@/components/admin/SectionHeader"
 import { RoleBadge } from "@/components/admin/RoleBadge"
 import type { ApiUser } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
 function fmtCurrency(n: number | string) {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(n))
@@ -32,7 +31,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     )
 }
 
-export function StudentsTab({ getToken }: { getToken: GetToken }) {
+export function StudentsTab() {
     const [students, setStudents] = useState<ApiUser[]>([])
     const [loading, setLoading] = useState(true)
     const [selected, setSelected] = useState<ApiUser | null>(null)
@@ -41,17 +40,17 @@ export function StudentsTab({ getToken }: { getToken: GetToken }) {
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: ApiUser[] }>("/user/students")
             setStudents(res.data.data)
         } catch (e) { console.error(e) } finally { setLoading(false) }
-    }, [getToken])
+    }, [])
 
     useEffect(() => { load() }, [load])
 
     const viewDetails = async (s: ApiUser) => {
         try {
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: ApiUser }>(`/user/${s.username}`)
             setSelected(res.data.data)
             setDetailOpen(true)

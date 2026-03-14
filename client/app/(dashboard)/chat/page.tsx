@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { ChatImagePreview, type ChatAttachment } from "@/components/chat-image-preview";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ import {
 } from "lucide-react";
 import { useChatMessages, type ChatMessageDisplay } from "@/hooks/useChatMessages";
 import { useNotifications } from "@/components/providers/notification-provider";
+import { ChatSidebarRight } from "./_components/ChatSidebarRight";
 
 type ChatMessageWithAttachments = ChatMessageDisplay & {
   attachments?: { url: string; type: string; name?: string }[];
@@ -114,11 +116,12 @@ function extractMentions(content: string): string[] {
 export default function ChatPage() {
   const { messages, loading, isConnected, sendMessage, deleteMessage, editMessage, currentUserId } = useChatMessages();
   const { markAsRead } = useNotifications();
-  const { uploadFile } = useCloudinaryUpload();
-  const [attachmentsDraft, setAttachmentsDraft] = useState<{ url: string; type: string; name?: string }[]>([]);
+  const { uploadFile, isUploading } = useCloudinaryUpload();
+  const [pendingAttachments, setPendingAttachments] = useState<{ file: File; previewUrl: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [lightbox, setLightbox] = useState<{ url: string; type: string; name?: string } | null>(null);
+// Removed legacy lightbox - ChatImagePreview handles its own viewer
+// const [lightbox, setLightbox] = useState<{ url: string; type: string; name?: string } | null>(null);
 
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -235,16 +238,35 @@ export default function ChatPage() {
     if (messages.length > 0) {
       markAsRead();
     }
-  }, [messages.length, attachmentsDraft.length, markAsRead]);
+  }, [messages.length, markAsRead]);
 
   const handleSend = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() && pendingAttachments.length === 0) return;
+    if (isUploading) return;
+
+    // Upload pending files first
+    const uploadedAttachments: { url: string; type: string; name?: string }[] = [];
+    
+    for (const att of pendingAttachments) {
+      const url = await uploadFile(att.file);
+      if (url) {
+        uploadedAttachments.push({
+          url,
+          type: att.file.type,
+          name: att.file.name
+        });
+      }
+    }
+
     const content = message.trim();
     const mentions = extractMentions(content);
-    await sendMessage(content, attachmentsDraft, mentions, replyingMsg?.id || undefined);
+    await sendMessage(content, uploadedAttachments, mentions, replyingMsg?.id || undefined);
+    
     setMessage("");
     setReplyingMsg(null);
-    setAttachmentsDraft([]);
+    // Cleanup preview URLs
+    pendingAttachments.forEach(att => URL.revokeObjectURL(att.previewUrl));
+    setPendingAttachments([]);
     inputRef.current?.focus();
   };
 
@@ -405,34 +427,25 @@ export default function ChatPage() {
                                 <p className="text-sm text-foreground/90 wrap-break-word">{renderContent(msg.content, msg.mentions)}</p>
                               </>
                             )}
-                            {/* Attachments */}
-                            {Array.isArray((msg as any).attachments) && (msg as any).attachments.length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-2">
-                                {(msg as any).attachments.map((att: { url: string; type: string; name?: string }, idx: number) => (
-                                  att.type?.startsWith('image') ? (
-                                    <Image
-                                      key={idx}
-                                      src={att.url}
-                                      alt={att.name || 'attachment'}
-                                      width={80}
-                                      height={80}
-                                      className="h-20 w-20 object-cover rounded cursor-pointer"
-                                      onClick={() => setLightbox(att)}
+                            {(() => {
+                              const attachments = Array.isArray(msg.attachments) 
+                                ? msg.attachments 
+                                : typeof msg.attachments === 'string'
+                                  ? JSON.parse(msg.attachments || '[]')
+                                  : [];
+                              
+                              return attachments.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {attachments.map((att: any, idx: number) => (
+                                    <ChatImagePreview
+                                      key={`${msg.id}-att-${idx}`}
+                                      attachment={att}
+                                      className="max-w-[200px]"
                                     />
-                                  ) : att.type?.startsWith('video') ? (
-                                    <video
-                                      key={idx}
-                                      src={att.url}
-                                      controls
-                                      className="h-20 w-32 cursor-pointer"
-                                      onClick={() => setLightbox(att)}
-                                    />
-                                  ) : (
-                                    <a key={idx} href={att.url} target="_blank" rel="noreferrer" className="text-sm text-primary">{att.name || 'attachment'}</a>
-                                  )
-                                ))}
-                              </div>
-                            )}
+                                  ))}
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           {/* Message Actions */}
@@ -483,17 +496,7 @@ export default function ChatPage() {
                 ))
               )}
             </div>
-            {attachmentsDraft.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {attachmentsDraft.map((att, idx) => (
-                  att.type.startsWith('image') ? (
-                    <Image key={idx} src={att.url} alt={att.name ?? 'attachment'} width={48} height={48} className="h-12 w-12 object-cover rounded cursor-pointer" onClick={() => setLightbox(att)} />
-                  ) : (
-                    <video key={idx} src={att.url} className="h-12 w-24" controls />
-                  )
-                ))}
-              </div>
-            )}
+            {/* Removed internal attachment preview in favor of new draft area */}
             <div ref={messagesEndRef} className="h-px w-full" />
           </ScrollArea>
 
@@ -513,16 +516,54 @@ export default function ChatPage() {
               <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => fileInputRef.current?.click()}>
                 <ImagePlus className="w-4 h-4" />
               </Button>
-              <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={async (e) => {
-                const f = e.target.files?.[0]
-                if (f) {
-                  const url = await uploadFile(f)
-                  if (url) {
-                    setAttachmentsDraft(prev => [...prev, { url, type: f.type, name: f.name }])
-                  }
-                }
-              }} />
-              <div className="flex-1 relative flex items-center bg-background border border-input rounded-full transition-all duration-300 focus-within:ring-1 focus-within:ring-ring">
+              <input 
+                ref={fileInputRef} 
+                type="file" 
+                multiple
+                accept="image/*,video/*" 
+                className="hidden" 
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  const newPending = files.map(f => ({
+                    file: f,
+                    previewUrl: URL.createObjectURL(f)
+                  }));
+                  setPendingAttachments(prev => [...prev, ...newPending]);
+                  e.target.value = '';
+                }} 
+              />
+              <div className="flex-1 flex flex-col gap-2 relative">
+                {pendingAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-2 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {pendingAttachments.map((att, idx) => (
+                      <div key={idx} className="relative group">
+                        {att.file.type.startsWith('image/') ? (
+                          <img
+                            src={att.previewUrl}
+                            alt="preview"
+                            className="h-16 w-16 object-cover rounded-md border border-border"
+                          />
+                        ) : (
+                          <div className="h-16 w-16 flex items-center justify-center bg-muted rounded-md border border-border">
+                            <Hash className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            const newPending = [...pendingAttachments];
+                            URL.revokeObjectURL(newPending[idx].previewUrl);
+                            newPending.splice(idx, 1);
+                            setPendingAttachments(newPending);
+                          }}
+                          className="absolute -top-1.5 -right-1.5 bg-background border border-border rounded-full p-0.5 shadow-sm hover:bg-muted transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex-1 relative flex items-center bg-background border border-input rounded-full transition-all duration-300 focus-within:ring-1 focus-within:ring-ring">
                 {mentionQuery !== null && mentionSuggestions.length > 0 && (
                   <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border rounded-md shadow-md overflow-hidden z-50">
                     {mentionSuggestions.map((member, i) => (
@@ -563,9 +604,15 @@ export default function ChatPage() {
                   <Smile className="w-4 h-4" />
                 </button>
               </div>
-              {message.trim() && (
-                <Button size="icon" onClick={handleSend} className="shrink-0 h-8 w-8 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <Send className="w-4 h-4" />
+            </div>
+              {(message.trim() || pendingAttachments.length > 0) && (
+                <Button 
+                  size="icon" 
+                  onClick={handleSend} 
+                  disabled={isUploading}
+                  className="shrink-0 h-8 w-8 animate-in fade-in slide-in-from-right-4 duration-300"
+                >
+                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               )}
             </div>
@@ -574,33 +621,11 @@ export default function ChatPage() {
 
         {/* Members List */}
         {showMembers && (
-          <div className="hidden md:block w-60 border-l border-border bg-card p-4">
-            <ScrollArea className="h-full">
-              {Object.entries(membersByRole).map(([role, members]) => (
-                <div key={role} className="mb-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    {role} — {members.length}
-                  </p>
-                  <div className="space-y-1">
-                    {members.map((member) => (
-                      <button
-                        key={member.id}
-                        onClick={() => setProfileUser(member)}
-                        className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md hover:bg-muted/50 transition-colors"
-                      >
-                        <Avatar className="w-7 h-7">
-                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
-                            {member.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-foreground truncate">{member.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </ScrollArea>
-          </div>
+          <ChatSidebarRight 
+            members={membersList} 
+            currentUserId={currentUserId} 
+            onSelectUser={setProfileUser} 
+          />
         )}
       </div>
 
@@ -645,17 +670,6 @@ export default function ChatPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {lightbox && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={()=>setLightbox(null)}>
-          <div className="bg-white rounded overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-            {lightbox.type?.startsWith('image') ? (
-              <Image src={lightbox.url} alt={lightbox.name ?? 'attachment'} width={1920} height={1080} className="max-w-screen max-h-screen" />
-            ) : (
-              <video src={lightbox.url} controls className="max-w-screen max-h-screen" />
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

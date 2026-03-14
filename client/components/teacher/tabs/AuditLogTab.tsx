@@ -7,7 +7,6 @@ import { DataTable } from "@/components/admin/DataTable"
 import { SectionHeader } from "@/components/admin/SectionHeader"
 import type { ApiAuditLog } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
 function fmtDate(s: string) {
     return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
@@ -22,7 +21,7 @@ const categoryColors: Record<string, string> = {
     SYSTEM: "bg-gray-500/15 text-gray-600",
 }
 
-export function AuditLogTab({ getToken }: { getToken: GetToken }) {
+export function AuditLogTab() {
     const [logs, setLogs] = useState<ApiAuditLog[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -30,13 +29,13 @@ export function AuditLogTab({ getToken }: { getToken: GetToken }) {
         async function load() {
             try {
                 setLoading(true)
-                const c = await getAuthedClient(getToken)
+                const c = await getAuthedClient()
                 const res = await c.get<{ success: boolean; data: ApiAuditLog[]; pagination: unknown }>("/logs/me?limit=100")
                 setLogs(res.data.data)
             } catch (e) { console.error(e) } finally { setLoading(false) }
         }
         load()
-    }, [getToken])
+    }, [])
 
     return (
         <div className="space-y-4">

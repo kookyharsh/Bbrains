@@ -100,7 +100,18 @@ export function useChatMessages() {
         avatar: details?.avatar || displayName.charAt(0).toUpperCase(),
         timestamp: new Date(msg.created_at),
         mentions: msg.mentions || undefined,
-        attachments: (msg.attachments as { url: string; type: string; name?: string }[]) ?? [],
+        attachments: (() => {
+          if (Array.isArray(msg.attachments)) return msg.attachments;
+          if (typeof msg.attachments === 'string') {
+            try {
+              return JSON.parse(msg.attachments);
+            } catch (e) {
+              console.error('Failed to parse attachments:', e);
+              return [];
+            }
+          }
+          return [];
+        })(),
         isOwn: msg.user_id === currentUserId,
         replyToId: msg.reply_to_id || null
       }

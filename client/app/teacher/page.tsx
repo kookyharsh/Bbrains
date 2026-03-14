@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { TeacherDashboard } from "../admin/TeacherDashboard"
+import { TeacherDashboard } from "./TeacherDashboard"
 import { dashboardApi } from "@/lib/api-services"
 
 export default function TeacherPage() {

@@ -5,9 +5,7 @@ import { getAuthedClient } from "@/lib/http"
 import { Loader2, Users, BookOpen, CheckCircle, Award } from "lucide-react"
 import { StatCard } from "@/components/admin/StatCard"
 
-type GetToken = () => Promise<string | null>
-
-export function OverviewTab({ getToken }: { getToken: GetToken }) {
+export function OverviewTab() {
     const [stats, setStats] = useState({ students: 0, assignments: 0, pendingProducts: 0, announcements: 0 })
     const [loading, setLoading] = useState(true)
 
@@ -15,7 +13,7 @@ export function OverviewTab({ getToken }: { getToken: GetToken }) {
         async function load() {
             try {
                 setLoading(true)
-                const c = await getAuthedClient(getToken)
+                const c = await getAuthedClient()
                 const [sRes, aRes, pRes, anRes] = await Promise.all([
                     c.get<{ success: boolean; data: unknown[] }>("/user/students"),
                     c.get<{ success: boolean; data: unknown[] }>("/academic/assignments"),
@@ -31,7 +29,7 @@ export function OverviewTab({ getToken }: { getToken: GetToken }) {
             } catch (e) { console.error(e) } finally { setLoading(false) }
         }
         load()
-    }, [getToken])
+    }, [])
 
     if (loading) return <div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-muted-foreground/50" /></div>
 

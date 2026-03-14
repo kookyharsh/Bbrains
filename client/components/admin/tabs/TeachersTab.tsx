@@ -11,7 +11,6 @@ import { RoleBadge } from "../RoleBadge"
 import { FormInput, FormSelect, FormTextarea } from "../form"
 import type { ApiUser } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
 function fullName(u?: { firstName?: string; lastName?: string } | null) {
     if (!u) return "—"
@@ -27,7 +26,7 @@ const emptyTeacherForm: TeacherForm = {
     sex: "other", dob: "", phone: "", collegeId: "45",
 }
 
-export function TeachersTab({ getToken }: { getToken: GetToken }) {
+export function TeachersTab() {
     const [teachers, setTeachers] = useState<ApiUser[]>([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
@@ -40,11 +39,11 @@ export function TeachersTab({ getToken }: { getToken: GetToken }) {
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: ApiUser[] }>("/user/teachers")
             setTeachers(res.data.data)
         } catch (e) { console.error(e) } finally { setLoading(false) }
-    }, [getToken])
+    }, [])
 
     useEffect(() => { load() }, [load])
 
@@ -64,7 +63,7 @@ export function TeachersTab({ getToken }: { getToken: GetToken }) {
         if (!form.username.trim() || !form.email.trim() || !form.firstName.trim()) return
         try {
             setSubmitting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const payload = {
                 username: form.username, email: form.email,
                 firstName: form.firstName, lastName: form.lastName,
@@ -87,7 +86,7 @@ export function TeachersTab({ getToken }: { getToken: GetToken }) {
         if (!deleteTarget) return
         try {
             setDeleting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             await c.delete(`/user/teachers/${deleteTarget.id}`)
             setTeachers((prev) => prev.filter((t) => t.id !== deleteTarget.id))
             setDeleteTarget(null)

@@ -10,8 +10,6 @@ import { CrudDrawer } from "@/components/admin/CrudDrawer"
 import { FormInput } from "@/components/admin/form/FormInput"
 import type { ApiAssignment, ApiSubmission, ApiGrade } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
-
 function fmtDate(s: string) {
     return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
 }
@@ -19,7 +17,8 @@ function fmtDate(s: string) {
 interface GradeForm { userId: string; assignmentId: string; grade: string }
 const emptyGradeForm: GradeForm = { userId: "", assignmentId: "", grade: "" }
 
-export function GradingTab({ getToken }: { getToken: GetToken }) {
+export function GradingTab() {
+
     const [assignments, setAssignments] = useState<ApiAssignment[]>([])
     const [submissions, setSubmissions] = useState<ApiSubmission[]>([])
     const [grades, setGrades] = useState<ApiGrade[]>([])
@@ -34,11 +33,11 @@ export function GradingTab({ getToken }: { getToken: GetToken }) {
     const loadAssignments = useCallback(async () => {
         try {
             setLoading(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: ApiAssignment[] }>("/academic/assignments")
             setAssignments(res.data.data)
         } catch (e) { console.error(e) } finally { setLoading(false) }
-    }, [getToken])
+    }, [])
 
     useEffect(() => { loadAssignments() }, [loadAssignments])
 
@@ -46,7 +45,7 @@ export function GradingTab({ getToken }: { getToken: GetToken }) {
         if (!assignmentId) { setSubmissions([]); setGrades([]); return }
         try {
             setLoadingSubs(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const [subRes, gradeRes] = await Promise.all([
                 c.get<{ success: boolean; data: ApiSubmission[] }>(`/academic/submissions/${assignmentId}`),
                 c.get<{ success: boolean; data: ApiGrade[] }>(`/grades/assignment/${assignmentId}`),
@@ -72,7 +71,7 @@ export function GradingTab({ getToken }: { getToken: GetToken }) {
         if (!gradeForm.grade.trim()) return
         try {
             setSubmitting(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             if (editGrade) {
                 const r = await c.put<{ success: boolean; data: ApiGrade }>(`/grades/${editGrade.id}`, { grade: gradeForm.grade })
                 setGrades((prev) => prev.map((g) => g.id === editGrade.id ? r.data.data : g))

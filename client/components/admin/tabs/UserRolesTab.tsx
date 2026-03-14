@@ -8,9 +8,8 @@ import { SectionHeader } from "../SectionHeader"
 import { ConfirmDialog } from "../ConfirmDialog"
 import type { ApiUser, ApiRole } from "@/lib/types/api"
 
-type GetToken = () => Promise<string | null>
 
-export function UserRolesTab({ getToken }: { getToken: GetToken }) {
+export function UserRolesTab() {
     const [users, setUsers] = useState<ApiUser[]>([])
     const [roles, setRoles] = useState<ApiRole[]>([])
     const [loading, setLoading] = useState(true)
@@ -26,7 +25,7 @@ export function UserRolesTab({ getToken }: { getToken: GetToken }) {
         async function load() {
             try {
                 setLoading(true)
-                const c = await getAuthedClient(getToken)
+                const c = await getAuthedClient()
                 const [uRes, rRes] = await Promise.all([
                     c.get<{ success: boolean; data: ApiUser[] }>("/user/students"),
                     c.get<{ success: boolean; data: ApiRole[] }>("/roles"),
@@ -36,13 +35,13 @@ export function UserRolesTab({ getToken }: { getToken: GetToken }) {
             } catch (e) { console.error(e) } finally { setLoading(false) }
         }
         load()
-    }, [getToken])
+    }, [])
 
     async function loadUserRoles(userId: string) {
         if (!userId) { setUserRoles([]); return }
         try {
             setLoadingUserRoles(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             const res = await c.get<{ success: boolean; data: { role: ApiRole }[] }>(`/roles/users/${userId}`)
             setUserRoles(res.data.data.map((ur) => ur.role))
         } catch (e) { console.error(e) } finally { setLoadingUserRoles(false) }
@@ -52,7 +51,7 @@ export function UserRolesTab({ getToken }: { getToken: GetToken }) {
         if (!selectedUserId || !assignRoleId) return
         try {
             setAssigning(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             await c.post(`/roles/users/${selectedUserId}/assign`, { roleId: Number(assignRoleId) })
             await loadUserRoles(selectedUserId)
             setAssignRoleId("")
@@ -63,7 +62,7 @@ export function UserRolesTab({ getToken }: { getToken: GetToken }) {
         if (!removeTarget) return
         try {
             setRemoving(true)
-            const c = await getAuthedClient(getToken)
+            const c = await getAuthedClient()
             await c.delete(`/roles/users/${removeTarget.userId}/${removeTarget.roleId}`)
             setUserRoles((prev) => prev.filter((r) => r.id !== removeTarget.roleId))
             setRemoveTarget(null)
