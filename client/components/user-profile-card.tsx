@@ -69,6 +69,11 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                     <div className="mt-2 flex flex-wrap gap-2">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">Student</span>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">Lvl {user?.level || 1}</span>
+                        {user?.xp !== undefined && (
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-brand-purple bg-brand-purple/10 px-2 py-0.5 rounded">
+                                {user?.xp} XP
+                            </span>
+                        )}
                     </div>
                 </div>
                 

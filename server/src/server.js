@@ -28,6 +28,9 @@ import attendanceRouter from "./modules/attendance/attendance.routes.js";
 import streakRouter from "./modules/streak/streak.routes.js";
 import announcementRouter from "./modules/announcement/announcement.routes.js";
 import chatRouter from "./modules/chat/chat.routes.js";
+import notificationRouter from "./modules/notification/notification.routes.js";
+import configRouter from "./modules/config/config.routes.js";
+import suggestionRouter from "./modules/suggestion/suggestion.routes.js";
 
 // Middleware imports
 import errorHandler from "./middleware/errorHandler.js";
@@ -38,10 +41,23 @@ dotenv.config();
 
 const app = express();
 
+// CORS configuration: whitelist specific origins for security
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:8080"
+];
 app.use(cors({
-  origin: true, // Reflects the request origin, allowing any origin for local testing
+  origin: function(origin, callback) {
+    // allow non-browser requests like Postman/no-origin
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 }));
 
@@ -79,6 +95,9 @@ app.use("/attendance", attendanceRouter);
 app.use("/streak", streakRouter);
 app.use("/announcements", announcementRouter);
 app.use("/chat", chatRouter);
+app.use("/notifications", notificationRouter);
+app.use("/config", configRouter);
+app.use("/suggestions", suggestionRouter);
 
 
 app.use((req, res) => {

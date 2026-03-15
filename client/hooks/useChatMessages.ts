@@ -2,156 +2,109 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
-import { createClient } from '@/lib/client'
+import { chatApi } from '@/lib/api-services'
+import type { Message } from '@/app/(dashboard)/chat/data'
 
-export interface ChatMessageDisplay {
-  id: string
-  content: string
-  userId: string
-  username: string
-  displayName: string
-  avatar: string
-  timestamp: Date
-  mentions?: string[]
-  attachments?: { url: string; type: string; name?: string }[]
-  isOwn: boolean
-  replyToId?: string | null
-}
-
-interface ChatMessageRow {
-  id: string
-  content: string
-  user_id: string
-  created_at: string
-  mentions: string[] | null
-  reply_to_id: string | null
-  attachments: { url: string; type: string; name?: string }[] | null
-}
+const formatMessage = (msg: any): Message => {
+    const date = new Date(msg.created_at || msg.createdAt);
+    return {
+        id: msg.id,
+        user: {
+            id: msg.user_id || msg.userId,
+            username: msg.username || 'unknown',
+            name: msg.display_name || msg.displayName || msg.username || 'Unknown',
+            avatar: msg.avatar || '',
+            badge: msg.role === 'admin' ? 'Admin' : msg.role === 'teacher' ? 'Teacher' : undefined,
+            badgeColor: msg.role === 'admin' ? 'bg-red-500' : msg.role === 'teacher' ? 'bg-blue-500' : undefined
+        },
+        content: msg.content,
+        timestamp: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: date.toLocaleDateString(),
+        createdAt: msg.created_at || msg.createdAt,
+        editedAt: (msg.updated_at || msg.updatedAt) !== (msg.created_at || msg.createdAt) ? (msg.updated_at || msg.updatedAt) : null,
+        mentions: msg.mentions || [],
+        attachments: msg.attachments || [],
+        replyTo: (msg.reply_to || msg.replyToMessageId) ? {
+            messageId: msg.reply_to || msg.replyToMessageId,
+            username: 'someone',
+            content: '...'
+        } : null
+    };
+};
 
 export function useChatMessages() {
-  const [messages, setMessages] = useState<ChatMessageDisplay[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string>('')
   const [isConnected, setIsConnected] = useState(false)
-
-  const browserClient = createClient()
-
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await browserClient.auth.getUser()
-      if (user) {
-        setCurrentUserId(user.id)
-      }
-    }
-    getCurrentUser()
-  }, [browserClient])
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null)
 
   const fetchMessages = useCallback(async () => {
-    const { data: msgData, error } = await supabase
-      .from('messages')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .limit(100)
-
-    if (error) {
-      console.error('Error fetching messages:', error)
-      setLoading(false)
-      return
-    }
-
-    const messages = msgData as ChatMessageRow[]
-    
-    const userIds = [...new Set(messages.map(m => m.user_id))]
-    
-    const { data: userData } = await supabase
-      .from('user')
-      .select('user_id, username, type')
-      .in('user_id', userIds)
-
-    const { data: detailsData } = await supabase
-      .from('user_details')
-      .select('user_id, first_name, last_name, avatar')
-      .in('user_id', userIds)
-
-    const userMap = new Map()
-    userData?.forEach(u => {
-      userMap.set(u.user_id, u)
-    })
-
-    const detailsMap = new Map()
-    detailsData?.forEach(d => {
-      detailsMap.set(d.user_id, d)
-    })
-
-    const formattedMessages: ChatMessageDisplay[] = messages.map(msg => {
-      const user = userMap.get(msg.user_id)
-      const details = detailsMap.get(msg.user_id)
-      
-      const firstName = details?.first_name || ''
-      const lastName = details?.last_name || ''
-      const displayName = `${firstName} ${lastName}`.trim() || user?.username || 'Unknown'
-      
-      return {
-        id: msg.id,
-        content: msg.content,
-        userId: msg.user_id,
-        username: user?.username || 'unknown',
-        displayName,
-        avatar: details?.avatar || displayName.charAt(0).toUpperCase(),
-        timestamp: new Date(msg.created_at),
-        mentions: msg.mentions || undefined,
-        attachments: (() => {
-          if (Array.isArray(msg.attachments)) return msg.attachments;
-          if (typeof msg.attachments === 'string') {
-            try {
-              return JSON.parse(msg.attachments);
-            } catch (e) {
-              console.error('Failed to parse attachments:', e);
-              return [];
-            }
-          }
-          return [];
-        })(),
-        isOwn: msg.user_id === currentUserId,
-        replyToId: msg.reply_to_id || null
+    try {
+      const response = await chatApi.getMessages()
+      if (response.success && response.data) {
+        const formattedMessages = response.data.map(formatMessage)
+        setMessages(formattedMessages)
       }
-    })
-
-    setMessages(formattedMessages)
-    setLoading(false)
-  }, [currentUserId])
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    fetchMessages()
-    const channel = supabase
-      .channel('messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages'
-        },
-        (payload) => {
-          console.log('Message change received:', payload)
-          fetchMessages()
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setCurrentUserId(user.id)
+        
+        // Get profile for denormalized inserts
+        const profileResponse = await chatApi.getMyProfile()
+        if (profileResponse.success) {
+            setCurrentUserProfile(profileResponse.data)
         }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          setIsConnected(true)
-        } else {
-          setIsConnected(false)
-        }
-      })
 
-    return () => {
-      if (typeof (supabase as any).removeChannel === 'function') {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).removeChannel(channel)
+        const channel = supabase
+          .channel('global-chat')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'chat_messages'
+            },
+            (payload) => {
+              if (payload.eventType === 'INSERT') {
+                setMessages(prev => {
+                  if (prev.find(m => m.id === payload.new.id)) return prev;
+                  return [...prev, formatMessage(payload.new)]
+                })
+              } else if (payload.eventType === 'UPDATE') {
+                setMessages(prev => prev.map(m => m.id === payload.new.id ? formatMessage(payload.new) : m))
+              } else if (payload.eventType === 'DELETE') {
+                setMessages(prev => prev.filter(m => m.id !== payload.old.id))
+              }
+            }
+          )
+          .subscribe((status) => {
+            setIsConnected(status === 'SUBSCRIBED')
+          })
+
+        return () => {
+          supabase.removeChannel(channel)
+        }
       }
     }
-  }, [fetchMessages])
+
+    setupRealtime()
+  }, [])
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchMessages()
+    }
+  }, [currentUserId, fetchMessages])
 
   const sendMessage = useCallback(async (
     content: string,
@@ -159,60 +112,56 @@ export function useChatMessages() {
     mentions?: string[],
     replyToId?: string
   ) => {
-    if (!currentUserId) {
-      console.error('No current user ID')
-      return
-    }
-
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          content,
-          user_id: currentUserId,
-          mentions: mentions || null,
-          reply_to_id: replyToId || null,
-          attachments: attachments || null
-        })
+      const response = await chatApi.sendMessage({
+        content,
+        attachments,
+        mentions,
+        replyTo: replyToId,
+        chatId: 'default'
+      })
 
-      if (error) {
-        console.error('Error sending message:', error?.message ?? error, error?.details ?? '')
-      } else {
-        fetchMessages()
+      if (!response.success) {
+        console.error('Error sending message:', response.message)
       }
     } catch (err) {
       console.error('Error sending message (exception):', err)
     }
-  }, [currentUserId, fetchMessages])
+  }, [])
 
   const deleteMessage = useCallback(async (id: string) => {
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .eq('id', id)
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('id', id)
 
-    if (error) {
-      console.error('Error deleting message:', error)
-    } else {
-      fetchMessages()
+      if (error) {
+        console.error('Error deleting message:', error)
+      }
+    } catch (err) {
+      console.error('Error deleting message (exception):', err)
     }
-  }, [fetchMessages])
+  }, [])
 
   const editMessage = useCallback(async (id: string, content: string, mentions?: string[]) => {
-    const { error } = await supabase
-      .from('messages')
-      .update({
-        content,
-        mentions: mentions || null
-      })
-      .eq('id', id)
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({
+          content,
+          mentions: mentions || [],
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
 
-    if (error) {
-      console.error('Error editing message:', error)
-    } else {
-      fetchMessages()
+      if (error) {
+        console.error('Error editing message:', error)
+      }
+    } catch (err) {
+      console.error('Error editing message (exception):', err)
     }
-  }, [fetchMessages])
+  }, [])
 
   return {
     messages,

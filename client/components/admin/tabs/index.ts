@@ -9,4 +9,7 @@ export { ProductsTab } from "./ProductsTab"
 export { AchievementsTab } from "./AchievementsTab"
 export { AuditLogTab } from "./AuditLogTab"
 export { TransactionsTab } from "./TransactionsTab"
+export { XpConfigTab } from "./XpConfigTab"
+export { ConfigTab } from "./ConfigTab"
+export { SuggestionsTab } from "./SuggestionsTab"
 

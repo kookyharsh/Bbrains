@@ -1,92 +1,98 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react"
-import { useChatMessages, type ChatMessageDisplay } from "@/hooks/useChatMessages"
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
+import { notificationApi, Notification } from "@/lib/api-services"
 import { supabase } from "@/integrations/supabase/client"
 
 interface NotificationContextType {
+    notifications: Notification[]
     unreadCount: number
-    mentions: ChatMessageDisplay[]
-    markAsRead: () => void
+    loading: boolean
+    fetchNotifications: () => Promise<void>
+    markRead: (id: number) => Promise<void>
+    markAllRead: () => Promise<void>
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
-const LAST_READ_KEY = "bbrains_chat_last_read"
-
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-    const { messages, currentUserId } = useChatMessages()
-    const [currentUsername, setCurrentUsername] = useState<string | null>(null)
-    const [lastReadTimestamp, setLastReadTimestamp] = useState<number>(() => {
-        if (typeof window !== "undefined") {
-            return parseInt(localStorage.getItem(LAST_READ_KEY) || "0")
-        }
-        return 0
-    })
+    const [notifications, setNotifications] = useState<Notification[]>([])
+    const [unreadCount, setUnreadCount] = useState(0)
+    const [loading, setLoading] = useState(false)
 
-    // Fetch current user's username
-    useEffect(() => {
-        if (currentUserId) {
-            const fetchUsername = async () => {
-                const { data } = await supabase
-                    .from("user")
-                    .select("username")
-                    .eq("user_id", currentUserId)
-                    .single()
-                if (data) setCurrentUsername(data.username)
+    const fetchNotifications = useCallback(async () => {
+        try {
+            setLoading(true)
+            const res = await notificationApi.getNotifications()
+            if (res.success && res.data) {
+                setNotifications(res.data.notifications)
+                setUnreadCount(res.data.unreadCount)
             }
-            fetchUsername()
-        }
-    }, [currentUserId])
-
-    const unreadNotifications = useMemo(() => {
-        if (!currentUsername || !currentUserId) return []
-
-        return messages.filter((msg) => {
-            // Only count if it's newer than the last time we "read"
-            const msgTime = new Date(msg.timestamp).getTime()
-            if (msgTime <= lastReadTimestamp) return false
-
-            // Don't notify for own messages
-            if (msg.userId === currentUserId) return false
-
-            // Is it a mention?
-            const isMention = msg.mentions?.some(
-                (m) => m.toLowerCase() === currentUsername.toLowerCase()
-            )
-
-            // Is it a reply to me?
-            // To be precise, we'd need to check if msg.replyToId points to one of our messages.
-            // useChatMessages doesn't return the full tree, but we can check if the message 
-            // has a replyToId and if we can find that message in our local list and if it's ours.
-            let isReplyToMe = false
-            if (msg.replyToId) {
-                const originalMsg = messages.find(m => m.id === msg.replyToId)
-                if (originalMsg && originalMsg.userId === currentUserId) {
-                    isReplyToMe = true
-                }
-            }
-
-            return isMention || isReplyToMe
-        })
-    }, [messages, currentUsername, currentUserId, lastReadTimestamp])
-
-    const markAsRead = useCallback(() => {
-        const now = Date.now()
-        setLastReadTimestamp(now)
-        if (typeof window !== "undefined") {
-            localStorage.setItem(LAST_READ_KEY, now.toString())
+        } catch (error) {
+            console.error("Failed to fetch notifications:", error)
+        } finally {
+            setLoading(false)
         }
     }, [])
 
+    useEffect(() => {
+        fetchNotifications()
+
+        // Set up real-time subscription for new notifications
+        const channel = supabase
+            .channel('public:notification')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'notification'
+                },
+                (payload) => {
+                    // Check if the notification is for the current user
+                    // We need the current user ID here. 
+                    // For now, let's just re-fetch to be safe and simple
+                    fetchNotifications()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [fetchNotifications])
+
+    const markRead = useCallback(async (id: number) => {
+        try {
+            await notificationApi.markRead(id)
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
+            setUnreadCount(prev => Math.max(0, prev - 1))
+        } catch (error) {
+            console.error("Failed to mark notification as read:", error)
+        }
+    }, [])
+
+    const markAllRead = useCallback(async () => {
+        try {
+            await notificationApi.markAllRead()
+            setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })))
+            setUnreadCount(0)
+        } catch (error) {
+            console.error("Failed to mark all as read:", error)
+        }
+    }, [])
+
+    const value = useMemo(() => ({
+        notifications,
+        unreadCount,
+        loading,
+        fetchNotifications,
+        markRead,
+        markAllRead
+    }), [notifications, unreadCount, loading, fetchNotifications, markRead, markAllRead])
+
     return (
-        <NotificationContext.Provider
-            value={{
-                unreadCount: unreadNotifications.length,
-                mentions: unreadNotifications,
-                markAsRead,
-            }}
-        >
+        <NotificationContext.Provider value={value}>
             {children}
         </NotificationContext.Provider>
     )

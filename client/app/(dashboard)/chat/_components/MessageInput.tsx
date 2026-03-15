@@ -180,6 +180,7 @@ export function MessageInput({
                             value={message}
                             onChange={(e) => onChange(e.target.value)}
                             onKeyDown={onKeyDown}
+                            aria-label="Message input"
                             placeholder={`Message #${channelName}`}
                             className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-muted-foreground"
                         />

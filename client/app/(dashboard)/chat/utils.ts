@@ -24,6 +24,11 @@ export function groupMessagesByDate(messages: Message[]): Map<string, Message[]>
 
 // ─── API Mappers ──────────────────────────────────────────────────────────────
 
+export function extractMentions(content: string): string[] {
+    const matches = content.match(/@(\w+)/g)
+    return matches ? matches.map((m) => m.slice(1)) : []
+}
+
 export function mapApiMessage(m: ApiMessage): Message {
     return {
         id: m._id,

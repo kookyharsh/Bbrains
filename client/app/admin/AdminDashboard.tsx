@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import {
     LayoutDashboard, Users, UserCheck, BookOpen, Megaphone,
     Shield, ShoppingBag, Trophy, FileText, ArrowUpDown, ChevronRight,
-    ArrowLeft, BarChart3
+    ArrowLeft, BarChart3, Settings2, MessageSquarePlus
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -21,6 +21,9 @@ import {
     AchievementsTab as AdminAchievementsTab,
     AuditLogTab as AdminAuditLogTab, 
     TransactionsTab as AdminTransactionsTab,
+    XpConfigTab as AdminXpConfigTab,
+    ConfigTab as AdminConfigTab,
+    SuggestionsTab as AdminSuggestionsTab
 } from "@/components/admin/tabs"
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
@@ -28,7 +31,7 @@ import {
 type AdminTab =
     | "overview" | "teachers" | "students" | "assignments"
     | "announcements" | "roles" | "userroles" | "products"
-    | "achievements" | "audit" | "transactions"
+    | "achievements" | "audit" | "transactions" | "xpconfig" | "config" | "suggestions"
 
 interface TabItem {
     id: AdminTab
@@ -52,9 +55,12 @@ const TABS: TabItem[] = [
     { id: "products", label: "Products", icon: <ShoppingBag className="size-4" />, description: "Manage & approve products", group: "Market" },
     // Gamification group
     { id: "achievements", label: "Achievements", icon: <Trophy className="size-4" />, description: "Create & manage achievements", group: "Gamification" },
+    { id: "xpconfig", label: "XP & Levels", icon: <Trophy className="size-4" />, description: "Manage level thresholds", group: "Gamification" },
     // System group
     { id: "audit", label: "Audit Log", icon: <FileText className="size-4" />, description: "System activity log with filters", group: "System" },
     { id: "transactions", label: "Transactions", icon: <ArrowUpDown className="size-4" />, description: "View all user transactions", group: "System" },
+    { id: "config", label: "System Config", icon: <Settings2 className="size-4" />, description: "Global settings & flags", group: "System" },
+    { id: "suggestions", label: "Suggestions", icon: <MessageSquarePlus className="size-4" />, description: "Review user feedback", group: "System" },
 ]
 
 const GROUPS = ["Users", "Academic", "Market", "Gamification", "System"]
@@ -196,8 +202,11 @@ export function AdminDashboard() {
                         {activeTab === "userroles" && <AdminUserRolesTab />}
                         {activeTab === "products" && <AdminProductsTab />}
                         {activeTab === "achievements" && <AdminAchievementsTab />}
+                        {activeTab === "xpconfig" && <AdminXpConfigTab />}
                         {activeTab === "audit" && <AdminAuditLogTab />}
                         {activeTab === "transactions" && <AdminTransactionsTab />}
+                        {activeTab === "config" && <AdminConfigTab />}
+                        {activeTab === "suggestions" && <AdminSuggestionsTab />}
                     </div>
                 </main>
             </div>

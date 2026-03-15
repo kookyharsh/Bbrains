@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Hash, Reply, Copy, Edit, Trash2 } from "lucide-react"
 
 export function ChatArea() {
@@ -23,7 +24,7 @@ export function ChatArea() {
 
                 {/* Message Item */}
                 <div className="group flex gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-xl transition-colors relative">
-                    <img alt="Jane Smith" className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzos9RzH54rNyLiSgreh6VR62qQCcPhCteRzY3BM7URRbNdIcuxUrFIqHltlKaNTPnZUSyYawK35uGfN832b-Yft32xicBjVQJ_eASs3TpfyInSRgNOxyk_o4PcfGQuZj5OnfYMk75Wu7sdXGbUGUbgFVzbtMxUoA5O4RYcSLVZ7qCj8ZfD8Jmjt08DKmvRKhBDFZI_BvqjNpdvRRa4Tcjtge_j4x0t-rERZd5HYWURLe1lvAbtPFbZMtS22ltLa81H1ANhI2iQwMV" />
+                    <Image alt="Jane Smith" width={40} height={40} className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzos9RzH54rNyLiSgreh6VR62qQCcPhCteRzY3BM7URRbNdIcuxUrFIqHltlKaNTPnZUSyYawK35uGfN832b-Yft32xicBjVQJ_eASs3TpfyInSRgNOxyk_o4PcfGQuZj5OnfYMk75Wu7sdXGbUGUbgFVzbtMxUoA5O4RYcSLVZ7qCj8ZfD8Jmjt08DKmvRKhBDFZI_BvqjNpdvRRa4Tcjtge_j4x0t-rERZd5HYWURLe1lvAbtPFbZMtS22ltLa81H1ANhI2iQwMV" />
                     <div className="flex-1">
                         <div className="flex items-baseline gap-2 mb-1">
                             <span className="font-semibold text-gray-900 dark:text-white">Jane Smith</span>
@@ -40,7 +41,7 @@ export function ChatArea() {
 
                 {/* Message Item */}
                 <div className="group flex gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-xl transition-colors relative">
-                    <img alt="Alex Johnson" className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAe7bpcUcCjr9t88LPidJvh29WW9JJS8XvxdI-4XfZ7yzPoyqnVBhNbJk4y0r5-a7Qxw_AQYiR2ubdNwOxAmB2JLmkhIbXgv9knQ5_h5VN7Nkn6vG9z0Z3d4Bwifgx47lIO86Dj-iaOJ6bTzFcU3uRraKfLfNKQhzuy0OoAXdj3g3FyNKPQQTIYZ3s81nlHoOEX9SjK27kolM2VMvhygvDjcKjVESpkZ6no4i6lRtXfyE9KVGN4GR9jdFZBuv3ZgV85ojXHnaJvXFPG" />
+                    <Image alt="Alex Johnson" width={40} height={40} className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAe7bpcUcCjr9t88LPidJvh29WW9JJS8XvxdI-4XfZ7yzPoyqnVBhNbJk4y0r5-a7Qxw_AQYiR2ubdNwOxAmB2JLmkhIbXgv9knQ5_h5VN7Nkn6vG9z0Z3d4Bwifgx47lIO86Dj-iaOJ6bTzFcU3uRraKfLfNKQhzuy0OoAXdj3g3FyNKPQQTIYZ3s81nlHoOEX9SjK27kolM2VMvhygvDjcKjVESpkZ6no4i6lRtXfyE9KVGN4GR9jdFZBuv3ZgV85ojXHnaJvXFPG" />
                     <div className="flex-1">
                         <div className="flex items-baseline gap-2 mb-1">
                             <span className="font-semibold text-gray-900 dark:text-white">Alex Johnson</span>
@@ -65,7 +66,7 @@ export function ChatArea() {
 
                 {/* Mention Message Item */}
                 <div className="group flex gap-4 bg-yellow-50 dark:bg-yellow-900/10 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 p-2 -mx-2 rounded-xl transition-colors relative border-l-4 border-yellow-400">
-                    <img alt="John Doe" className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrwGY41theBgHakpItLhif7EKL0IXy-DrWh9GKvYwHEUDh0TaxHNKnCJB2IpbGpnlANtVPBXYoj_qrJ-3PbW9KF101Bnm2wiScPMF76rD2ZwIrowJOydPrHYCUY_bnFG14tpLnuc5nR8gu_NPc5NfQnEiPCGyA6_ehWYotqPlWU4e7CE8Lk5WrChIna2JnofzFrkTL-IvJCrj5s_mEoiHfVlZQp6BCttZMROpIUQ71sdxgyb_PKOB7dag1ziVxs10-9TbRJdQuWCtu" />
+                    <Image alt="John Doe" width={40} height={40} className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrwGY41theBgHakpItLhif7EKL0IXy-DrWh9GKvYwHEUDh0TaxHNKnCJB2IpbGpnlANtVPBXYoj_qrJ-3PbW9KF101Bnm2wiScPMF76rD2ZwIrowJOydPrHYCUY_bnFG14tpLnuc5nR8gu_NPc5NfQnEiPCGyA6_ehWYotqPlWU4e7CE8Lk5WrChIna2JnofzFrkTL-IvJCrj5s_mEoiHfVlZQp6BCttZMROpIUQ71sdxgyb_PKOB7dag1ziVxs10-9TbRJdQuWCtu" />
                     <div className="flex-1">
                         <div className="flex items-baseline gap-2 mb-1">
                             <span className="font-semibold text-gray-900 dark:text-white">John Doe</span>
@@ -85,7 +86,7 @@ export function ChatArea() {
 
                 {/* Notice Message Item */}
                 <div className="group flex gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 p-2 -mx-2 rounded-xl transition-colors relative">
-                    <img alt="Prof. Williams" className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDM4uF5pqSJdACjFmQG2-Xb-ZZfbYNFSMxKAB9xaoA4ngwGaYr2vbRWuV86465B08gwYGL1HQLhCVZn_3t6Vhdj1jv5s3HmSYLICiKkdURtY2mVWJ3WiMXkK-4Qu6Hu1N9QM1h1YqgbmAt3u2xBsY_Ecj1oFandRTqla3omdIFawrPAwmGXyjk2DVigmgjkNm3-odDCLN3-t6kDg74WgTPIIBUgMIaJCXqtQ6B9GHcsHaVPWvmvd_6LOzwL9yGe4iPM_MJzB1d_bRZ6" />
+                    <Image alt="Prof. Williams" width={40} height={40} className="w-10 h-10 rounded-full mt-1 object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDM4uF5pqSJdACjFmQG2-Xb-ZZfbYNFSMxKAB9xaoA4ngwGaYr2vbRWuV86465B08gwYGL1HQLhCVZn_3t6Vhdj1jv5s3HmSYLICiKkdURtY2mVWJ3WiMXkK-4Qu6Hu1N9QM1h1YqgbmAt3u2xBsY_Ecj1oFandRTqla3omdIFawrPAwmGXyjk2DVigmgjkNm3-odDCLN3-t6kDg74WgTPIIBUgMIaJCXqtQ6B9GHcsHaVPWvmvd_6LOzwL9yGe4iPM_MJzB1d_bRZ6" />
                     <div className="flex-1">
                         <div className="flex items-baseline gap-2 mb-1">
                             <span className="font-semibold text-red-600 dark:text-red-400">Prof. Williams</span>

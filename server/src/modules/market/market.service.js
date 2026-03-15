@@ -15,7 +15,7 @@ const getAllProducts = async (skip = 0, take = 10) => {
 }
 
 
-const createProduct = async (name, description, price, stock, image, creatorId, approval = "pending") => {
+const createProduct = async (name, description, price, stock, image, creatorId, approval = "pending", metadata = {}) => {
     const product = await prisma.product.create({
         data: {
             name,
@@ -24,7 +24,8 @@ const createProduct = async (name, description, price, stock, image, creatorId, 
             stock,
             image,
             creatorId,
-            approval
+            approval,
+            metadata
         }
     })
     return product;
@@ -122,11 +123,13 @@ const removeFromCart = async (userId, cartItemId) => {
 };
 
 const checkout = async (userId, pin) => {
+    console.log('[checkout service] Starting for userId:', userId);
     return await prisma.$transaction(async (tx) => {
         // 1. Validate User Queue & Wallet PIN
         const wallet = await tx.wallet.findUnique({
             where: { userId }
         });
+        console.log('[checkout service] Wallet found:', wallet ? 'yes' : 'no');
 
         if (!wallet) throw new Error("Wallet not configured");
         let pinMatch = false;
@@ -151,11 +154,14 @@ const checkout = async (userId, pin) => {
             if (item.product.stock < item.quantity) {
                 throw new Error(`Insufficient stock for ${item.product.name}`);
             }
-            totalAmount += Number(item.product.price) * item.quantity;
+            totalAmount += parseFloat(String(item.product.price)) * item.quantity;
         }
 
+        console.log('[checkout] Balance:', wallet.balance, 'Total:', totalAmount, 'Type:', typeof wallet.balance);
+
         // 4. Check Balance
-        if (Number(wallet.balance) < totalAmount) {
+        const balanceNum = parseFloat(String(wallet.balance));
+        if (balanceNum < totalAmount) {
             throw new Error("Insufficient wallet balance");
         }
 
@@ -180,6 +186,25 @@ const checkout = async (userId, pin) => {
                 }
             }
         });
+
+        // 6.5 Add items to Library
+        for (const item of cartItems) {
+            await tx.library.upsert({
+                where: {
+                    userId_productId: {
+                        userId,
+                        productId: item.productId
+                    }
+                },
+                create: {
+                    userId,
+                    productId: item.productId
+                },
+                update: {
+                    purchasedAt: new Date()
+                }
+            });
+        }
 
         // 7. Update Stock & Clear Cart
         for (const item of cartItems) {
@@ -240,7 +265,7 @@ const buyNow = async (userId, productId, quantity, pin) => {
         if (product.stock < quantity) throw new Error("Insufficient stock");
 
         const totalAmount = Number(product.price) * quantity;
-        if (Number(wallet.balance) < totalAmount) throw new Error("Insufficient wallet balance");
+        if (parseFloat(String(wallet.balance)) < totalAmount) throw new Error("Insufficient wallet balance");
 
         await tx.wallet.update({
             where: { userId },
@@ -264,6 +289,23 @@ const buyNow = async (userId, productId, quantity, pin) => {
             },
             include: {
                 items: true
+            }
+        });
+
+        // 6.5 Add to Library
+        await tx.library.upsert({
+            where: {
+                userId_productId: {
+                    userId,
+                    productId: product.id
+                }
+            },
+            create: {
+                userId,
+                productId: product.id
+            },
+            update: {
+                purchasedAt: new Date()
             }
         });
 

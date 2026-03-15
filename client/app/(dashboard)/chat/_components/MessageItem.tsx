@@ -111,12 +111,13 @@ export const MessageItem = React.memo(function MessageItem({
                 </div>
 
                 {attachments.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 grid gap-2">
                         {attachments.map((att: any, idx: number) => (
                             <ChatImagePreview
                                 key={`${msg.id}-att-${idx}`}
                                 attachment={att}
-                                className="max-w-[200px]"
+                                variant="message"
+                                className="w-full"
                             />
                         ))}
                     </div>

@@ -11,6 +11,9 @@ import authorize from '../../middleware/authorize.js';
 
 const router = express.Router();
 
+// Health Check
+router.get('/ping', (req, res) => res.json({ status: 'ok', service: 'market' }));
+
 // Products
 router.get('/products', verifyToken, getAllProducts);
 router.get('/products/search', verifyToken, searchProductsHandler);

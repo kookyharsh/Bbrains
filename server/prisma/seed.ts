@@ -7,6 +7,10 @@ import { createSupabaseUser, listSupabaseUsers, deleteSupabaseUser } from '../sr
 declare const process: any;
 
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const walletIdForUserId = (userId: string) => {
+  const suffix = userId.split('_')[1] ?? '';
+  return `wallet_${suffix || userId}`;
+};
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const getRandomItems = <T>(arr: T[], count: number): T[] => {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -162,7 +166,7 @@ async function main() {
           balance: userType === 'admin' ? 10000 : userType === 'teacher' ? 5000 : getRandomInt(500, 3000)
         },
         create: {
-          id: userData.email,
+          id: walletIdForUserId(user.id),
           userId: user.id,
           balance: userType === 'admin' ? 10000 : userType === 'teacher' ? 5000 : getRandomInt(500, 3000)
         }

@@ -18,7 +18,8 @@ const productSchema = z.object({
   price: z.number().positive(),
   stock: z.number().int().nonnegative(),
   imageUrl: z.string().url().optional(),
-  category: z.string().max(50).optional()
+  category: z.string().max(50).optional(),
+  metadata: z.record(z.any()).optional()
 });
 
 const cartItemSchema = z.object({
@@ -40,7 +41,8 @@ export const getAllProducts = async (req, res) => {
     const result = await getProductsList((page - 1) * limit, limit);
     return sendPaginated(res, result.products, { page, limit, total: result.total });
   } catch (error) {
-    return sendError(res, 'Failed to fetch products', 500);
+    console.error('[getAllProducts] Error:', error);
+    return sendError(res, error.message || 'Failed to fetch products', 500);
   }
 };
 
@@ -66,6 +68,13 @@ export const createProduct = async (req, res) => {
     const validated = productSchema.parse(req.body);
     const isPrivileged = req.user.type === "teacher" || req.user.type === "admin";
     const approval = isPrivileged ? "approved" : "pending";
+    
+    // Combine category from field and metadata
+    const metadata = {
+      ...(validated.metadata || {}),
+      category: validated.category || validated.metadata?.category || 'product'
+    };
+
     const product = await createProductSvc(
       validated.name,
       validated.description,
@@ -73,7 +82,8 @@ export const createProduct = async (req, res) => {
       validated.stock,
       validated.imageUrl,
       req.user.id,
-      approval
+      approval,
+      metadata
     );
     await createAuditLog(req.user.id, 'MARKET', 'CREATE', 'Product', product.id);
     return sendCreated(res, product, 'Product created');
@@ -120,7 +130,8 @@ export const searchProductsHandler = async (req, res) => {
     const products = await findProductByName(query);
     return sendSuccess(res, products);
   } catch (error) {
-    return sendError(res, 'Search failed', 500);
+    console.error('[searchProductsHandler] Error:', error);
+    return sendError(res, error.message || 'Search failed', 500);
   }
 };
 
@@ -149,7 +160,8 @@ export const getPendingProducts = async (req, res) => {
     });
     return sendSuccess(res, products);
   } catch (error) {
-    return sendError(res, 'Failed to fetch pending products', 500);
+    console.error('[getPendingProducts] Error:', error);
+    return sendError(res, error.message || 'Failed to fetch pending products', 500);
   }
 };
 
@@ -199,9 +211,12 @@ export const addToCartHandler = async (req, res) => {
 export const getCartHandler = async (req, res) => {
   try {
     const items = await getCart(req.user.id);
-    return sendSuccess(res, items);
+    // Filter out items where product might have been deleted but cart still has ID
+    const validItems = items.filter(item => item.product);
+    return sendSuccess(res, validItems);
   } catch (error) {
-    return sendError(res, 'Failed to fetch cart', 500);
+    console.error('[getCartHandler] Error:', error);
+    return sendError(res, error.message || 'Failed to fetch cart', 500);
   }
 };
 
@@ -273,8 +288,7 @@ export const getAllThemes = async (req, res) => {
         where: {
           approval: 'approved',
           metadata: {
-            path: ['category'],
-            equals: 'theme'
+            contains: { category: 'theme' }
           }
         },
         skip,
@@ -290,8 +304,7 @@ export const getAllThemes = async (req, res) => {
         where: {
           approval: 'approved',
           metadata: {
-            path: ['category'],
-            equals: 'theme'
+            contains: { category: 'theme' }
           }
         }
       })
@@ -315,8 +328,7 @@ export const getTheme = async (req, res) => {
         id,
         approval: 'approved',
         metadata: {
-          path: ['category'],
-          equals: 'theme'
+          contains: { category: 'theme' }
         }
       },
       include: {
@@ -341,83 +353,60 @@ export const getLibrary = async (req, res) => {
     const category = req.query.category;
     const skip = (page - 1) * limit;
 
-    const whereClause = {
-      userId: req.user.id,
-      status: 'completed'
-    };
+    // Use the Library model directly
+    console.log(`[getLibrary] Fetching for user: ${req.user.id} (${req.user.username})`);
+    
+    const libraryItems = await prisma.library.findMany({
+      where: { userId: req.user.id },
+      include: {
+        product: {
+          include: {
+            creator: { select: { username: true } }
+          }
+        }
+      },
+      orderBy: { purchasedAt: 'desc' },
+    });
 
-    let categoryFilter = {};
-    if (category) {
-      categoryFilter = {
-        product: {
-          metadata: {
-            path: ['category'],
-            equals: category
-          }
-        }
+    console.log(`[getLibrary] Found ${libraryItems.length} rows in database.`);
+
+    let allItems = libraryItems.map(item => {
+      const p = item.product;
+      const metadata = p.metadata || {};
+      return {
+        id: item.id,
+        productId: item.productId,
+        name: p.name,
+        description: p.description,
+        image: p.image,
+        category: metadata.category || 'product',
+        fileUrl: metadata.fileUrl,
+        fileType: metadata.fileType,
+        themeConfig: metadata.themeConfig,
+        version: metadata.version,
+        purchasedAt: item.purchasedAt,
+        creator: p.creator?.username || 'Unknown'
       };
-    } else {
-      categoryFilter = {
-        product: {
-          metadata: {
-            path: ['category'],
-            not: null
-          }
-        }
-      };
+    });
+
+    console.log(`[getLibrary] Categories present:`, [...new Set(allItems.map(a => a.category))]);
+
+    // Filter by category if requested
+    if (category && category !== 'all' && category !== 'undefined') {
+      console.log(`[getLibrary] Filtering for category: ${category}`);
+      allItems = allItems.filter(item => item.category === category);
     }
 
-    const [items, total] = await Promise.all([
-      prisma.orderItem.findMany({
-        where: {
-          ...whereClause,
-          ...categoryFilter
-        },
-        skip,
-        take: limit,
-        orderBy: { order: { orderDate: 'desc' } },
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              description: true,
-              image: true,
-              metadata: true,
-              creator: { select: { username: true } }
-            }
-          },
-          order: {
-            select: { orderDate: true }
-          }
-        }
-      }),
-      prisma.orderItem.count({
-        where: {
-          ...whereClause,
-          ...categoryFilter
-        }
-      })
-    ]);
+    const total = allItems.length;
+    const paginatedItems = allItems.slice(skip, skip + limit);
 
-    const formattedItems = items.map(item => ({
-      id: item.id,
-      productId: item.productId,
-      name: item.product.name,
-      description: item.product.description,
-      image: item.product.image,
-      category: item.product.metadata?.category || 'product',
-      fileUrl: item.product.metadata?.fileUrl,
-      fileType: item.product.metadata?.fileType,
-      themeConfig: item.product.metadata?.themeConfig,
-      version: item.product.metadata?.version,
-      purchasedAt: item.order.orderDate,
-      creator: item.product.creator.username
-    }));
-
-    return sendPaginated(res, formattedItems, { page, limit, total });
+    return res.json({
+      success: true,
+      data: paginatedItems,
+      pagination: { page, limit, total }
+    });
   } catch (error) {
-    console.error('Error fetching library:', error);
+    console.error('Error in getLibrary:', error);
     return sendError(res, 'Failed to fetch library', 500);
   }
 };
@@ -429,13 +418,10 @@ export const getDownloadUrl = async (req, res) => {
     if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
 
     // Check if user has purchased this item
-    const purchase = await prisma.orderItem.findFirst({
+    const purchase = await prisma.library.findFirst({
       where: {
         productId,
-        order: {
-          userId: req.user.id,
-          status: 'completed'
-        }
+        userId: req.user.id
       }
     });
 
@@ -462,13 +448,10 @@ export const applyTheme = async (req, res) => {
     if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
 
     // Check if user has purchased this theme
-    const purchase = await prisma.orderItem.findFirst({
+    const purchase = await prisma.library.findFirst({
       where: {
         productId,
-        order: {
-          userId: req.user.id,
-          status: 'completed'
-        }
+        userId: req.user.id
       },
       include: {
         product: {

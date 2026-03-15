@@ -32,9 +32,31 @@ const normalizeProfile = (user) => {
 export const getChatMessages = async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit || "200"), 10), 1), 500);
-        const messages = await getMessagesForChat(req.query.chatId) // chatId optional
-        const sliced = messages.slice(-limit);
-        return sendSuccess(res, sliced);
+        const chatId = req.query.chatId || 'default';
+        
+        const messages = await prisma.chatMessage.findMany({
+            where: { chatId },
+            orderBy: { createdAt: 'asc' },
+            take: -limit // Take the last 'limit' messages
+        });
+        
+        // Normalize for frontend
+        const normalized = messages.map(msg => ({
+            id: msg.id,
+            userId: msg.userId,
+            username: msg.username,
+            displayName: msg.displayName,
+            avatar: msg.avatar,
+            role: msg.role,
+            content: msg.content,
+            mentions: msg.mentions,
+            replyToMessageId: msg.replyTo,
+            attachments: msg.attachments,
+            createdAt: msg.createdAt,
+            updatedAt: msg.updatedAt
+        }));
+
+        return sendSuccess(res, normalized);
     } catch (error) {
         console.error("Failed to fetch chat messages:", error);
         return sendError(res, "Failed to fetch chat messages", 500);
@@ -83,10 +105,50 @@ export const getChatMembers = async (req, res) => {
     }
 };
 
+export const createChatMessage = async (req, res) => {
+    try {
+        const { content, chatId, mentions, replyTo, attachments } = req.body;
+        const userId = req.user.id;
+
+        // Fetch user profile for denormalized storage
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: { userDetails: true }
+        });
+
+        if (!user) return sendError(res, "User not found", 404);
+
+        const profile = normalizeProfile(user);
+
+        const message = await prisma.chatMessage.create({
+            data: {
+                content,
+                chatId: chatId || 'default',
+                userId,
+                username: profile.username,
+                displayName: profile.displayName,
+                avatar: profile.avatar,
+                role: profile.type,
+                mentions: mentions || [],
+                replyTo: replyTo || null,
+                attachments: attachments || []
+            }
+        });
+
+        return sendSuccess(res, message, "Message sent", 201);
+    } catch (error) {
+        console.error("Failed to create chat message:", error);
+        return sendError(res, "Failed to send message", 500);
+    }
+};
+
 export const getMyChatProfile = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        if (!userId) return sendError(res, "Unauthorized", 401);
+
         const user = await prisma.user.findUnique({
-            where: { id: req.user.id },
+            where: { id: userId },
             select: {
                 id: true,
                 username: true,
@@ -114,6 +176,7 @@ export const getMyChatProfile = async (req, res) => {
         });
 
         if (!user) return sendError(res, "User not found", 404);
+
         return sendSuccess(res, normalizeProfile(user));
     } catch (error) {
         console.error("Failed to fetch my chat profile:", error);

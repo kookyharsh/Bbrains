@@ -16,7 +16,20 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
 
     let formattedUser = null;
     if (user) {
+        // Fetch user type from DB
+        const { data: dbUser } = await supabase
+            .from('user')
+            .select(`
+                type,
+                xp (level, xp)
+            `)
+            .eq('user_id', user.id)
+            .single()
+
         const metadata = user.user_metadata || {};
+        const userXpData = Array.isArray(dbUser?.xp) ? dbUser?.xp[0] : dbUser?.xp;
+        const userXp = userXpData || { level: 1, xp: 0 };
+        
         formattedUser = {
             id: user.id,
             email: user.email,
@@ -25,6 +38,9 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
             lastName: metadata.last_name || metadata.lastName || "",
             fullName: metadata.full_name || metadata.name || "",
             username: metadata.username || user.email?.split('@')[0] || "",
+            type: dbUser?.type || 'student',
+            level: userXp.level,
+            xp: userXp.xp,
         };
     }
 

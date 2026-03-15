@@ -23,13 +23,16 @@ export interface ChatAttachment {
 interface ChatImagePreviewProps {
   attachment: ChatAttachment
   className?: string
+  variant?: 'compact' | 'message'
 }
 
 export function ChatImagePreview({ 
   attachment, 
-  className = '' 
+  className = '',
+  variant = 'compact',
 }: ChatImagePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [messageAspectRatio, setMessageAspectRatio] = useState<number | null>(null)
 
   // Robust type checking
   const isImage = (attachment.type?.toLowerCase().includes('image') || 
@@ -113,13 +116,35 @@ export function ChatImagePreview({
       <DialogTrigger asChild>
         <div className={cn('relative group cursor-pointer overflow-hidden rounded-xl border border-border bg-muted/30 shadow-sm hover:shadow-md transition-all duration-200', className)}>
           {isImage ? (
-            <div className="relative w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32">
+            <div
+              className={cn(
+                'relative overflow-hidden',
+                variant === 'message'
+                  ? 'w-full max-h-[70vh]'
+                  : 'w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32'
+              )}
+              style={variant === 'message' ? { aspectRatio: messageAspectRatio ?? 16 / 9 } : undefined}
+            >
               <Image
                 src={attachment.url}
                 alt={attachment.name || 'Preview'}
                 fill
-                className="object-cover hover:scale-105 transition-transform duration-300"
-                sizes="(max-width: 768px) 96px, (max-width: 1200px) 112px, 128px"
+                className={cn(
+                  'object-cover transition-transform duration-300',
+                  variant === 'message' ? 'hover:scale-[1.02]' : 'hover:scale-105'
+                )}
+                onLoadingComplete={(img) => {
+                  if (variant !== 'message') return
+                  const w = img.naturalWidth
+                  const h = img.naturalHeight
+                  if (!w || !h) return
+                  setMessageAspectRatio(w / h)
+                }}
+                sizes={
+                  variant === 'message'
+                    ? '(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 640px'
+                    : '(max-width: 768px) 96px, (max-width: 1200px) 112px, 128px'
+                }
               />
             </div>
           ) : isVideo ? (

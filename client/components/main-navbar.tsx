@@ -1,9 +1,9 @@
 "use client"
 
-import { Bell, LogOut, User, BarChart3 } from "lucide-react"
+import { LogOut, User, BarChart3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/client"
-import { useNotifications } from "./providers/notification-provider"
+import { NotificationsBell } from "./NotificationsBell"
 
 import { ModeToggle } from "./mode-toggle"
 import { SidebarTrigger } from "./ui/sidebar"
@@ -15,15 +15,32 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import React, { useEffect, useState } from "react"
 
 export function MainNavbar({ user }: { user?: any }) {
     const router = useRouter()
-    const { unreadCount } = useNotifications()
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const handleLogout = async () => {
         const supabase = createClient()
         await supabase.auth.signOut()
         router.push("/auth/login")
+    }
+
+    if (!mounted) {
+        return (
+            <nav className="sticky top-0 z-[var(--z-nav)] flex h-16 md:h-20 w-full items-center border-b bg-ui-light-surface/95 dark:bg-ui-dark-surface/95 px-4 md:px-8 backdrop-blur shadow-sm">
+                <div className="flex flex-1 items-center gap-4">
+                    <div className="h-9 w-9 md:h-10 md:w-10 rounded-full border border-border/60 bg-background/80" />
+                </div>
+                <div className="hidden lg:flex flex-[2] items-center justify-center px-4" />
+                <div className="flex flex-1 items-center justify-end gap-2 md:gap-6" />
+            </nav>
+        )
     }
 
     return (
@@ -52,14 +69,7 @@ export function MainNavbar({ user }: { user?: any }) {
             <div className="flex flex-1 items-center justify-end gap-2 md:gap-6">
                 <div className="flex items-center gap-1 md:gap-2">
                     <ModeToggle />
-                    <button className="relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-full border border-gray-100 dark:border-gray-800 transition-colors">
-                        <Bell className="h-4 w-4 md:h-5 md:w-5" />
-                        {unreadCount > 0 && (
-                            <span className="absolute top-1.5 right-1.5 md:top-2 md:right-2 h-3.5 w-3.5 md:h-4 md:w-4 bg-red-500 rounded-full border-2 border-white dark:border-gray-950 text-[8px] md:text-[10px] font-bold text-white flex items-center justify-center">
-                                {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                        )}
-                    </button>
+                    <NotificationsBell />
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-3 md:pl-6 md:border-l border-gray-100 dark:border-gray-800">
@@ -76,7 +86,7 @@ export function MainNavbar({ user }: { user?: any }) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 mt-2 z-[var(--z-modal)]">
                             <DropdownMenuItem asChild className="cursor-pointer py-2.5">
-                                <Link href="/settings" className="flex items-center">
+                                <Link href="/profile" className="flex items-center">
                                     <User className="mr-2 h-4 w-4" />
                                     <span>View Profile</span>
                                 </Link>

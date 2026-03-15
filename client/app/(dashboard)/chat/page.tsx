@@ -18,10 +18,11 @@ import { MessageItem } from "./_components/MessageItem";
 import { MessageInput } from "./_components/MessageInput";
 import { ChatSidebarRight } from "./_components/ChatSidebarRight";
 import { ProfileDialog } from "./_components/ProfileDialog";
+import { Memberssidebar } from "./_components/Memberssidebar";
 
 // Data & Utils
 import { Message, Member } from "./data";
-import { mapApiMember } from "./utils";
+import { extractMentions, mapApiMember } from "./utils";
 
 export default function ChatPage() {
   // Hooks
@@ -35,7 +36,7 @@ export default function ChatPage() {
     currentUserId 
   } = useChatMessages();
   
-  const { markAsRead } = useNotifications();
+  const { markAllRead } = useNotifications();
   const { uploadFile, isUploading } = useCloudinaryUpload();
 
   // State
@@ -64,19 +65,27 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const { data: users } = await supabase.from("user").select("user_id, username, type");
-        const { data: details } = await supabase.from("user_details").select("user_id, first_name, last_name, avatar, sex, pronouns");
+        const { data: users, error: usersError } = await supabase.from("user").select("user_id, username, type");
+        if (usersError) throw usersError;
+
+        const { data: details, error: detailsError } = await supabase
+          .from("user_details")
+          .select("user_id, first_name, last_name, avatar, sex");
+        if (detailsError) {
+          console.warn("Error fetching user details:", detailsError);
+        }
         
-        if (users && details) {
+        if (users) {
+          const detailsList = details ?? [];
           const members = users.map((u) => {
-            const d = details.find((det) => det.user_id === u.user_id);
+            const d = detailsList.find((det) => det.user_id === u.user_id);
             // Using mapApiMember to ensure consistent structure
             return mapApiMember({
                 userId: u.user_id,
                 username: u.username,
                 displayName: d ? `${d.first_name} ${d.last_name}`.trim() : u.username,
                 avatar: d?.avatar || "",
-                pronouns: d?.pronouns || (d?.sex === 'male' ? 'he/him' : d?.sex === 'female' ? 'she/her' : 'they/them'),
+                pronouns: d?.sex === 'male' ? 'he/him' : d?.sex === 'female' ? 'she/her' : 'they/them',
                 grade: "N/A",
                 roles: [],
                 type: u.type || "student"
@@ -86,24 +95,25 @@ export default function ChatPage() {
         }
       } catch (error) {
         console.error("Error fetching members:", error);
+        toast.error("Unable to load members list");
       }
     };
     fetchMembers();
   }, []);
 
   // Helpers
-  const getDateLabel = (dateStr: string) => {
+  const getDateLabel = useCallback((dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
     const diff = today.getTime() - d.getTime();
-    const days = diff / (1000 * 60 * 60 * 24);
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     if (days === 0) return "Today";
     if (days === 1) return "Yesterday";
     return d.toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" });
-  };
+  }, []);
 
   const groupedMessages = useMemo(() => {
     const groups: { label: string; messages: Message[] }[] = [];
@@ -118,7 +128,7 @@ export default function ChatPage() {
       }
     });
     return groups;
-  }, [messages]);
+  }, [messages, getDateLabel]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -126,13 +136,13 @@ export default function ChatPage() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
     if (messages.length > 0) {
-      markAsRead();
+      markAllRead();
     }
     return () => clearTimeout(timer);
-  }, [messages.length, markAsRead]);
+  }, [messages.length, markAllRead]);
 
   // Handlers
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!message.trim() && pendingAttachments.length === 0) return;
     if (isUploading) return;
 
@@ -151,39 +161,43 @@ export default function ChatPage() {
         }
 
         if (editingMsgId) {
-            await editMessage(editingMsgId, message.trim());
+            const content = message.trim();
+            await editMessage(editingMsgId, content, extractMentions(content));
             setEditingMsgId(null);
         } else {
             const content = message.trim();
-            // Mentions are extracted by the backend from the @ pattern
-            await sendMessage(content, uploadedAttachments, [], replyingMsg?.id);
+            await sendMessage(content, uploadedAttachments, extractMentions(content), replyingMsg?.id);
         }
         
         setMessage("");
         setReplyingMsg(null);
-        pendingAttachments.forEach(att => URL.revokeObjectURL(att.previewUrl));
-        setPendingAttachments([]);
+        setPendingAttachments((prev) => {
+            prev.forEach(att => URL.revokeObjectURL(att.previewUrl));
+            return [];
+        });
     } catch (error) {
         toast.error("Failed to send message");
     }
-  };
+  }, [message, pendingAttachments, isUploading, editingMsgId, replyingMsg, uploadFile, editMessage, sendMessage]);
 
-  const handleFileSelect = (files: File[]) => {
+  const handleFileSelect = useCallback((files: File[]) => {
     const newPending = files.map(f => ({
       file: f,
       previewUrl: URL.createObjectURL(f)
     }));
     setPendingAttachments(prev => [...prev, ...newPending]);
-  };
+  }, []);
 
-  const handleRemoveAttachment = (index: number) => {
-    const newPending = [...pendingAttachments];
-    URL.revokeObjectURL(newPending[index].previewUrl);
-    newPending.splice(index, 1);
-    setPendingAttachments(newPending);
-  };
+  const handleRemoveAttachment = useCallback((index: number) => {
+    setPendingAttachments(prev => {
+      const newPending = [...prev];
+      URL.revokeObjectURL(newPending[index].previewUrl);
+      newPending.splice(index, 1);
+      return newPending;
+    });
+  }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (mentionQuery !== null && mentionIndex >= 0) {
         // Handled by MessageInput component mostly, but we can prevent default send here
         if (["ArrowDown", "ArrowUp", "Enter", "Tab"].includes(e.key)) {
@@ -204,10 +218,14 @@ export default function ChatPage() {
         if (replyingMsg) setReplyingMsg(null);
         setMentionQuery(null);
     }
-  };
+  }, [mentionQuery, mentionIndex, editingMsgId, replyingMsg, handleSend]);
 
-  const onDetectMention = (val: string) => {
-    const cursorPos = (document.activeElement as HTMLInputElement)?.selectionStart || 0;
+  const onDetectMention = useCallback((val: string) => {
+    const active = document.activeElement as (HTMLInputElement | null);
+    const cursorPos =
+      active && typeof active.selectionStart === "number"
+        ? active.selectionStart
+        : val.length;
     const textBeforeCursor = val.slice(0, cursorPos);
     const match = textBeforeCursor.match(/@(\w*)$/);
     if (match) {
@@ -216,9 +234,9 @@ export default function ChatPage() {
     } else {
       setMentionQuery(null);
     }
-  };
+  }, []);
 
-  const onMentionSelect = (username: string) => {
+  const onMentionSelect = useCallback((username: string) => {
     const input = document.querySelector('input[aria-label="Message input"]') as HTMLInputElement;
     const cursorPos = input?.selectionStart || 0;
     const textBeforeCursor = message.slice(0, cursorPos);
@@ -232,30 +250,48 @@ export default function ChatPage() {
       input?.focus();
       input?.setSelectionRange(newPos, newPos);
     }, 0);
-  };
+  }, [message]);
 
-  const handleOpenProfile = (userId: string) => {
+  const handleOpenProfile = useCallback((userId: string) => {
     const member = membersList.find(m => m.id === userId);
     if (member) {
         setProfileUser(member);
         setShowProfile(true);
     }
-  };
+  }, [membersList]);
 
-  const handleReply = (msg: Message) => {
+  const handleReply = useCallback((msg: Message) => {
     setReplyingMsg({ 
         id: msg.id, 
         username: msg.user.username, 
         content: msg.content 
     });
     setEditingMsgId(null);
-  };
+  }, []);
 
-  const handleEdit = (id: string, content: string) => {
+  const handleEdit = useCallback((id: string, content: string) => {
     setEditingMsgId(id);
     setMessage(content);
     setReplyingMsg(null);
-  };
+  }, []);
+
+  const handleCopy = useCallback((content: string) => {
+    navigator.clipboard.writeText(content);
+    toast.success("Copied to clipboard");
+  }, []);
+
+  const onEmojiSelect = useCallback((emoji: any) => setMessage(prev => prev + emoji.emoji), []);
+  const onCancelEdit = useCallback(() => {
+    setEditingMsgId(null);
+    setMessage("");
+  }, []);
+  const onCancelReply = useCallback(() => setReplyingMsg(null), []);
+  const onToggleMembers = useCallback(() => setShowMembers(!showMembers), [showMembers]);
+  const onMembersSidebarClose = useCallback(() => setShowMembers(false), []);
+  const onMembersSidebarOpenProfile = useCallback((userId: string) => {
+    handleOpenProfile(userId);
+    setShowMembers(false);
+  }, [handleOpenProfile]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-card md:rounded-xl md:border md:shadow-sm">
@@ -264,7 +300,7 @@ export default function ChatPage() {
         showMembers={showMembers}
         messageCount={messages.length}
         isConnected={isConnected}
-        onToggleMembers={() => setShowMembers(!showMembers)}
+        onToggleMembers={onToggleMembers}
       />
 
       <div className="flex flex-1 min-h-0">
@@ -298,10 +334,7 @@ export default function ChatPage() {
                                 currentUserId={currentUserId}
                                 currentUsername={currentUsername}
                                 onReply={handleReply}
-                                onCopy={(content) => {
-                                    navigator.clipboard.writeText(content);
-                                    toast.success("Copied to clipboard");
-                                }}
+                                onCopy={handleCopy}
                                 onEdit={handleEdit}
                                 onDelete={deleteMessage}
                                 onOpenProfile={handleOpenProfile}
@@ -329,12 +362,9 @@ export default function ChatPage() {
             }}
             onSend={handleSend}
             onKeyDown={handleKeyDown}
-            onEmojiSelect={(emoji) => setMessage(prev => prev + emoji.emoji)}
-            onCancelEdit={() => {
-                setEditingMsgId(null);
-                setMessage("");
-            }}
-            onCancelReply={() => setReplyingMsg(null)}
+            onEmojiSelect={onEmojiSelect}
+            onCancelEdit={onCancelEdit}
+            onCancelReply={onCancelReply}
             onFileSelect={handleFileSelect}
             onRemoveAttachment={handleRemoveAttachment}
             onMentionSelect={onMentionSelect}
@@ -345,11 +375,22 @@ export default function ChatPage() {
         </div>
 
         {showMembers && (
-          <ChatSidebarRight 
-            members={membersList} 
-            currentUserId={currentUserId || ""} 
-            onSelectUser={(user) => handleOpenProfile(user.id)} 
-          />
+          <>
+            <ChatSidebarRight 
+              members={membersList} 
+              currentUserId={currentUserId || ""} 
+              onSelectUser={(user) => handleOpenProfile(user.id)} 
+            />
+
+            <div className="md:hidden">
+              <Memberssidebar
+                members={membersList}
+                currentUserId={currentUserId || ""}
+                onClose={onMembersSidebarClose}
+                onOpenProfile={onMembersSidebarOpenProfile}
+              />
+            </div>
+          </>
         )}
       </div>
 

@@ -52,7 +52,15 @@ export interface AttendanceRecord {
   id: string;
   date: string;
   status: 'present' | 'absent' | 'late';
-  courseName?: string;
+  notes?: string;
+  markedBy?: string;
+  marker?: {
+    username: string;
+    userDetails?: {
+      firstName: string;
+      lastName: string;
+    };
+  };
 }
 
 export interface LeaderboardEntry {
@@ -160,6 +168,22 @@ export const dashboardApi = {
   },
 };
 
+export const userApi = {
+  updateProfile: async (id: string, data: { username?: string }): Promise<ApiResponse<User>> => {
+    return api.put<User>(`/user/update/${id}`, data);
+  },
+  updateDetails: async (data: { 
+    firstName?: string; 
+    lastName?: string; 
+    avatar?: string; 
+    sex?: string; 
+    dob?: string; 
+    phone?: string; 
+  }): Promise<ApiResponse<any>> => {
+    return api.put<any>('/user/me/details', data);
+  },
+};
+
 export interface Assignment {
   id: number;
   title: string;
@@ -220,8 +244,23 @@ export const walletApi = {
 };
 
 export const attendanceApi = {
-  getAttendance: async (): Promise<ApiResponse<AttendanceData>> => {
-    return api.get<AttendanceData>('/attendance');
+  getAttendance: async (params?: { startDate?: string; endDate?: string; status?: string }): Promise<ApiResponse<AttendanceRecord[]>> => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<AttendanceRecord[]>(`/attendance${query}`);
+  },
+
+  getStudentHistory: async (studentId: string, params?: { startDate?: string; endDate?: string; status?: string }): Promise<ApiResponse<AttendanceRecord[]>> => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return api.get<AttendanceRecord[]>(`/attendance/student/${studentId}${query}`);
+  },
+
+  markAttendance: async (data: {
+    studentId: string;
+    date: string;
+    status: 'present' | 'absent' | 'late';
+    notes?: string;
+  }): Promise<ApiResponse<AttendanceRecord>> => {
+    return api.post<AttendanceRecord>('/attendance/mark', data);
   },
 };
 
@@ -377,6 +416,111 @@ export const streakApi = {
   },
 };
 
+export interface Notification {
+  id: number;
+  userId: string;
+  title: string;
+  message?: string;
+  type: string;
+  relatedId?: string;
+  readAt?: string;
+  createdAt: string;
+}
+
+export const notificationApi = {
+  getNotifications: async (unreadOnly = false): Promise<ApiResponse<{ notifications: Notification[]; unreadCount: number }>> => {
+    return api.get(`/notifications?unreadOnly=${unreadOnly}`);
+  },
+
+  markRead: async (id: number): Promise<ApiResponse<void>> => {
+    return api.post(`/notifications/mark-read/${id}`, {});
+  },
+
+  markAllRead: async (): Promise<ApiResponse<void>> => {
+    return api.post('/notifications/mark-all-read', {});
+  },
+
+  getUnreadCount: async (): Promise<ApiResponse<{ count: number }>> => {
+    return api.get('/notifications/unread-count');
+  },
+};
+
+export interface SystemConfig {
+    id: number;
+    key: string;
+    value: string;
+    type: 'string' | 'number' | 'boolean' | 'json';
+    description?: string;
+    updatedAt: string;
+}
+
+export const configApi = {
+    getConfigs: async (): Promise<ApiResponse<SystemConfig[]>> => {
+        return api.get('/config');
+    },
+    updateConfig: async (data: Partial<SystemConfig>): Promise<ApiResponse<SystemConfig>> => {
+        return api.post('/config', data);
+    },
+    deleteConfig: async (key: string): Promise<ApiResponse<void>> => {
+        return api.delete(`/config/${key}`);
+    },
+    getPublicConfigs: async (): Promise<ApiResponse<any>> => {
+        return api.get('/config/public');
+    }
+};
+
+export interface Suggestion {
+    id: number;
+    userId: string;
+    title: string;
+    content: string;
+    status: 'pending' | 'reviewed' | 'implemented' | 'rejected';
+    createdAt: string;
+    user?: {
+        username: string;
+        userDetails?: { firstName: string; lastName: string };
+    };
+}
+
+export const suggestionApi = {
+    getSuggestions: async (status?: string): Promise<ApiResponse<Suggestion[]>> => {
+        const query = status ? `?status=${status}` : '';
+        return api.get(`/suggestions${query}`);
+    },
+    createSuggestion: async (data: { title: string; content: string }): Promise<ApiResponse<Suggestion>> => {
+        return api.post('/suggestions', data);
+    },
+    updateStatus: async (id: number, status: string): Promise<ApiResponse<Suggestion>> => {
+        return api.put(`/suggestions/${id}/status`, { status });
+    },
+    deleteSuggestion: async (id: number): Promise<ApiResponse<void>> => {
+        return api.delete(`/suggestions/${id}`);
+    }
+};
+
+export interface LevelThreshold {
+  levelNumber: number;
+  requiredXp: number;
+}
+
+export const xpApi = {
+  getLevels: async (): Promise<ApiResponse<LevelThreshold[]>> => {
+    return api.get<LevelThreshold[]>('/xp/levels');
+  },
+
+  createLevel: async (levelNumber: number, requiredXp: number): Promise<ApiResponse<LevelThreshold>> => {
+    return api.post<LevelThreshold>('/xp/levels', { levelNumber, requiredXp });
+  },
+
+  updateLevel: async (levelNumber: number, requiredXp: number): Promise<ApiResponse<LevelThreshold>> => {
+    return api.put<LevelThreshold>(`/xp/levels/${levelNumber}`, { requiredXp });
+  },
+
+  deleteLevel: async (levelNumber: number): Promise<ApiResponse<LevelThreshold>> => {
+    return api.delete<LevelThreshold>(`/xp/levels/${levelNumber}`);
+  },
+};
+
 export interface ProductMetadata {
   category?: string;
   fileUrl?: string;
@@ -414,6 +558,24 @@ export interface LibraryItem {
   creator: string;
 }
 
+export const libraryApi = {
+  getLibrary: async (
+    category?: string,
+    page = 1,
+    limit = 20
+  ): Promise<ApiResponse<{ data: LibraryItem[]; pagination: { page: number; limit: number; total: number } }>> => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (category) params.set('category', category);
+    return api.get(`/market/library?${params.toString()}`);
+  },
+
+  getDownloadUrl: async (productId: number): Promise<ApiResponse<{ url: string }>> => {
+    return api.get(`/market/library/${productId}/download`);
+  },
+};
+
 export const marketApi = {
   getProducts: async (page = 1, limit = 20): Promise<ApiResponse<{ data: Product[]; pagination: { page: number; limit: number; total: number } }>> => {
     return api.get(`/market/products?page=${page}&limit=${limit}`);
@@ -441,6 +603,10 @@ export const marketApi = {
   
   checkout: async (pin: string): Promise<ApiResponse<unknown>> => {
     return api.post('/market/checkout', { pin });
+  },
+
+  getMyProducts: async (): Promise<ApiResponse<Product[]>> => {
+    return api.get<Product[]>('/market/my-products');
   },
 };
 
@@ -470,14 +636,29 @@ export const themeApi = {
   },
 };
 
-export const libraryApi = {
-  getLibrary: async (category?: string, page = 1, limit = 20): Promise<ApiResponse<{ data: LibraryItem[]; pagination: { page: number; limit: number; total: number } }>> => {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (category) params.append('category', category);
-    return api.get(`/market/library?${params.toString()}`);
+export const chatApi = {
+  getMessages: async (chatId?: string, limit = 200): Promise<ApiResponse<any[]>> => {
+    const query = new URLSearchParams();
+    if (chatId) query.append('chatId', chatId);
+    query.append('limit', String(limit));
+    return api.get<any[]>(`/chat/messages?${query.toString()}`);
   },
-  
-  getDownloadUrl: async (productId: number): Promise<ApiResponse<{ url: string }>> => {
-    return api.get(`/market/library/${productId}/download`);
+
+  getMembers: async (): Promise<ApiResponse<any[]>> => {
+    return api.get<any[]>(`/chat/members`);
+  },
+
+  getMyProfile: async (): Promise<ApiResponse<any>> => {
+    return api.get<any>(`/chat/me`);
+  },
+
+  sendMessage: async (data: {
+    content: string;
+    chatId?: string;
+    mentions?: string[];
+    replyTo?: string;
+    attachments?: { url: string; type: string; name?: string }[];
+  }): Promise<ApiResponse<any>> => {
+    return api.post<any>('/chat/messages', data);
   },
 };

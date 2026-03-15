@@ -51,26 +51,41 @@ const MemberRow = React.memo(function MemberRow({
     )
 })
 
-interface MembersSidebarProps {
-    members: Member[]
-    onClose: () => void
-    onOpenProfile: (userId: string) => void
-}
+interface MembersSidebarProps { 
+    members: Member[] 
+    onClose: () => void 
+    onOpenProfile: (userId: string) => void 
+    currentUserId?: string
+} 
 
-export const Memberssidebar = React.memo(function MembersSidebar({ members, onClose, onOpenProfile }: MembersSidebarProps) {
-    const onlineMembers = useMemo(
-        () => members.filter(m => m.status !== "offline"),
-        [members]
-    )
-
-    const grouped = useMemo(
-        () =>
-            onlineMembers.reduce<Record<Member["role"], Member[]>>(
-                (acc, m) => { acc[m.role].push(m); return acc },
-                { admin: [], moderator: [], member: [] }
-            ),
-        [onlineMembers]
-    )
+export const Memberssidebar = React.memo(function MembersSidebar({ members, onClose, onOpenProfile, currentUserId }: MembersSidebarProps) { 
+    const onlineMembers = useMemo( 
+        () => members.filter(m => m.status !== "offline"), 
+        [members] 
+    ) 
+ 
+    const offlineMembers = useMemo( 
+        () => members.filter(m => m.status === "offline"), 
+        [members] 
+    ) 
+ 
+    const groupedOnline = useMemo( 
+        () => 
+            onlineMembers.reduce<Record<Member["role"], Member[]>>( 
+                (acc, m) => { acc[m.role].push(m); return acc }, 
+                { admin: [], moderator: [], member: [] } 
+            ), 
+        [onlineMembers] 
+    ) 
+ 
+    const groupedOffline = useMemo( 
+        () => 
+            offlineMembers.reduce<Record<Member["role"], Member[]>>( 
+                (acc, m) => { acc[m.role].push(m); return acc }, 
+                { admin: [], moderator: [], member: [] } 
+            ), 
+        [offlineMembers] 
+    ) 
 
     return (
         <aside className="w-full lg:w-60 bg-gray-50 dark:bg-gray-800/50 border-l border-gray-200 dark:border-gray-800 flex flex-col shrink-0 absolute inset-0 z-20 lg:relative lg:inset-auto lg:z-auto">
@@ -81,28 +96,60 @@ export const Memberssidebar = React.memo(function MembersSidebar({ members, onCl
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </button>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Members — {onlineMembers.length} online</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Members — {onlineMembers.length} online • {members.length} total</h3>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {members.length === 0 ? (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">No members found.</div>
+                ) : null}
+
                 {ROLE_ORDER.map((role) =>
-                    grouped[role].length > 0 ? (
+                    groupedOnline[role].length > 0 ? (
                         <div key={role}>
                             <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                                {ROLE_LABELS[role]} — {grouped[role].length}
+                                {ROLE_LABELS[role]} — Online ({groupedOnline[role].length})
                             </h4>
                             <div className="space-y-2">
-                                {grouped[role].map((member) => (
+                                {groupedOnline[role].map((member) => (
                                     <MemberRow
                                         key={member.id}
                                         member={member}
                                         onOpenProfile={onOpenProfile}
+                                        isCurrentUser={!!currentUserId && member.id === currentUserId}
                                     />
                                 ))}
                             </div>
                         </div>
                     ) : null
                 )}
+
+                {offlineMembers.length > 0 ? (
+                    <div className="pt-2">
+                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Offline</h4>
+                        <div className="space-y-6">
+                            {ROLE_ORDER.map((role) =>
+                                groupedOffline[role].length > 0 ? (
+                                    <div key={`offline-${role}`}>
+                                        <h5 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                                            {ROLE_LABELS[role]} — {groupedOffline[role].length}
+                                        </h5>
+                                        <div className="space-y-2">
+                                            {groupedOffline[role].map((member) => (
+                                                <MemberRow
+                                                    key={member.id}
+                                                    member={member}
+                                                    onOpenProfile={onOpenProfile}
+                                                    isCurrentUser={!!currentUserId && member.id === currentUserId}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : null
+                            )}
+                        </div>
+                    </div>
+                ) : null}
             </div>
         </aside>
     )

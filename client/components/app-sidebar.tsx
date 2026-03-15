@@ -29,7 +29,20 @@ import { UserProfileCard, UserStatus, statusColors, statusLabels } from "./user-
 import { useNotifications } from "./providers/notification-provider"
 import { dashboardApi } from "@/lib/api-services"
 
-export function AppSidebar({ user }: { user?: any }) {
+interface AppSidebarProps {
+    user?: {
+        id: string;
+        email: string;
+        imageUrl?: string;
+        firstName?: string;
+        lastName?: string;
+        fullName?: string;
+        username?: string;
+        type?: string;
+    } | null;
+}
+
+export function AppSidebar({ user }: AppSidebarProps) {
     const pathname = usePathname()
     const { state } = useSidebar()
     const isCollapsed = state === "collapsed"
@@ -37,21 +50,8 @@ export function AppSidebar({ user }: { user?: any }) {
     
     const [showProfileCard, setShowProfileCard] = useState(false)
     const [userStatus, setUserStatus] = useState<UserStatus>("online")
-    const [userType, setUserType] = useState<string>('student')
-
-    useEffect(() => {
-        const fetchUserType = async () => {
-            try {
-                const resp = await dashboardApi.getUser()
-                if (resp.success && resp.data) {
-                    setUserType(resp.data.type?.toLowerCase() || 'student')
-                }
-            } catch (err) {
-                console.error('Failed to fetch user type:', err)
-            }
-        }
-        fetchUserType()
-    }, [])
+    
+    const userType = user?.type?.toLowerCase() || 'student'
 
     const extraItems = userType === 'admin' ? adminExtraItems : userType === 'teacher' ? teacherExtraItems : []
     const items = [...extraItems, ...baseSidebarItems]

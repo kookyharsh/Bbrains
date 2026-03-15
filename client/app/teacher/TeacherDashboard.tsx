@@ -3,7 +3,8 @@
 import React, { useState } from "react"
 import {
     LayoutDashboard, Users, BookOpen, Award, ShoppingBag,
-    Megaphone, FileText, ChevronRight, ArrowLeft, BarChart3
+    Megaphone, FileText, ChevronRight, ArrowLeft, BarChart3,
+    Calendar
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -16,11 +17,12 @@ import {
     ProductsTab as TeacherProductsTab, 
     AnnouncementsTab as TeacherAnnouncementsTab,
     AuditLogTab as TeacherAuditLogTab,
+    AttendanceTab as TeacherAttendanceTab,
 } from "@/components/teacher/tabs"
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 
-type TeacherTab = "overview" | "students" | "assignments" | "grading" | "products" | "announcements" | "audit"
+type TeacherTab = "overview" | "students" | "attendance" | "assignments" | "grading" | "products" | "announcements" | "audit"
 
 interface TabItem {
     id: TeacherTab
@@ -32,6 +34,7 @@ interface TabItem {
 const TABS: TabItem[] = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="size-4" />, description: "Dashboard summary" },
     { id: "students", label: "Students", icon: <Users className="size-4" />, description: "View student details & wallets" },
+    { id: "attendance", label: "Attendance", icon: <Calendar className="size-4" />, description: "Mark daily student attendance" },
     { id: "assignments", label: "Assignments", icon: <BookOpen className="size-4" />, description: "Create & manage assignments" },
     { id: "grading", label: "Grading", icon: <Award className="size-4" />, description: "Grade student submissions" },
     { id: "products", label: "Approvals", icon: <ShoppingBag className="size-4" />, description: "Approve student products" },
@@ -141,6 +144,7 @@ export function TeacherDashboard() {
                     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         {activeTab === "overview" && <TeacherOverview />}
                         {activeTab === "students" && <TeacherStudentsTab />}
+                        {activeTab === "attendance" && <TeacherAttendanceTab />}
                         {activeTab === "assignments" && <TeacherAssignmentsTab />}
                         {activeTab === "grading" && <TeacherGradingTab />}
                         {activeTab === "products" && <TeacherProductsTab />}

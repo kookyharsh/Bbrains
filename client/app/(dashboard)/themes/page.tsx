@@ -222,15 +222,16 @@ export default function ThemesPage() {
                 </div>
               )
             })
-            .filter(Boolean): Boolean
+            .filter(Boolean)
         }
         
-        {userThemes.filter(tid => !themes.find(t => t.id === tid && !t.isBuiltIn)).length === 0 && (
+       {userThemes.filter(tid => !themes.find(t => t.id === tid && !t.isBuiltIn)).length === 0 && (
           <p className="text-center text-muted-foreground py-8">
             You haven't purchased any themes yet. Browse the marketplace above to get started!
           </p>
         )}
       </div>
+    </div>
     </div>
   )
 }

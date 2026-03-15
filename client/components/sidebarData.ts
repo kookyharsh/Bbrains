@@ -2,6 +2,8 @@ import {
     Calendar,
     Home,
     MessageSquare,
+    MessageSquarePlus,
+    User,
     Megaphone,
     Wallet,
     Book,
@@ -42,6 +44,11 @@ export const baseSidebarItems: SidebarItem[] = [
         title: "Dashboard",
         url: "/dashboard",
         icon: Home,
+    },
+    {
+        title: "Suggestions",
+        url: "/suggestions",
+        icon: MessageSquarePlus,
     },
     {
         title: "Announcements",

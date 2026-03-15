@@ -102,7 +102,7 @@ async function makeRequest<T>(
 
     return {
       success: true,
-      data: data.data ?? data,
+      data: data as T,
       message: data.message,
     };
   } catch (error) {

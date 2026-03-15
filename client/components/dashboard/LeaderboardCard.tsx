@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Crown, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ interface LeaderboardCardProps {
   initialLeaderboard?: LeaderboardEntry[];
 }
 
-export function LeaderboardCard({ initialLeaderboard }: LeaderboardCardProps) {
+export const LeaderboardCard = memo(function LeaderboardCard({ initialLeaderboard }: LeaderboardCardProps) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(initialLeaderboard || []);
   const [loading, setLoading] = useState(!initialLeaderboard);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,19 @@ export function LeaderboardCard({ initialLeaderboard }: LeaderboardCardProps) {
           // Transform server response to match client interface
           // Server returns: { id, rank, score, user: { username, userDetails: { firstName, lastName, avatar } } }
           // Client expects: { id, rank, xp, username, firstName, lastName, avatar }
-          const transformedData = (response.data as any[]).map((entry) => ({
+          interface RawLeaderboardEntry {
+            userId?: string;
+            id?: string;
+            rank: number;
+            score?: number;
+            xp?: number;
+            username?: string;
+            firstName?: string;
+            lastName?: string;
+            avatar?: string;
+            user?: { username?: string; userDetails?: { firstName?: string; lastName?: string; avatar?: string } };
+          }
+          const transformedData = (response.data as RawLeaderboardEntry[]).map((entry) => ({
             id: entry.userId || entry.id || "",
             rank: entry.rank,
             xp: entry.score ?? entry.xp ?? 0,
@@ -149,3 +161,4 @@ export function LeaderboardCard({ initialLeaderboard }: LeaderboardCardProps) {
     </Card>
   );
 }
+)

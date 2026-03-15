@@ -41,15 +41,20 @@ model User {
   products         Product[]
   submissions      Submission[]
   transactions     TransactionHistory[]
+  library          Library[]
   college          College              @relation(fields: [collegeId], references: [id])
   userAchievements UserAchievements[]
   userDetails      UserDetails?
   roles            UserRoles[]
   wallet           Wallet?
   xp               Xp?
-  attendances      Attendance[]
+  attendances      Attendance[]         @relation("userAttendance")
+  markedAttendances Attendance[]        @relation("markerAttendance")
+  notifications    Notification[]
+  suggestions      Suggestion[]
   streak           Streak?
   preference        UserPreference?
+  chatMessages     ChatMessage[]
 
   @@map("user")
 }
@@ -260,6 +265,7 @@ model Product {
   createdAt   DateTime    @default(now()) @map("created_at")
   cartItems   Cart[]
   orderItems  OrderItem[]
+  libraryItems Library[]
   creator     User        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@index([name])
@@ -316,6 +322,18 @@ model Cart {
 
   @@unique([userId, productId])
   @@map("cart")
+}
+
+model Library {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  productId   Int      @map("product_id")
+  purchasedAt DateTime @default(now()) @map("purchased_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("library")
 }
 
 model Announcement {
@@ -410,12 +428,15 @@ model Event {
 }
 
 model Attendance {
-  id        Int      @id @default(autoincrement())
-  userId    String   @map("user_id")
-  date      DateTime @db.Date
-  status    String   @db.VarChar(20) 
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  markedBy    String?  @map("marked_by")
+  date        DateTime @db.Date
+  status      String   @db.VarChar(20) 
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation("userAttendance", fields: [userId], references: [id], onDelete: Cascade)
+  marker      User?    @relation("markerAttendance", fields: [markedBy], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
   @@map("attendance")
@@ -444,4 +465,63 @@ model UserPreference {
 
   @@map("user_preference")
 }
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  title     String   @db.VarChar(100)
+  message   String?
+  type      String   @db.VarChar(50) // mention, system, chat, announcement, achievement, attendance, grade
+  relatedId String?  @map("related_id")
+  readAt    DateTime?
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notification")
+}
+
+model SystemConfig {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique @db.VarChar(100)
+  value       String   @db.Text
+  description String?
+  type        String   @default("string") // string, number, boolean, json
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_config")
+}
+
+model Suggestion {
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  title       String   @db.VarChar(100)
+  content     String   @db.Text
+  status      String   @default("pending") // pending, reviewed, implemented, rejected
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("suggestion")
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  chatId      String   @default("default") @map("chat_id")
+  userId      String   @map("user_id")
+  username    String?
+  displayName String?  @map("display_name")
+  avatar      String?
+  role        String?
+  content     String   @db.Text
+  mentions    Json?    @default("[]")
+  replyTo     String?  @map("reply_to")
+  attachments Json?    @default("[]")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
 

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { cn } from '@/lib/utils'
 import type { ChatMessage } from '@/hooks/use-realtime-chat'
 
@@ -7,7 +8,7 @@ interface ChatMessageItemProps {
   showHeader: boolean
 }
 
-export const ChatMessageItem = ({ message, isOwnMessage, showHeader }: ChatMessageItemProps) => {
+export const ChatMessageItem = memo(function ChatMessageItem({ message, isOwnMessage, showHeader }: ChatMessageItemProps) {
   return (
     <div className={`flex mt-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -42,4 +43,4 @@ export const ChatMessageItem = ({ message, isOwnMessage, showHeader }: ChatMessa
       </div>
     </div>
   )
-}
+})

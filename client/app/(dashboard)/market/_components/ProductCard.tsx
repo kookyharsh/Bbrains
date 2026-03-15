@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { Heart, ShoppingCart, User } from "lucide-react"
 
 interface ProductCardProps {
@@ -15,11 +16,15 @@ export function ProductCard({ title, price, seller, image, condition, isFavorite
   return (
     <div className="group bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
       <div className="relative h-48 bg-gray-50 dark:bg-gray-800 p-4 flex items-center justify-center overflow-hidden">
-        <img
-          alt={title}
-          className="max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-lg transition-transform duration-300 group-hover:scale-105"
-          src={image}
-        />
+        <div className="relative w-full h-full">
+          <Image
+            src={image}
+            alt={title}
+            fill
+            className="object-contain mix-blend-multiply dark:mix-blend-normal rounded-lg transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        </div>
 
         <button className="absolute top-3 right-3 w-8 h-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors">
           <Heart className={`h-4 w-4 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500"}`} />

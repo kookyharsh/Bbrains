@@ -7,6 +7,7 @@ import { AnnouncementsCard } from "@/components/dashboard/AnnouncementsCard";
 import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
 import { dashboardApi } from "@/lib/api-services";
 import { DashboardContent } from "@/components/dashboard-content";
+import { LevelWidget } from "@/components/dashboard/LevelWidget";
 
 export default async function DashboardOverview() {
   let dashboardData = null;
@@ -59,7 +60,8 @@ export default async function DashboardOverview() {
       </div>
 
       {/* Top row cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <LevelWidget level={dashboardData?.stats?.level || 1} xp={dashboardData?.stats?.xp || 0} nextLevelXp={dashboardData?.stats?.nextLevelRequiredXp} />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
         <AttendanceCard initialAttendance={dashboardData?.attendance} />

@@ -43,7 +43,7 @@ import { Scanner } from "@yudiel/react-qr-scanner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import Link from "link";
+import Link from "next/link";
 import { walletApi, transactionApi, dashboardApi, Transaction, WalletData, User } from "@/lib/api-services";
 import { validate, hasErrors, ValidationErrors, commonRules } from "@/lib/validation";
 import { DashboardContent } from "@/components/dashboard-content"
@@ -92,7 +92,8 @@ export default function WalletPage() {
           setWallet(walletRes.data);
         }
         if (txnRes.success && txnRes.data) {
-          setTransactions(txnRes.data);
+          const txnData = (txnRes.data as any)?.data || txnRes.data;
+          setTransactions(Array.isArray(txnData) ? txnData : []);
         }
         if (userRes.success && userRes.data) {
           setUser(userRes.data);
@@ -466,7 +467,6 @@ export default function WalletPage() {
         </Card>
       </div>
     </div>
-  </div>
 
         {/* Send Money Dialog */}
         <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>

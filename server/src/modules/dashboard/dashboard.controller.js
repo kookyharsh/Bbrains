@@ -88,14 +88,30 @@ async function studentDashboard(userId, res) {
             })
         ]);
 
+        // Normalize user profile for frontend: flatten avatar and names
+        const userProfile = {
+            ...user,
+            avatar: user?.userDetails?.avatar,
+            firstName: user?.userDetails?.firstName,
+            lastName: user?.userDetails?.lastName,
+            collegeName: user?.college?.name
+        };
         const streak = calculateStreak(recentClaims);
 
+        let nextLevel = null;
+        if (xp) {
+            nextLevel = await prisma.level.findFirst({
+                where: { levelNumber: xp.level + 1 }
+            });
+        }
+
         return sendSuccess(res, {
-            user,
+            user: userProfile,
             stats: {
                 totalCourses: enrollments?.length || 0,
                 xp: Number(xp?.xp) || 0,
                 level: xp?.level || 1,
+                nextLevelRequiredXp: nextLevel ? Number(nextLevel.requiredXp) : null,
                 walletBalance: Number(wallet?.balance) || 0,
                 leaderboardRank: leaderboardPos?.rank || null,
                 totalAchievements: achievements?.length || 0,
@@ -147,7 +163,7 @@ function calculateStreak(claims) {
 
 async function teacherDashboard(userId, res) {
     try {
-        const [user, totalStudents, totalCourses, recentSubmissions, totalSubmissions, totalGrades] = await Promise.all([
+        const [user, totalStudents, totalCourses, recentSubmissions, totalSubmissions, totalGrades, xp] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
                 select: { id: true, username: true, email: true, type: true, userDetails: true }
@@ -163,14 +179,25 @@ async function teacherDashboard(userId, res) {
                 orderBy: { submittedAt: 'desc' }
             }),
             prisma.submission.count(),
-            prisma.grade.count() // Assuming one grade per submission, simplified count
+            prisma.grade.count(), // Assuming one grade per submission, simplified count
+            prisma.xp.findUnique({ where: { userId } }),
         ]);
 
+        // Normalize user profile for frontend
+        const userProfile = {
+            ...user,
+            avatar: user?.userDetails?.avatar,
+            firstName: user?.userDetails?.firstName,
+            lastName: user?.userDetails?.lastName,
+        };
         return sendSuccess(res, {
-            user,
+            user: userProfile,
             stats: {
                 totalStudents,
                 totalCourses,
+                // xp/level shown in admin/teacher dashboards as XP progress
+                xp: Number(xp?.xp) || 0,
+                level: xp?.level || 1,
                 pendingGrades: totalSubmissions - totalGrades // Simple approximation
             },
             recentSubmissions
@@ -201,7 +228,15 @@ async function adminDashboard(res) {
             })
         ]);
 
+        // Normalize user profile for frontend
+        const userProfile = {
+            ...user,
+            avatar: user?.userDetails?.avatar,
+            firstName: user?.userDetails?.firstName,
+            lastName: user?.userDetails?.lastName,
+        };
         return sendSuccess(res, {
+            user: userProfile,
             stats: {
                 totalUsers,
                 totalStudents,
