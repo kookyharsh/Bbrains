@@ -21,6 +21,7 @@ export interface Message {
         content: string
     } | null
     mentions?: string[]
+    attachments?: { url: string; type: string; name?: string }[]
 }
 
 export interface Member {
@@ -71,7 +72,15 @@ export interface ApiMember {
 
 export const CHANNEL_NAME = "General Discussion"
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"
+const getBaseUrl = () => {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    if (typeof window !== "undefined") {
+      return `http://${window.location.hostname}:5000`;
+    }
+    return "http://localhost:5000";
+};
+
+export const API_BASE_URL = getBaseUrl();
 
 export const AVATAR_COLORS = [
     "bg-indigo-500", "bg-green-500", "bg-yellow-500", "bg-red-500",

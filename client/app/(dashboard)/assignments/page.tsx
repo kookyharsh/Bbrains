@@ -42,6 +42,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
+import { DashboardContent } from "@/components/dashboard-content";
 
 const mockAssignments = [
   {
@@ -154,7 +155,7 @@ export default function AssignmentsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <DashboardContent className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Assignments & Exams</h1>
         <p className="text-muted-foreground">View, search and submit your assignments</p>
@@ -347,6 +348,6 @@ export default function AssignmentsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashboardContent>
   );
 }

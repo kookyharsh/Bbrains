@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import { CalendarHeader } from "./_components/CalendarHeader"
 import { CalendarFilters } from "./_components/CalendarFilters"
 import { CalendarView, CalendarEvent } from "./_components/CalendarView"
+import { DashboardContent } from "@/components/dashboard-content"
 
 // Dummy data matching the classes in the Stitch view
 const dummyEvents: CalendarEvent[] = [
@@ -73,12 +74,14 @@ export default function CalendarPage() {
     const [view, setView] = useState<"day" | "week" | "month">("week")
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950 overflow-hidden">
-            <CalendarHeader />
-            <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar">
-                <CalendarFilters activeView={view} onViewChange={setView} />
-                <CalendarView view={view} events={dummyEvents} />
+        <DashboardContent>
+            <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950 overflow-hidden">
+                <CalendarHeader />
+                <div className="flex-1 overflow-y-auto p-6 sm:p-8 custom-scrollbar">
+                    <CalendarFilters activeView={view} onViewChange={setView} />
+                    <CalendarView view={view} events={dummyEvents} />
+                </div>
             </div>
-        </div>
+        </DashboardContent>
     )
 }

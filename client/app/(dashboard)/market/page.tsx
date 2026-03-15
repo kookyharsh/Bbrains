@@ -34,6 +34,7 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DashboardContent } from "@/components/dashboard-content"
 
 interface Product {
   id: number;
@@ -115,232 +116,236 @@ export default function MarketPage() {
 
   if (selectedProduct) {
     return (
-      <div className="space-y-6">
-        <Button variant="ghost" onClick={() => setSelectedProduct(null)} className="gap-2">
-          <ArrowLeft className="w-4 h-4" /> Back to Market
-        </Button>
+      <DashboardContent>
+        <div className="space-y-6">
+          <Button variant="ghost" onClick={() => setSelectedProduct(null)} className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> Back to Market
+          </Button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Product Image */}
-          <Card>
-            <CardContent className="p-8 flex items-center justify-center">
-              <div className="text-8xl">{selectedProduct.image}</div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Product Image */}
+            <Card>
+              <CardContent className="p-8 flex items-center justify-center">
+                <div className="text-8xl">{selectedProduct.image}</div>
+              </CardContent>
+            </Card>
 
-          {/* Product Details */}
-          <div className="space-y-4">
-            <div>
-              <Badge variant="secondary" className="mb-2">{selectedProduct.creator}</Badge>
-              <h1 className="text-2xl font-bold text-foreground">{selectedProduct.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm ml-1 text-foreground">{selectedProduct.rating}</span>
+            {/* Product Details */}
+            <div className="space-y-4">
+              <div>
+                <Badge variant="secondary" className="mb-2">{selectedProduct.creator}</Badge>
+                <h1 className="text-2xl font-bold text-foreground">{selectedProduct.name}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm ml-1 text-foreground">{selectedProduct.rating}</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">• {selectedProduct.stock} in stock</span>
                 </div>
-                <span className="text-sm text-muted-foreground">• {selectedProduct.stock} in stock</span>
               </div>
-            </div>
 
-            <p className="text-3xl font-bold text-primary">{selectedProduct.price} B-Coins</p>
-            <p className="text-muted-foreground">{selectedProduct.description}</p>
+              <p className="text-3xl font-bold text-primary">{selectedProduct.price} B-Coins</p>
+              <p className="text-muted-foreground">{selectedProduct.description}</p>
 
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Quantity:</span>
-              <div className="flex items-center border border-border rounded-md">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
-                  <Minus className="w-3 h-3" />
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Quantity:</span>
+                <div className="flex items-center border border-border rounded-md">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+                    <Minus className="w-3 h-3" />
+                  </Button>
+                  <span className="w-10 text-center text-sm font-medium">{quantity}</span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuantity(quantity + 1)}>
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    for (let i = 0; i < quantity; i++) addToCart(selectedProduct.id);
+                  }}
+                >
+                  {cart[selectedProduct.id] ? "View Cart" : "Add to Cart"}
                 </Button>
-                <span className="w-10 text-center text-sm font-medium">{quantity}</span>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setQuantity(quantity + 1)}>
-                  <Plus className="w-3 h-3" />
+                <Button variant="secondary" className="flex-1" onClick={() => handleBuyNow(selectedProduct)}>
+                  Buy Now
                 </Button>
               </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  for (let i = 0; i < quantity; i++) addToCart(selectedProduct.id);
-                }}
-              >
-                {cart[selectedProduct.id] ? "View Cart" : "Add to Cart"}
-              </Button>
-              <Button variant="secondary" className="flex-1" onClick={() => handleBuyNow(selectedProduct)}>
-                Buy Now
-              </Button>
             </div>
           </div>
         </div>
-      </div>
+      </DashboardContent>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Campus Market</h1>
-        <Button variant="outline" className="relative" onClick={() => setShowCart(true)}>
-          <ShoppingCart className="w-4 h-4 mr-2" />
-          Cart
-          {cartCount > 0 && (
-            <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
-              {cartCount}
-            </span>
-          )}
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-lg">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
-            <button
-              onClick={() => setSelectedProduct(product)}
-              className="w-full text-left"
-            >
-              <div className="h-32 bg-muted/50 flex items-center justify-center text-5xl">
-                {product.image}
-              </div>
-            </button>
-            <CardContent className="p-4">
-              <button onClick={() => setSelectedProduct(product)} className="text-left w-full">
-                <h3 className="font-semibold text-foreground truncate hover:text-primary transition-colors">
-                  {product.name}
-                </h3>
-              </button>
-              <p className="text-xs text-muted-foreground mt-0.5">{product.creator}</p>
-              <div className="flex items-center justify-between mt-3">
-                <span className="text-lg font-bold text-primary">{product.price}</span>
-                {cart[product.id] ? (
-                  <div className="flex items-center gap-1">
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => removeFromCart(product.id)}>
-                      <Minus className="w-3 h-3" />
-                    </Button>
-                    <span className="w-6 text-center text-sm font-medium">{cart[product.id]}</span>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => addToCart(product.id)}>
-                      <Plus className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Button size="sm" onClick={() => addToCart(product.id)}>
-                    <ShoppingCart className="w-3.5 h-3.5 mr-1" /> Add
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p>No products found</p>
+    <DashboardContent>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Campus Market</h1>
+          <Button variant="outline" className="relative" onClick={() => setShowCart(true)}>
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Cart
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </Button>
         </div>
-      )}
 
-      {/* Cart Dialog */}
-      <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Shopping Cart</DialogTitle>
-            <DialogDescription>{cartCount} items</DialogDescription>
-          </DialogHeader>
-          {cartCount === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>Your cart is empty</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(cart).map(([id, qty]) => {
-                const product = mockProducts.find((p) => p.id === Number(id));
-                if (!product) return null;
-                return (
-                  <div key={id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                    <span className="text-2xl">{product.image}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm truncate">{product.name}</p>
-                      <p className="text-xs text-muted-foreground">{product.price} × {qty}</p>
+        {/* Search */}
+        <div className="relative max-w-lg">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <button
+                onClick={() => setSelectedProduct(product)}
+                className="w-full text-left"
+              >
+                <div className="h-32 bg-muted/50 flex items-center justify-center text-5xl">
+                  {product.image}
+                </div>
+              </button>
+              <CardContent className="p-4">
+                <button onClick={() => setSelectedProduct(product)} className="text-left w-full">
+                  <h3 className="font-semibold text-foreground truncate hover:text-primary transition-colors">
+                    {product.name}
+                  </h3>
+                </button>
+                <p className="text-xs text-muted-foreground mt-0.5">{product.creator}</p>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-lg font-bold text-primary">{product.price}</span>
+                  {cart[product.id] ? (
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => removeFromCart(product.id)}>
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <span className="w-6 text-center text-sm font-medium">{cart[product.id]}</span>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => addToCart(product.id)}>
+                        <Plus className="w-3 h-3" />
+                      </Button>
                     </div>
-                    <span className="font-semibold text-foreground">{product.price * qty}</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(Number(id))}>
-                      <Minus className="w-3 h-3" />
+                  ) : (
+                    <Button size="sm" onClick={() => addToCart(product.id)}>
+                      <ShoppingCart className="w-3.5 h-3.5 mr-1" /> Add
                     </Button>
-                  </div>
-                );
-              })}
-              <div className="border-t border-border pt-3 flex justify-between items-center">
-                <span className="font-semibold text-foreground">Total</span>
-                <span className="text-xl font-bold text-primary">{cartTotal} B-Coins</span>
-              </div>
-            </div>
-          )}
-          {cartCount > 0 && (
-            <DialogFooter>
-              <Button className="w-full" onClick={() => { setShowCart(false); setShowBuyConfirm(true); setBuyProduct(null); }}>
-                Checkout
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      {/* Buy Confirmation */}
-      <AlertDialog open={showBuyConfirm} onOpenChange={setShowBuyConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
-            <AlertDialogDescription>
-              {buyProduct
-                ? `Are you sure you want to buy ${buyProduct.name} for ${buyProduct.price * quantity} B-Coins?`
-                : `Checkout ${cartCount} items for ${cartTotal} B-Coins?`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmBuy}>Proceed to Pay</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* PIN Dialog */}
-      <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Enter Wallet PIN</DialogTitle>
-            <DialogDescription>Enter your 6-digit PIN to confirm purchase</DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-center py-4">
-            <InputOTP maxLength={6} value={pin} onChange={setPin}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>No products found</p>
           </div>
-          <DialogFooter>
-            <Button onClick={handlePinSubmit} disabled={pin.length < 6} className="w-full">Confirm Purchase</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        )}
+
+        {/* Cart Dialog */}
+        <Dialog open={showCart} onOpenChange={setShowCart}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Shopping Cart</DialogTitle>
+              <DialogDescription>{cartCount} items</DialogDescription>
+            </DialogHeader>
+            {cartCount === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Your cart is empty</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(cart).map(([id, qty]) => {
+                  const product = mockProducts.find((p) => p.id === Number(id));
+                  if (!product) return null;
+                  return (
+                    <div key={id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                      <span className="text-2xl">{product.image}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground text-sm truncate">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.price} × {qty}</p>
+                      </div>
+                      <span className="font-semibold text-foreground">{product.price * qty}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(Number(id))}>
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  );
+                })}
+                <div className="border-t border-border pt-3 flex justify-between items-center">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="text-xl font-bold text-primary">{cartTotal} B-Coins</span>
+                </div>
+              </div>
+            )}
+            {cartCount > 0 && (
+              <DialogFooter>
+                <Button className="w-full" onClick={() => { setShowCart(false); setShowBuyConfirm(true); setBuyProduct(null); }}>
+                  Checkout
+                </Button>
+              </DialogFooter>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Buy Confirmation */}
+        <AlertDialog open={showBuyConfirm} onOpenChange={setShowBuyConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
+              <AlertDialogDescription>
+                {buyProduct
+                  ? `Are you sure you want to buy ${buyProduct.name} for ${buyProduct.price * quantity} B-Coins?`
+                  : `Checkout ${cartCount} items for ${cartTotal} B-Coins?`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmBuy}>Proceed to Pay</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* PIN Dialog */}
+        <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Enter Wallet PIN</DialogTitle>
+              <DialogDescription>Enter your 6-digit PIN to confirm purchase</DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center py-4">
+              <InputOTP maxLength={6} value={pin} onChange={setPin}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <DialogFooter>
+              <Button onClick={handlePinSubmit} disabled={pin.length < 6} className="w-full">Confirm Purchase</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </DashboardContent>
   );
 }

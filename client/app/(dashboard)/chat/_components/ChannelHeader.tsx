@@ -2,40 +2,53 @@
 
 import { Hash, Users, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 interface ChannelHeaderProps {
     channelName: string
     showMembers: boolean
+    messageCount: number
+    isConnected: boolean
     onToggleMembers: () => void
 }
 
-export function ChannelHeader({ channelName, showMembers, onToggleMembers }: ChannelHeaderProps) {
+export function ChannelHeader({ 
+    channelName, 
+    showMembers, 
+    messageCount,
+    isConnected,
+    onToggleMembers 
+}: ChannelHeaderProps) {
     return (
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-ui-light-surface dark:bg-ui-dark-surface z-10 w-full shrink-0">
-            <div className="flex items-center gap-3">
-                <Hash className="text-gray-400 dark:text-gray-500 h-5 w-5" />
-                <h2 className="font-bold text-lg text-gray-900 dark:text-white">{channelName}</h2>
-                <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline-block">| Talk about anything!</span>
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-card rounded-t-lg shrink-0 z-10">
+            <div className="flex items-center gap-2">
+                <Hash className="w-5 h-5 text-muted-foreground" />
+                <h2 className="font-semibold text-foreground truncate max-w-[150px] sm:max-w-none">{channelName}</h2>
+                <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{messageCount} messages</Badge>
+                <div 
+                    className={`h-2 w-2 rounded-full ml-1 ${isConnected ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`} 
+                    title={isConnected ? 'Connected' : 'Disconnected'} 
+                />
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <div className="relative hidden sm:block">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                        placeholder="Search messages..."
+                        className="bg-background border border-input rounded-md pl-7 pr-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring w-32 md:w-40 placeholder:text-muted-foreground"
+                    />
+                </div>
+                
                 <Button
                     variant="ghost"
-                    size="icon"
+                    size="sm"
                     onClick={onToggleMembers}
-                    aria-label="Toggle member list"
-                    className={`h-9 w-9 rounded-full transition-colors ${showMembers
-                        ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
-                        : "text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
-                        }`}
+                    className={`h-8 gap-1.5 ${showMembers ? "bg-muted" : ""}`}
                 >
-                    <Users className="h-[20px] w-[20px]" />
+                    <Users className="h-4 w-4" />
+                    <span className="hidden md:inline text-xs">Members</span>
                 </Button>
-
-                {/* Search Bar matching stitch header search icon vibe */}
-                <button className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-                    <Search className="h-5 w-5" />
-                </button>
             </div>
         </div>
     )

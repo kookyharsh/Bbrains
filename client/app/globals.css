@@ -9,6 +9,33 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Brand Colors */
+  --color-brand-orange: #FF7675;
+  --color-brand-purple: #6C5CE7;
+  --color-brand-mint: #55E6C1;
+  --color-brand-slate: #2F3640;
+
+  /* UI Colors - Light */
+  --color-ui-light-bg: #F5F6FA;
+  --color-ui-light-surface: #FFFFFF;
+  --color-ui-light-text-primary: #2F3640;
+  --color-ui-light-text-secondary: #636E72;
+
+  /* UI Colors - Dark */
+  --color-ui-dark-bg: #2F3640;
+  --color-ui-dark-surface: #3A424E;
+  --color-ui-dark-text-primary: #FFFFFF;
+  --color-ui-dark-text-secondary: #B9BBBE;
+
+  /* Z-Index Scale */
+  --z-nav: 40;
+  --z-bottom-nav: 50;
+  --z-sidebar: 100;
+  --z-overlay: 110;
+  --z-modal: 120;
+  --z-tooltip: 130;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);

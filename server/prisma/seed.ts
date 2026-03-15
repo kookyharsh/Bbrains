@@ -1,6 +1,10 @@
 import { UserRole, Sex, TransactionType, TransactionStatus, LeaderboardCategory, LogCategory, ProductApproval } from '@prisma/client';
-import prisma from '../utils/prisma.js';
-import { createSupabaseUser, listSupabaseUsers, deleteSupabaseUser } from '../modules/auth/supabase-user.service.js';
+// @ts-ignore
+import prisma from '../src/utils/prisma.js';
+// @ts-ignore
+import { createSupabaseUser, listSupabaseUsers, deleteSupabaseUser } from '../src/modules/auth/supabase-user.service.js';
+
+declare const process: any;
 
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -52,7 +56,7 @@ async function main() {
           await deleteSupabaseUser(u.id);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("⚠️ Could not clean up Supabase users. Ignoring if creating fails.", e);
     }
 
@@ -323,7 +327,7 @@ async function main() {
               grade: getRandomItem(["A+", "A", "B+", "B", "C"]),
             }
           });
-        } catch (e) { }
+        } catch (e: any) { }
       }
     }
     console.log(`✅ ${courses.length} Courses created.`);
@@ -353,11 +357,11 @@ async function main() {
       });
 
       const submitters = getRandomItems(
-        enrollments.map(e => e.user),
+        enrollments.map((e: any) => e.user),
         Math.max(1, Math.ceil(enrollments.length / 1.5))
       );
 
-      for (const student of submitters) {
+      for (const student of (submitters as any[])) {
         try {
           await prisma.submission.create({
             data: {
@@ -376,7 +380,7 @@ async function main() {
             }
           });
           submissionCount++;
-        } catch (e) { }
+        } catch (e: any) { }
       }
     }
     console.log(`✅ ${submissionCount} Submissions & Grades created.`);
@@ -439,7 +443,12 @@ async function main() {
               '--destructive': '#ff4d4d',
               '--border': '#e5e0d8',
               '--input': '#ffffff',
-              '--ring': '#2d2d2d'
+              '--ring': '#2d2d2d',
+              '--chart-1': '#ff4d4d',
+              '--chart-2': '#2d5da1',
+              '--chart-3': '#55E6C1',
+              '--chart-4': '#f9ca24',
+              '--chart-5': '#f39c12'
             }
           }
         }
@@ -472,7 +481,12 @@ async function main() {
               '--destructive': '#E74C3C',
               '--border': '#E8DAEF',
               '--input': '#FFFFFF',
-              '--ring': '#FF7675'
+              '--ring': '#FF7675',
+              '--chart-1': '#FF7675',
+              '--chart-2': '#E74C3C',
+              '--chart-3': '#F39C12',
+              '--chart-4': '#FAB1A0',
+              '--chart-5': '#FF9F43'
             }
           }
         }
@@ -505,7 +519,12 @@ async function main() {
               '--destructive': '#E74C3C',
               '--border': '#D6C4E9',
               '--input': '#FFFFFF',
-              '--ring': '#6C5CE7'
+              '--ring': '#6C5CE7',
+              '--chart-1': '#6C5CE7',
+              '--chart-2': '#9B59B6',
+              '--chart-3': '#A29BFE',
+              '--chart-4': '#706FD3',
+              '--chart-5': '#4834D4'
             }
           }
         }
@@ -538,7 +557,12 @@ async function main() {
               '--destructive': '#E74C3C',
               '--border': '#A9DFBF',
               '--input': '#FFFFFF',
-              '--ring': '#55E6C1'
+              '--ring': '#55E6C1',
+              '--chart-1': '#55E6C1',
+              '--chart-2': '#27AE60',
+              '--chart-3': '#2ECC71',
+              '--chart-4': '#55EFC4',
+              '--chart-5': '#1ABC9C'
             }
           }
         }
@@ -571,7 +595,12 @@ async function main() {
               '--destructive': '#E74C3C',
               '--border': '#BDC3C7',
               '--input': '#FFFFFF',
-              '--ring': '#2F3640'
+              '--ring': '#2F3640',
+              '--chart-1': '#2F3640',
+              '--chart-2': '#535C68',
+              '--chart-3': '#95A5A6',
+              '--chart-4': '#BDC3C7',
+              '--chart-5': '#7F8C8D'
             }
           }
         }
@@ -613,7 +642,7 @@ async function main() {
             }
           });
           cartCount++;
-        } catch (e) { }
+        } catch (e: any) { }
       }
 
       if (Math.random() > 0.5) {
@@ -701,7 +730,7 @@ async function main() {
             }
           });
           lbCount++;
-        } catch (e) { }
+        } catch (e: any) { }
       }
     }
     console.log(`✅ ${lbCount} Leaderboard entries created.`);
@@ -732,7 +761,7 @@ async function main() {
             data: { userId: student.id, achievementId: ach.id }
           });
           achCount++;
-        } catch (e) { }
+        } catch (e: any) { }
       }
     }
     console.log(`✅ ${achievements.length} Achievements, ${achCount} assigned.`);
@@ -750,7 +779,7 @@ async function main() {
             note: `Market Purchase / Reward #${i + 1}`,
           }
         });
-      } catch (e) { }
+      } catch (e: any) { }
     }
     console.log("✅ 30 Transactions created.");
 
@@ -771,7 +800,7 @@ async function main() {
             reason: "System seeding process",
           }
         });
-      } catch (e) { }
+      } catch (e: any) { }
     }
     console.log("✅ 30 Audit logs created.");
 
@@ -788,19 +817,19 @@ async function main() {
     console.log(`  • ${products.length} Products`);
     console.log(`  • ${eventData.length} Events`);
     console.log(`  • ${orderCount} Orders`);
-    process.exit(0);
+    (process as any).exit(0);
 
   } catch (error) {
     console.error("\n❌ SEEDING FAILED:");
     console.error(error);
-    process.exit(1);
+    (process as any).exit(1);
   }
 }
 
 main()
-  .catch((e) => {
+  .catch((e: any) => {
     console.error("❌ Fatal error:", e);
-    process.exit(1);
+    (process as any).exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();

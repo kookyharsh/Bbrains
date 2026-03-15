@@ -70,15 +70,9 @@ const loadChatIdentity = async (userId) => {
 };
 
 export const initChatSocket = (server) => {
-    const allowedOrigins = [
-        process.env.CLIENT_URL,
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ].filter(Boolean);
-
     const io = new Server(server, {
         cors: {
-            origin: allowedOrigins,
+            origin: true, // Allow any origin in development
             methods: ["GET", "POST"],
             credentials: true
         }

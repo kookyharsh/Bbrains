@@ -40,5 +40,5 @@ export default function AdminPage() {
         )
     }
 
-    return <AdminDashboard getToken={async () => null} />
+    return <AdminDashboard />
 }

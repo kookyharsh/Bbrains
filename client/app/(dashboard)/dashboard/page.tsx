@@ -6,6 +6,7 @@ import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import { AnnouncementsCard } from "@/components/dashboard/AnnouncementsCard";
 import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
 import { dashboardApi } from "@/lib/api-services";
+import { DashboardContent } from "@/components/dashboard-content";
 
 export default async function DashboardOverview() {
   let dashboardData = null;
@@ -36,7 +37,7 @@ export default async function DashboardOverview() {
   const username = dashboardData?.user?.firstName || dashboardData?.user?.username || "User";
 
   return (
-    <div className="space-y-6">
+    <DashboardContent className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
@@ -75,6 +76,6 @@ export default async function DashboardOverview() {
         <AnnouncementsCard initialAnnouncements={dashboardData?.announcements?.slice(0, 5)} />
         <UpcomingEventsCard initialEvents={dashboardData?.events?.slice(0, 5)} />
       </div>
-    </div>
+    </DashboardContent>
   );
 }

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BookOpen, Users, Clock, AlertCircle, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { courseApi, enrollmentApi, Course } from "@/lib/api-services";
+import { DashboardContent } from "@/components/dashboard-content";
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -75,7 +76,7 @@ export default function CoursesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <DashboardContent className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">My Courses</h1>
         <p className="text-muted-foreground">Your enrolled courses this semester</p>
@@ -167,6 +168,6 @@ export default function CoursesPage() {
           ))}
         </div>
       )}
-    </div>
+    </DashboardContent>
   );
 }

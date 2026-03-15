@@ -33,9 +33,9 @@ const stats = [
 ];
 
 const genderData = [
-  { name: "Male", value: 680, color: "hsl(var(--primary))" },
-  { name: "Female", value: 548, color: "hsl(var(--destructive))" },
-  { name: "Other", value: 20, color: "hsl(var(--muted-foreground))" },
+  { name: "Male", value: 680, color: "var(--chart-1)" },
+  { name: "Female", value: 548, color: "var(--chart-2)" },
+  { name: "Other", value: 20, color: "var(--chart-3)" },
 ];
 
 const enrollmentData = [
@@ -95,7 +95,7 @@ export default function StatisticsPage() {
                   <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
                   <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="students" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: "hsl(var(--primary))" }} />
+                  <Line type="monotone" dataKey="students" stroke="var(--chart-1)" strokeWidth={2} dot={{ fill: "var(--chart-1)" }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -150,7 +150,7 @@ export default function StatisticsPage() {
                   <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
                   <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
                   <Tooltip />
-                  <Bar dataKey="students" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="students" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

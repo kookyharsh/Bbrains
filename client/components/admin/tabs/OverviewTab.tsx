@@ -5,9 +5,7 @@ import { Loader2, UserCheck, Users, ShoppingBag, CheckCircle, BookOpen, FileText
 import { getAuthedClient } from "@/lib/http"
 import { StatCard } from "../StatCard"
 
-type GetToken = () => Promise<string | null>
-
-export function OverviewTab({ getToken }: { getToken: GetToken }) {
+export function OverviewTab() {
     const [stats, setStats] = useState({
         teachers: 0, students: 0, products: 0, pending: 0,
         roles: 0, achievements: 0, announcements: 0, assignments: 0,
@@ -18,7 +16,7 @@ export function OverviewTab({ getToken }: { getToken: GetToken }) {
         async function load() {
             try {
                 setLoading(true)
-                const c = await getAuthedClient(getToken)
+                const c = await getAuthedClient()
                 const results = await Promise.allSettled([
                     c.get<{ data: unknown[] }>("/user/teachers"),
                     c.get<{ data: unknown[] }>("/user/students"),
@@ -34,7 +32,7 @@ export function OverviewTab({ getToken }: { getToken: GetToken }) {
             } catch (e) { console.error(e) } finally { setLoading(false) }
         }
         load()
-    }, [getToken])
+    }, [])
 
     if (loading) return <div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-muted-foreground/50" /></div>
 

@@ -1,7 +1,15 @@
 import axios, { AxiosInstance } from "axios"
 import { getAuthToken } from "./api"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== "undefined") {
+    return `http://${window.location.hostname}:5000`;
+  }
+  return "http://localhost:5000";
+};
+
+const API_BASE_URL = getBaseUrl();
 
 export const http = axios.create({
   baseURL: API_BASE_URL,

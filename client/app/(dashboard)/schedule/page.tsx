@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin } from "lucide-react";
+import { DashboardContent } from "@/components/dashboard-content"
 
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -37,49 +38,51 @@ export default function SchedulePage() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Schedule</h1>
-          <p className="text-muted-foreground">Your weekly class schedule</p>
+    <DashboardContent>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Schedule</h1>
+            <p className="text-muted-foreground">Your weekly class schedule</p>
+          </div>
+          <Badge variant="outline" className="gap-1">
+            <Calendar className="w-3 h-3" /> {today}
+          </Badge>
         </div>
-        <Badge variant="outline" className="gap-1">
-          <Calendar className="w-3 h-3" /> {today}
-        </Badge>
-      </div>
 
-      <div className="grid gap-4">
-        {schedule.map((day, di) => (
-          <Card key={day.day} className={day.day === today ? "ring-2 ring-primary/50" : ""}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                {day.day}
-                {day.day === today && <Badge className="text-xs">Today</Badge>}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-2">
-                {day.classes.map((cls, ci) => (
-                  <div key={ci} className={`flex items-center gap-4 p-3 rounded-lg border ${colors[ci % colors.length]}`}>
-                    <div className="shrink-0 text-center min-w-[80px]">
-                      <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {cls.time}
-                      </p>
+        <div className="grid gap-4">
+          {schedule.map((day, di) => (
+            <Card key={day.day} className={day.day === today ? "ring-2 ring-primary/50" : ""}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {day.day}
+                  {day.day === today && <Badge className="text-xs">Today</Badge>}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2">
+                  {day.classes.map((cls, ci) => (
+                    <div key={ci} className={`flex items-center gap-4 p-3 rounded-lg border ${colors[ci % colors.length]}`}>
+                      <div className="shrink-0 text-center min-w-[80px]">
+                        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {cls.time}
+                        </p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground text-sm">{cls.subject}</p>
+                        <p className="text-xs text-muted-foreground">{cls.teacher}</p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 text-xs gap-1">
+                        <MapPin className="w-3 h-3" /> {cls.room}
+                      </Badge>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground text-sm">{cls.subject}</p>
-                      <p className="text-xs text-muted-foreground">{cls.teacher}</p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 text-xs gap-1">
-                      <MapPin className="w-3 h-3" /> {cls.room}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
-    </div>
+    </DashboardContent>
   );
 }

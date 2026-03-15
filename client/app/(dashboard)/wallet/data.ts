@@ -48,10 +48,10 @@ export interface ApiWallet {
 export const chartConfig = {
     spent: {
         label: "Spent",
-        color: "hsl(0, 84%, 60%)",
+        color: "var(--chart-2)",
     },
     received: {
         label: "Received",
-        color: "hsl(142, 71%, 45%)",
+        color: "var(--chart-1)",
     },
 } satisfies ChartConfig

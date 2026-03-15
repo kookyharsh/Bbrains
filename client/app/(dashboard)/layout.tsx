@@ -1,6 +1,5 @@
 import { MainNavbar } from "@/components/main-navbar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 
 import {
     SidebarInset,
@@ -32,25 +31,28 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <SidebarProvider defaultOpen={true}>
             <NotificationProvider>
-                <div className="flex h-screen w-full overflow-hidden">
+                <div className="flex h-screen w-full overflow-hidden bg-background">
                     {/* Sidebar on the left - height: 100vh */}
                     <AppSidebar user={formattedUser} />
 
                     {/* Main Content Area on the right */}
-                    <SidebarInset className="flex flex-col h-full overflow-hidden min-w-0">
+                    <SidebarInset className="flex flex-col h-full overflow-hidden min-w-0 w-full">
                         {/* Navbar starts after the sidebar and spans the remaining width */}
                         <MainNavbar user={formattedUser} />
 
-                        {/* Page Content */}
-                        <main className="flex-1 min-h-0 overflow-y-auto md:p-4">
-                            {children}
+                        {/* 
+                            Fix 7: Layout Scroll Conflict
+                            We remove overflow-y-auto from this container and use flex-1 min-h-0.
+                            This ensures that children like Chat (which use h-full) are strictly constrained.
+                            Pages that need to scroll will now have their own scroll containers.
+                        */}
+                        <main className="flex-1 min-h-0 flex flex-col relative">
+                             {children}
                         </main>
                     </SidebarInset>
                 </div>
             </NotificationProvider>
 
-            {/* Mobile Bottom Navigation - only visible on small screens */}
-            <MobileBottomNav />
         </SidebarProvider>
     )
 }

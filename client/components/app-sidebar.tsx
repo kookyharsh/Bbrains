@@ -57,9 +57,9 @@ export function AppSidebar({ user }: { user?: any }) {
     const items = [...extraItems, ...baseSidebarItems]
 
     return (
-        <Sidebar collapsible="icon" className="border-r border-gray-100 dark:border-gray-800">
-            <SidebarHeader className="bg-ui-light-surface dark:bg-ui-dark-surface pt-6 px-3">
-                <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} mb-6 text-ui-light-textPrimary dark:text-ui-dark-textPrimary`}>
+        <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+            <SidebarHeader className="bg-sidebar pt-6 px-3">
+                <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} mb-6 text-sidebar-foreground`}>
                     <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} min-w-0`}>
                         <div className={`${isCollapsed ? "w-8 h-8" : "w-10 h-10"} bg-brand-purple rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm transition-all duration-200`}>
                             <BarChart3 className={`${isCollapsed ? "h-4 w-4" : "h-6 w-6"} transition-all duration-200`} />
@@ -72,9 +72,9 @@ export function AppSidebar({ user }: { user?: any }) {
                 </div>
             </SidebarHeader>
 
-            <SidebarContent className={`bg-ui-light-surface dark:bg-ui-dark-surface custom-scrollbar ${isCollapsed ? "px-1.5" : "px-3"}`}>
+            <SidebarContent className={`bg-sidebar custom-scrollbar ${isCollapsed ? "px-1.5" : "px-3"}`}>
                 <SidebarGroup>
-                    <SidebarGroupLabel className="px-4 text-[10px] font-bold text-ui-light-textSecondary dark:text-ui-dark-textSecondary uppercase tracking-[0.1em] mb-4 group-data-[collapsible=icon]:hidden">
+                    <SidebarGroupLabel className="px-4 text-[10px] font-bold text-sidebar-foreground/60 uppercase tracking-[0.1em] mb-4 group-data-[collapsible=icon]:hidden">
                         Main menu
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
@@ -89,8 +89,8 @@ export function AppSidebar({ user }: { user?: any }) {
                                                 <Link
                                                     href={item.url}
                                                     className={`flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl transition-all duration-200 ${isCollapsed ? "!size-11 !min-h-0 !p-0 !gap-0 justify-center mx-auto" : ""} ${isActive
-                                                        ? "bg-brand-purple text-white shadow-sm font-semibold"
-                                                        : "text-ui-light-textSecondary dark:text-ui-dark-textSecondary hover:bg-black/5 dark:hover:bg-white/5"
+                                                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm font-semibold"
+                                                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/10"
                                                         }`}
                                                 >
                                                     <div className="relative">
@@ -141,11 +141,11 @@ export function AppSidebar({ user }: { user?: any }) {
                 </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="bg-ui-light-surface dark:bg-ui-dark-surface px-3 pb-6 pt-4 border-t border-gray-100 dark:border-gray-800/50">
+            <SidebarFooter className="bg-sidebar px-3 pb-6 pt-4 border-t border-sidebar-border">
                 {user && (
                     <div className="flex flex-col gap-4">
                         <button
-                            className={`flex items-center gap-3 rounded-xl text-ui-light-textSecondary dark:text-ui-dark-textSecondary hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${isCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"}`}
+                            className={`flex items-center gap-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/10 transition-colors ${isCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"}`}
                             title="Settings"
                         >
                             <Settings className="h-5 w-5 shrink-0" />
@@ -156,11 +156,11 @@ export function AppSidebar({ user }: { user?: any }) {
 
                         <div className={isCollapsed ? "flex justify-center" : "px-2"}>
                             {!isCollapsed && (
-                                <h3 className="text-[10px] font-bold text-ui-light-textSecondary dark:text-ui-dark-textSecondary uppercase tracking-[0.1em] mb-4">Account</h3>
+                                <h3 className="text-[10px] font-bold text-sidebar-foreground/60 uppercase tracking-[0.1em] mb-4">Account</h3>
                             )}
                             <button
                                 onClick={() => setShowProfileCard(!showProfileCard)}
-                                className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} w-full ${isCollapsed ? "" : "hover:bg-black/5 dark:hover:bg-white/5 rounded-xl p-2 -mx-2"} transition-colors`}
+                                className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} w-full ${isCollapsed ? "" : "hover:bg-sidebar-accent/10 rounded-xl p-2 -mx-2"} transition-colors`}
                             >
                                 <div className="relative">
                                     <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
@@ -173,10 +173,10 @@ export function AppSidebar({ user }: { user?: any }) {
                                 </div>
                                 {!isCollapsed && (
                                     <div className="flex-1 min-w-0 text-left">
-                                        <p className="text-[13px] font-bold text-ui-light-textPrimary dark:text-ui-dark-textPrimary truncate">
+                                        <p className="text-[13px] font-bold text-sidebar-foreground truncate">
                                             {user?.fullName || user?.username || "Anonymous User"}
                                         </p>
-                                        <p className="text-[11px] text-ui-light-textSecondary dark:text-ui-dark-textSecondary truncate mt-0.5">
+                                        <p className="text-[11px] text-sidebar-foreground/60 truncate mt-0.5">
                                             {statusLabels[userStatus]}
                                         </p>
                                     </div>

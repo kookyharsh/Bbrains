@@ -1,5 +1,6 @@
 import { announcementApi, dashboardApi } from "@/lib/api-services";
 import { AnnouncementsContent } from "@/components/announcements/AnnouncementsContent";
+import { DashboardContent } from "@/components/dashboard-content";
 
 export default async function AnnouncementsPage() {
   const [announcementsRes, userRes] = await Promise.all([
@@ -11,9 +12,11 @@ export default async function AnnouncementsPage() {
   const user = userRes.success ? (userRes.data ?? null) : null;
 
   return (
-    <AnnouncementsContent 
-      initialAnnouncements={announcements} 
-      currentUser={user} 
-    />
+    <DashboardContent>
+      <AnnouncementsContent 
+        initialAnnouncements={announcements} 
+        currentUser={user} 
+      />
+    </DashboardContent>
   );
 }

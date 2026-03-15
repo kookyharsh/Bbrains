@@ -65,8 +65,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.style.setProperty(key, value)
     })
     
-    // Add theme class
-    root.className = `theme-${themeId}`
+    // Manage classes on root element
+    // 1. Remove all theme- classes
+    const currentClasses = Array.from(root.classList)
+    currentClasses.forEach(cls => {
+      if (cls.startsWith('theme-')) {
+        root.classList.remove(cls)
+      }
+    })
+    
+    // 2. Add new theme class
+    root.classList.add(`theme-${themeId}`)
+    
+    // 3. Toggle dark class based on theme definition
+    if (themeDef.isDark) {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
     
     // Save to localStorage
     localStorage.setItem('theme', themeId)

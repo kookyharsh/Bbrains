@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from "react"
+import React, { useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
@@ -8,132 +8,221 @@ import {
 import {
     EmojiPicker, EmojiPickerContent, EmojiPickerFooter, EmojiPickerSearch,
 } from "@/components/ui/emoji-picker"
-import { PlusCircle, Send, Smile, X } from "lucide-react"
+import { PlusCircle, Send, Smile, X, ImagePlus, Loader2, Hash } from "lucide-react"
 import type { Member, Message } from "../data"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface MessageInputProps {
     message: string
     channelName: string
     members: Member[]
     editingMessageId: string | null
-    replyingMessage: Message | null
+    replyingMessage: { id: string; username: string; content: string } | null
+    pendingAttachments: { file: File; previewUrl: string }[]
+    isUploading?: boolean
     onChange: (val: string) => void
     onSend: () => void
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
     onEmojiSelect: (emoji: { emoji: string }) => void
     onCancelEdit: () => void
     onCancelReply: () => void
+    onFileSelect: (files: File[]) => void
+    onRemoveAttachment: (index: number) => void
+    onMentionSelect: (username: string) => void
+    mentionQuery: string | null
+    mentionIndex: number
+    setMentionIndex: (idx: number) => void
 }
 
 export function MessageInput({
-    message, channelName, members, editingMessageId, replyingMessage, onChange, onSend, onKeyDown, onEmojiSelect, onCancelEdit, onCancelReply,
+    message, 
+    channelName, 
+    members, 
+    editingMessageId, 
+    replyingMessage, 
+    pendingAttachments,
+    isUploading = false,
+    onChange, 
+    onSend, 
+    onKeyDown, 
+    onEmojiSelect, 
+    onCancelEdit, 
+    onCancelReply,
+    onFileSelect,
+    onRemoveAttachment,
+    onMentionSelect,
+    mentionQuery,
+    mentionIndex,
+    setMentionIndex
 }: MessageInputProps) {
-    const mentionMatch = message.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/)
-    const mentionQuery = mentionMatch ? mentionMatch[1].toLowerCase() : null
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
 
-    const mentionCandidates = useMemo(() => {
+    const mentionSuggestions = useMemo(() => {
         if (mentionQuery === null) return []
         return members
-            .filter((member) => member.username.toLowerCase().startsWith(mentionQuery))
-            .slice(0, 6)
+            .filter((member) => 
+                member.name.toLowerCase().includes(mentionQuery.toLowerCase()) || 
+                member.username.toLowerCase().includes(mentionQuery.toLowerCase())
+            )
+            .slice(0, 5)
     }, [mentionQuery, members])
 
-    const insertMention = (username: string) => {
-        if (mentionQuery === null) return
-        onChange(message.replace(/@([a-zA-Z0-9_]*)$/, `@${username} `))
-    }
-
     return (
-        <div className="p-4 bg-ui-light-surface dark:bg-ui-dark-surface border-t border-gray-100 dark:border-gray-800 shrink-0 z-10 w-full relative">
+        <div className="px-3 py-2 border-t border-border bg-card mt-auto pb-9 relative">
+            {/* Reply Preview */}
             {replyingMessage && (
-                <div className="mb-2 flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs w-full">
-                    <span className="truncate text-gray-600 dark:text-gray-300">
-                        Replying to <span className="font-semibold text-gray-900 dark:text-white">{replyingMessage.user.name}</span>: {replyingMessage.content}
+                <div className="flex items-center justify-between mb-2 px-2 py-1.5 bg-muted/50 rounded-md text-xs">
+                    <span className="text-muted-foreground truncate">
+                        Replying to <span className="font-medium text-foreground">@{replyingMessage.username}</span>: {replyingMessage.content.slice(0, 50)}{replyingMessage.content.length > 50 ? '...' : ''}
                     </span>
-                    <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={onCancelReply}>
-                        <X className="h-4 w-4" />
-                    </button>
+                    <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onCancelReply}>
+                        <X className="w-3 h-3" />
+                    </Button>
                 </div>
             )}
 
-            {editingMessageId && (
-                <div className="mb-2 flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2 text-xs w-full">
-                    <span className="text-gray-600 dark:text-gray-300">Editing message</span>
-                    <button className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={onCancelEdit}>
-                        <X className="h-4 w-4" />
-                    </button>
+            {/* Editing indicator if not handled in-line */}
+            {editingMessageId && !replyingMessage && (
+                <div className="flex items-center justify-between mb-2 px-2 py-1.5 bg-brand-purple/10 rounded-md text-xs">
+                    <span className="text-brand-purple font-medium">Editing message</span>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 text-brand-purple" onClick={onCancelEdit}>
+                        <X className="w-3 h-3" />
+                    </Button>
                 </div>
             )}
 
-            <div className="bg-gray-100 dark:bg-gray-800 rounded-xl p-2 flex items-center gap-2 w-full">
-                <button
-                    className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                    aria-label="Attach file"
+            <div className="flex items-start gap-1.5">
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="shrink-0 h-8 w-8 mt-1" 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
                 >
-                    <PlusCircle className="h-5 w-5" />
-                </button>
-
-                <input
-                    value={message}
-                    onChange={(e) => onChange(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    placeholder={`Message #${channelName}...`}
-                    className="flex-1 bg-transparent border-none focus:ring-0 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 outline-none text-sm"
-                    aria-label="Message input"
+                    <ImagePlus className="w-4 h-4" />
+                </Button>
+                
+                <input 
+                    ref={fileInputRef} 
+                    type="file" 
+                    multiple
+                    accept="image/*,video/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length > 0) onFileSelect(files);
+                        e.target.value = '';
+                    }} 
                 />
 
-                <div className="flex items-center gap-1">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                                aria-label="Open emoji picker"
-                            >
-                                <Smile className="h-5 w-5" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            align="end"
-                            side="top"
-                            className="h-100 w-fit border-none bg-transparent p-0 shadow-none z-50 mb-2"
-                        >
-                            <EmojiPicker
-                                className="h-full border shadow-xl bg-ui-light-surface dark:bg-ui-dark-surface rounded-lg overflow-hidden"
-                                onEmojiSelect={onEmojiSelect}
-                            >
-                                <EmojiPickerSearch placeholder="Search emoji…" />
-                                <EmojiPickerContent />
-                                <EmojiPickerFooter />
-                            </EmojiPicker>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                <div className="flex-1 flex flex-col gap-2 relative">
+                    {/* Attachment Previews */}
+                    {pendingAttachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-2 bg-muted/30 rounded-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            {pendingAttachments.map((att, idx) => (
+                                <div key={idx} className="relative group">
+                                    {att.file.type.startsWith('image/') ? (
+                                        <img
+                                            src={att.previewUrl}
+                                            alt="preview"
+                                            className="h-16 w-16 object-cover rounded-md border border-border"
+                                        />
+                                    ) : (
+                                        <div className="h-16 w-16 flex items-center justify-center bg-muted rounded-md border border-border">
+                                            <Hash className="w-6 h-6 text-muted-foreground" />
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => onRemoveAttachment(idx)}
+                                        className="absolute -top-1.5 -right-1.5 bg-background border border-border rounded-full p-0.5 shadow-sm hover:bg-muted transition-colors"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
-                    <button
-                        onClick={onSend}
-                        disabled={!message.trim()}
-                        aria-label={editingMessageId ? "Save message" : "Send message"}
-                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    {/* Input Area */}
+                    <div className="flex-1 relative flex items-center bg-background border border-input rounded-full transition-all duration-300 focus-within:ring-1 focus-within:ring-ring">
+                        {/* Mention Suggestions */}
+                        {mentionQuery !== null && mentionSuggestions.length > 0 && (
+                            <div className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border rounded-md shadow-md overflow-hidden z-50">
+                                {mentionSuggestions.map((member, i) => (
+                                    <button
+                                        key={member.id}
+                                        className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
+                                            i === mentionIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted/50 text-foreground"
+                                        }`}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            onMentionSelect(member.username);
+                                        }}
+                                        onMouseEnter={() => setMentionIndex(i)}
+                                    >
+                                        <Avatar className="w-6 h-6">
+                                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                                                {member.name.charAt(0)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex flex-col items-start overflow-hidden">
+                                            <span className="font-medium truncate w-full text-left">{member.name}</span>
+                                            <span className="text-[10px] text-muted-foreground truncate w-full text-left">@{member.username}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        <input
+                            ref={inputRef}
+                            value={message}
+                            onChange={(e) => onChange(e.target.value)}
+                            onKeyDown={onKeyDown}
+                            placeholder={`Message #${channelName}`}
+                            className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-muted-foreground"
+                        />
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className="px-2 text-muted-foreground hover:text-foreground transition-colors mr-1"
+                                    aria-label="Open emoji picker"
+                                >
+                                    <Smile className="w-4 h-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                side="top"
+                                className="h-100 w-fit border-none bg-transparent p-0 shadow-none z-50 mb-2"
+                            >
+                                <EmojiPicker
+                                    className="h-full border shadow-xl bg-ui-light-surface dark:bg-ui-dark-surface rounded-lg overflow-hidden"
+                                    onEmojiSelect={onEmojiSelect}
+                                >
+                                    <EmojiPickerSearch placeholder="Search emoji…" />
+                                    <EmojiPickerContent />
+                                    <EmojiPickerFooter />
+                                </EmojiPicker>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                </div>
+
+                {/* Send Button */}
+                {(message.trim() || pendingAttachments.length > 0) && (
+                    <Button 
+                        size="icon" 
+                        onClick={onSend} 
+                        disabled={isUploading}
+                        className="shrink-0 h-8 w-8 mt-1 animate-in fade-in slide-in-from-right-4 duration-300"
                     >
-                        <Send className="h-5 w-5" />
-                    </button>
-                </div>
+                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </Button>
+                )}
             </div>
-
-            {mentionCandidates.length > 0 && (
-                <div className="mt-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-ui-light-surface dark:bg-ui-dark-surface shadow-lg absolute bottom-[80px] left-4 max-w-sm w-[90%] z-50 overflow-hidden">
-                    {mentionCandidates.map((member) => (
-                        <button
-                            key={member.id}
-                            type="button"
-                            onClick={() => insertMention(member.username)}
-                            className="flex items-center justify-between w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                            <span className="font-semibold text-gray-900 dark:text-white">{member.name}</span>
-                            <span className="ml-2 text-gray-500 dark:text-gray-400">@{member.username}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
         </div>
     )
 }
