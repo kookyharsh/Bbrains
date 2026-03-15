@@ -34,6 +34,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider as ThemeContextProvider } from "@/context/theme-context"
 
 export default function RootLayout({
   children,
@@ -45,16 +46,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TooltipProvider>
-            {children}
-            <Toaster position="top-right" />
-          </TooltipProvider>
+        <ThemeProvider enableSystem disableTransitionOnChange>
+          <ThemeContextProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster position="top-right" />
+            </TooltipProvider>
+          </ThemeContextProvider>
         </ThemeProvider>
       </body>
     </html>

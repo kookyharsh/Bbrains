@@ -409,6 +409,193 @@ async function main() {
     }
     console.log(`✅ ${products.length} Products created.`);
 
+    console.log("🎨 Seeding Theme Products...");
+    const themeData = [
+      { 
+        name: "Hand-Drawn Theme", 
+        desc: "Creative hand-drawn aesthetic with paper texture and sketchy elements", 
+        price: 150, 
+        stock: 999, // Unlimited for digital products
+        metadata: {
+          category: 'theme',
+          themeConfig: {
+            id: 'hand-drawn',
+            name: 'Hand-Drawn',
+            variables: {
+              '--background': '#fdfbf7',
+              '--foreground': '#2d2d2d',
+              '--card': '#fdfbf7',
+              '--card-foreground': '#2d2d2d',
+              '--popover': '#fdfbf7',
+              '--popover-foreground': '#2d2d2d',
+              '--primary': '#55E6C1',
+              '--primary-foreground': '#2d2d2d',
+              '--secondary': '#e5e0d8',
+              '--secondary-foreground': '#2d2d2d',
+              '--muted': '#f5f5f0',
+              '--muted-foreground': '#636E72',
+              '--accent': '#ff4d4d',
+              '--accent-foreground': '#ffffff',
+              '--destructive': '#ff4d4d',
+              '--border': '#e5e0d8',
+              '--input': '#ffffff',
+              '--ring': '#2d2d2d'
+            }
+          }
+        }
+      },
+      { 
+        name: "Vibrant Orange Theme", 
+        desc: "Energetic theme based on brand orange color", 
+        price: 200, 
+        stock: 999,
+        metadata: {
+          category: 'theme',
+          themeConfig: {
+            id: 'brand-orange',
+            name: 'Vibrant Orange',
+            variables: {
+              '--background': '#FFF5F5',
+              '--foreground': '#2F3640',
+              '--card': '#FFFFFF',
+              '--card-foreground': '#2F3640',
+              '--popover': '#FFF5F5',
+              '--popover-foreground': '#2F3640',
+              '--primary': '#FF7675',
+              '--primary-foreground': '#FFFFFF',
+              '--secondary': '#FED7D7',
+              '--secondary-foreground': '#2F3640',
+              '--muted': '#FADBD8',
+              '--muted-foreground': '#636E72',
+              '--accent': '#F39C12',
+              '--accent-foreground': '#FFFFFF',
+              '--destructive': '#E74C3C',
+              '--border': '#E8DAEF',
+              '--input': '#FFFFFF',
+              '--ring': '#FF7675'
+            }
+          }
+        }
+      },
+      { 
+        name: "Royal Purple Theme", 
+        desc: "Sophisticated theme based on brand purple color", 
+        price: 200, 
+        stock: 999,
+        metadata: {
+          category: 'theme',
+          themeConfig: {
+            id: 'brand-purple',
+            name: 'Royal Purple',
+            variables: {
+              '--background': '#F5F0FF',
+              '--foreground': '#2F3640',
+              '--card': '#FFFFFF',
+              '--card-foreground': '#2F3640',
+              '--popover': '#F5F0FF',
+              '--popover-foreground': '#2F3640',
+              '--primary': '#6C5CE7',
+              '--primary-foreground': '#FFFFFF',
+              '--secondary': '#D6C4E9',
+              '--secondary-foreground': '#2F3640',
+              '--muted': '#E8DAEF',
+              '--muted-foreground': '#636E72',
+              '--accent': '#9B59B6',
+              '--accent-foreground': '#FFFFFF',
+              '--destructive': '#E74C3C',
+              '--border': '#D6C4E9',
+              '--input': '#FFFFFF',
+              '--ring': '#6C5CE7'
+            }
+          }
+        }
+      },
+      { 
+        name: "Fresh Mint Theme", 
+        desc: "Refreshing theme based on brand mint color", 
+        price: 180, 
+        stock: 999,
+        metadata: {
+          category: 'theme',
+          themeConfig: {
+            id: 'brand-mint',
+            name: 'Fresh Mint',
+            variables: {
+              '--background': '#F0FFF9',
+              '--foreground': '#2F3640',
+              '--card': '#FFFFFF',
+              '--card-foreground': '#2F3640',
+              '--popover': '#F0FFF9',
+              '--popover-foreground': '#2F3640',
+              '--primary': '#55E6C1',
+              '--primary-foreground': '#2F3640',
+              '--secondary': '#D5F5E3',
+              '--secondary-foreground': '#2F3640',
+              '--muted': '#D5F5E3',
+              '--muted-foreground': '#2F3640',
+              '--accent': '#27AE60',
+              '--accent-foreground': '#FFFFFF',
+              '--destructive': '#E74C3C',
+              '--border': '#A9DFBF',
+              '--input': '#FFFFFF',
+              '--ring': '#55E6C1'
+            }
+          }
+        }
+      },
+      { 
+        name: "Slate Professional Theme", 
+        desc: "Professional theme based on brand slate color", 
+        price: 180, 
+        stock: 999,
+        metadata: {
+          category: 'theme',
+          themeConfig: {
+            id: 'brand-slate',
+            name: 'Slate Professional',
+            variables: {
+              '--background': '#F8F9FA',
+              '--foreground': '#2F3640',
+              '--card': '#FFFFFF',
+              '--card-foreground': '#2F3640',
+              '--popover': '#F8F9FA',
+              '--popover-foreground': '#2F3640',
+              '--primary': '#2F3640',
+              '--primary-foreground': '#FFFFFF',
+              '--secondary': '#EDEDED',
+              '--secondary-foreground': '#2F3640',
+              '--muted': '#BDC3C7',
+              '--muted-foreground': '#2F3640',
+              '--accent': '#95A5A6',
+              '--accent-foreground': '#FFFFFF',
+              '--destructive': '#E74C3C',
+              '--border': '#BDC3C7',
+              '--input': '#FFFFFF',
+              '--ring': '#2F3640'
+            }
+          }
+        }
+      }
+    ];
+
+    const themes = [];
+    for (const t of themeData) {
+      const theme = await prisma.product.create({
+        data: {
+          name: t.name,
+          description: t.desc,
+          price: t.price,
+          stock: t.stock,
+          creatorId: getRandomItem(teachers).id,
+          image: `https://placehold.co/400/6C5CE7/FFFFFF?text=${encodeURIComponent(t.name.split(' ')[0])}`, // Simple placeholder
+          approval: ProductApproval.approved,
+          metadata: t.metadata
+        }
+      });
+      themes.push(theme);
+    }
+    console.log(`✅ ${themes.length} Theme products created.`);
+
     console.log("🛒 Seeding Carts & Orders...");
     let cartCount = 0;
     let orderCount = 0;
