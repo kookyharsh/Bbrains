@@ -50,21 +50,26 @@ export function mapApiMessage(m: ApiMessage): Message {
     }
 }
 
-export function mapApiMember(m: ApiMember, activeUserIds: string[]): Member {
-    const memberId = String(m.userId)
+export function mapApiMember(m: any, activeUserIds: string[] = []): Member {
+    const id = m.id || m.userId || String(m._id || "")
+    const memberId = String(id)
     const isOnline = activeUserIds.includes(memberId)
-    const isAdmin = m.roles.includes("admin") || m.type === "admin"
-    const isMod = m.roles.includes("staff") || m.roles.includes("teacher") || m.type === "teacher" || m.type === "staff"
+    
+    const roles = Array.isArray(m.roles) ? m.roles : []
+    const type = m.type || "student"
+    
+    const isAdmin = roles.includes("admin") || type === "admin"
+    const isMod = roles.includes("staff") || roles.includes("teacher") || type === "teacher" || type === "staff"
 
     return {
-        id: m.userId,
-        username: m.username,
-        name: m.displayName || m.username,
+        id: memberId,
+        username: m.username || "unknown",
+        name: m.displayName || m.username || "Unknown",
         avatar: m.avatar || "",
         pronouns: m.pronouns || "they/them",
         grade: m.grade || "N/A",
-        roles: m.roles || [],
-        type: m.type,
+        roles: roles,
+        type: type,
         badge: isAdmin ? "ADMIN" : isMod ? "MOD" : undefined,
         badgeColor: isAdmin ? "bg-red-500" : isMod ? "bg-blue-500" : undefined,
         role: isAdmin ? "admin" : isMod ? "moderator" : "member",

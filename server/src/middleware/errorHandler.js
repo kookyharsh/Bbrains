@@ -11,17 +11,20 @@ const errorHandler = (err, req, res, next) => {
         console.error('Error:', err);
     }
 
-    // Handle Zod validation errors
-    if (err instanceof ZodError) {
+    // Handle Zod validation errors (with support for different Zod instances/versions)
+    if (err instanceof ZodError || err.name === 'ZodError' || err.constructor.name === 'ZodError') {
+        const errors = err.errors ? err.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+        })) : [];
+        
         return res.status(400).json({
             success: false,
             message: 'Validation failed',
-            errors: err.errors.map(e => ({
-                field: e.path.join('.'),
-                message: e.message
-            }))
+            errors
         });
     }
+
 
     // Handle our custom AppError
     if (err instanceof AppError) {

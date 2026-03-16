@@ -1,58 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
-  Search,
-  Plus,
-  Pencil,
-  Trash2,
-  Eye,
-  Users,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Building,
-  User,
+  Search, Plus, Pencil, Trash2, Users, Mail, Phone, MapPin, Building, User,
 } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 interface UserDetails {
@@ -83,53 +53,17 @@ interface UserDetails {
 }
 
 const mockUsers: UserDetails[] = [
-  { 
-    id: "u1", username: "alex_j", email: "alex@uni.edu", firstName: "Alex", lastName: "Johnson", 
-    role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0101",
-    address: { street: "123 College Ave", city: "Boston", state: "MA", zipCode: "02115", country: "USA" },
-    emergencyContact: { name: "John Johnson", phone: "+1 555-0102", relationship: "Father" }
-  },
-  { 
-    id: "u2", username: "sarah_j", email: "sarah@uni.edu", firstName: "Sarah", lastName: "Jenkins", 
-    role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0103",
-    address: { street: "456 Oak Street", city: "Cambridge", state: "MA", zipCode: "02139", country: "USA" },
-    emergencyContact: { name: "Mary Jenkins", phone: "+1 555-0104", relationship: "Mother" }
-  },
-  { 
-    id: "u3", username: "dr_smith", email: "smith@uni.edu", firstName: "Robert", lastName: "Smith", 
-    role: "teacher", status: "active", joinDate: "2024-01-15", phone: "+1 555-0105",
-    address: { street: "789 Faculty Lane", city: "Boston", state: "MA", zipCode: "02115", country: "USA" },
-    bio: "Professor of Computer Science with 15 years of experience."
-  },
-  { 
-    id: "u4", username: "prof_johnson", email: "johnson@uni.edu", firstName: "Emily", lastName: "Johnson", 
-    role: "teacher", status: "active", joinDate: "2023-08-20", phone: "+1 555-0106",
-    address: { street: "321 Academic Blvd", city: "Cambridge", state: "MA", zipCode: "02138", country: "USA" },
-    bio: "Department Head for Mathematics."
-  },
-  { 
-    id: "u5", username: "mike_c", email: "mike@uni.edu", firstName: "Michael", lastName: "Chang", 
-    role: "student", status: "inactive", joinDate: "2025-09-01" 
-  },
-  { 
-    id: "u6", username: "emily_d", email: "emily@uni.edu", firstName: "Emily", lastName: "Davis", 
-    role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0107",
-    address: { street: "555 Student Way", city: "Boston", state: "MA", zipCode: "02115", country: "USA" }
-  },
-  { 
-    id: "u7", username: "admin_adams", email: "adams@uni.edu", firstName: "Principal", lastName: "Adams", 
-    role: "admin", status: "active", joinDate: "2020-01-01", phone: "+1 555-0108",
-    address: { street: "100 Admin Building", city: "Boston", state: "MA", zipCode: "02115", country: "USA" }
-  },
-  { 
-    id: "u8", username: "jane_w", email: "jane@uni.edu", firstName: "Jane", lastName: "Wilson", 
-    role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0109",
-    address: { street: "777 University Ave", city: "Boston", state: "MA", zipCode: "02115", country: "USA" },
-    emergencyContact: { name: "Robert Wilson", phone: "+1 555-0110", relationship: "Father" }
-  },
+  { id: "u1", username: "alex_j", email: "alex@uni.edu", firstName: "Alex", lastName: "Johnson", role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0101", address: { street: "123 College Ave", city: "Boston", state: "MA", zipCode: "02115", country: "USA" }, emergencyContact: { name: "John Johnson", phone: "+1 555-0102", relationship: "Father" } },
+  { id: "u2", username: "sarah_j", email: "sarah@uni.edu", firstName: "Sarah", lastName: "Jenkins", role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0103", address: { street: "456 Oak Street", city: "Cambridge", state: "MA", zipCode: "02139", country: "USA" }, emergencyContact: { name: "Mary Jenkins", phone: "+1 555-0104", relationship: "Mother" } },
+  { id: "u3", username: "dr_smith", email: "smith@uni.edu", firstName: "Robert", lastName: "Smith", role: "teacher", status: "active", joinDate: "2024-01-15", phone: "+1 555-0105", address: { street: "789 Faculty Lane", city: "Boston", state: "MA", zipCode: "02115", country: "USA" }, bio: "Professor of Computer Science with 15 years of experience." },
+  { id: "u4", username: "prof_johnson", email: "johnson@uni.edu", firstName: "Emily", lastName: "Johnson", role: "teacher", status: "active", joinDate: "2023-08-20", phone: "+1 555-0106", address: { street: "321 Academic Blvd", city: "Cambridge", state: "MA", zipCode: "02138", country: "USA" }, bio: "Department Head for Mathematics." },
+  { id: "u5", username: "mike_c", email: "mike@uni.edu", firstName: "Michael", lastName: "Chang", role: "student", status: "inactive", joinDate: "2025-09-01" },
+  { id: "u6", username: "emily_d", email: "emily@uni.edu", firstName: "Emily", lastName: "Davis", role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0107", address: { street: "555 Student Way", city: "Boston", state: "MA", zipCode: "02115", country: "USA" } },
+  { id: "u7", username: "admin_adams", email: "adams@uni.edu", firstName: "Principal", lastName: "Adams", role: "admin", status: "active", joinDate: "2020-01-01", phone: "+1 555-0108", address: { street: "100 Admin Building", city: "Boston", state: "MA", zipCode: "02115", country: "USA" } },
+  { id: "u8", username: "jane_w", email: "jane@uni.edu", firstName: "Jane", lastName: "Wilson", role: "student", status: "active", joinDate: "2025-09-01", phone: "+1 555-0109", address: { street: "777 University Ave", city: "Boston", state: "MA", zipCode: "02115", country: "USA" }, emergencyContact: { name: "Robert Wilson", phone: "+1 555-0110", relationship: "Father" } },
 ];
 
-export default function ManageUsersPage() {
+export function ManageUsersTab() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [showDialog, setShowDialog] = useState(false);
@@ -146,10 +80,7 @@ export default function ManageUsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Manage Users</h1>
-          <p className="text-muted-foreground">View and manage all users</p>
-        </div>
+        <p className="text-muted-foreground">View and manage all users</p>
         <Button onClick={() => { setEditUser(null); setShowDialog(true); }}>
           <Plus className="w-4 h-4 mr-1" /> Add User
         </Button>
@@ -251,29 +182,16 @@ export default function ManageUsersPage() {
             <DialogTitle>{editUser ? "Edit User" : "Add New User"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Basic Info */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <User className="w-4 h-4" /> Basic Information
               </h3>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>First Name</Label>
-                  <Input defaultValue={editUser?.firstName} placeholder="First name" />
-                </div>
-                <div>
-                  <Label>Last Name</Label>
-                  <Input defaultValue={editUser?.lastName} placeholder="Last name" />
-                </div>
+                <div><Label>First Name</Label><Input defaultValue={editUser?.firstName} placeholder="First name" /></div>
+                <div><Label>Last Name</Label><Input defaultValue={editUser?.lastName} placeholder="Last name" /></div>
               </div>
-              <div>
-                <Label>Username</Label>
-                <Input defaultValue={editUser?.username} placeholder="Username" />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input defaultValue={editUser?.email} placeholder="Email" type="email" />
-              </div>
+              <div><Label>Username</Label><Input defaultValue={editUser?.username} placeholder="Username" /></div>
+              <div><Label>Email</Label><Input defaultValue={editUser?.email} placeholder="Email" type="email" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Role</Label>
@@ -299,20 +217,13 @@ export default function ManageUsersPage() {
               </div>
             </div>
 
-            {/* Contact Info */}
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Phone className="w-4 h-4" /> Contact Information
               </h3>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Phone</Label>
-                  <Input defaultValue={editUser?.phone} placeholder="+1 555-0000" />
-                </div>
-                <div>
-                  <Label>Date of Birth</Label>
-                  <Input defaultValue={editUser?.dateOfBirth} type="date" />
-                </div>
+                <div><Label>Phone</Label><Input defaultValue={editUser?.phone} placeholder="+1 555-0000" /></div>
+                <div><Label>Date of Birth</Label><Input defaultValue={editUser?.dateOfBirth} type="date" /></div>
               </div>
               <div>
                 <Label>Gender</Label>
@@ -328,67 +239,37 @@ export default function ManageUsersPage() {
               </div>
             </div>
 
-            {/* Address */}
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <MapPin className="w-4 h-4" /> Address
               </h3>
-              <div>
-                <Label>Street Address</Label>
-                <Input defaultValue={editUser?.address?.street} placeholder="123 Main St" />
+              <div><Label>Street Address</Label><Input defaultValue={editUser?.address?.street} placeholder="123 Main St" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>City</Label><Input defaultValue={editUser?.address?.city} placeholder="City" /></div>
+                <div><Label>State/Province</Label><Input defaultValue={editUser?.address?.state} placeholder="State" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>City</Label>
-                  <Input defaultValue={editUser?.address?.city} placeholder="City" />
-                </div>
-                <div>
-                  <Label>State/Province</Label>
-                  <Input defaultValue={editUser?.address?.state} placeholder="State" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Zip/Postal Code</Label>
-                  <Input defaultValue={editUser?.address?.zipCode} placeholder="12345" />
-                </div>
-                <div>
-                  <Label>Country</Label>
-                  <Input defaultValue={editUser?.address?.country} placeholder="Country" />
-                </div>
+                <div><Label>Zip/Postal Code</Label><Input defaultValue={editUser?.address?.zipCode} placeholder="12345" /></div>
+                <div><Label>Country</Label><Input defaultValue={editUser?.address?.country} placeholder="Country" /></div>
               </div>
             </div>
 
-            {/* Emergency Contact */}
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Building className="w-4 h-4" /> Emergency Contact
               </h3>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Contact Name</Label>
-                  <Input defaultValue={editUser?.emergencyContact?.name} placeholder="Full name" />
-                </div>
-                <div>
-                  <Label>Phone</Label>
-                  <Input defaultValue={editUser?.emergencyContact?.phone} placeholder="+1 555-0000" />
-                </div>
+                <div><Label>Contact Name</Label><Input defaultValue={editUser?.emergencyContact?.name} placeholder="Full name" /></div>
+                <div><Label>Phone</Label><Input defaultValue={editUser?.emergencyContact?.phone} placeholder="+1 555-0000" /></div>
               </div>
-              <div>
-                <Label>Relationship</Label>
-                <Input defaultValue={editUser?.emergencyContact?.relationship} placeholder="e.g., Father, Mother, Guardian" />
-              </div>
+              <div><Label>Relationship</Label><Input defaultValue={editUser?.emergencyContact?.relationship} placeholder="e.g., Father, Mother, Guardian" /></div>
             </div>
 
-            {/* Bio */}
             <div className="space-y-3 pt-2">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Mail className="w-4 h-4" /> Additional Information
               </h3>
-              <div>
-                <Label>Bio</Label>
-                <Textarea defaultValue={editUser?.bio} placeholder="Brief description about the user..." className="resize-none" rows={3} />
-              </div>
+              <div><Label>Bio</Label><Textarea defaultValue={editUser?.bio} placeholder="Brief description about the user..." className="resize-none" rows={3} /></div>
             </div>
           </div>
           <DialogFooter>

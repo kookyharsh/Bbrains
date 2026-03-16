@@ -4,10 +4,11 @@ import React, { useState } from "react"
 import {
     LayoutDashboard, Users, UserCheck, BookOpen, Megaphone,
     Shield, ShoppingBag, Trophy, FileText, ArrowUpDown, ChevronRight,
-    ArrowLeft, BarChart3, Settings2, MessageSquarePlus
+    ArrowLeft, BarChart3, Settings2, MessageSquarePlus, GraduationCap, UserCog
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 
 import {
     OverviewTab as AdminOverview, 
@@ -23,7 +24,11 @@ import {
     TransactionsTab as AdminTransactionsTab,
     XpConfigTab as AdminXpConfigTab,
     ConfigTab as AdminConfigTab,
-    SuggestionsTab as AdminSuggestionsTab
+    SuggestionsTab as AdminSuggestionsTab,
+    AcademicsTab as AdminAcademicsTab,
+    StatsTab as AdminStatsTab,
+    RolesAccessTab as AdminRolesAccessTab,
+    ManageUsersTab as AdminManageUsersTab,
 } from "@/components/admin/tabs"
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
@@ -32,6 +37,7 @@ type AdminTab =
     | "overview" | "teachers" | "students" | "assignments"
     | "announcements" | "roles" | "userroles" | "products"
     | "achievements" | "audit" | "transactions" | "xpconfig" | "config" | "suggestions"
+    | "academics" | "stats" | "rolesaccess" | "manageusers"
 
 interface TabItem {
     id: AdminTab
@@ -44,11 +50,14 @@ interface TabItem {
 const TABS: TabItem[] = [
     { id: "overview", label: "Overview", icon: <LayoutDashboard className="size-4" />, description: "System overview & stats" },
     // Users group
+    { id: "manageusers", label: "Manage Users", icon: <UserCog className="size-4" />, description: "View and manage all users", group: "Users" },
     { id: "teachers", label: "Teachers", icon: <UserCheck className="size-4" />, description: "Manage teacher accounts", group: "Users" },
     { id: "students", label: "Students", icon: <Users className="size-4" />, description: "Manage student accounts", group: "Users" },
-    { id: "roles", label: "Roles", icon: <Shield className="size-4" />, description: "Create & manage custom roles", group: "Users" },
+    { id: "rolesaccess", label: "Roles & Access", icon: <Shield className="size-4" />, description: "Manage roles, permissions & user access", group: "Users" },
+    { id: "roles", label: "Quick Roles", icon: <Shield className="size-4" />, description: "Create & manage custom roles", group: "Users" },
     { id: "userroles", label: "User Roles", icon: <Shield className="size-4" />, description: "Assign roles to users", group: "Users" },
     // Academic group
+    { id: "academics", label: "Academics", icon: <GraduationCap className="size-4" />, description: "Courses, students & assignments", group: "Academic" },
     { id: "assignments", label: "Assignments", icon: <BookOpen className="size-4" />, description: "Manage all assignments", group: "Academic" },
     { id: "announcements", label: "Announcements", icon: <Megaphone className="size-4" />, description: "Manage announcements", group: "Academic" },
     // Market group
@@ -57,6 +66,7 @@ const TABS: TabItem[] = [
     { id: "achievements", label: "Achievements", icon: <Trophy className="size-4" />, description: "Create & manage achievements", group: "Gamification" },
     { id: "xpconfig", label: "XP & Levels", icon: <Trophy className="size-4" />, description: "Manage level thresholds", group: "Gamification" },
     // System group
+    { id: "stats", label: "Statistics", icon: <BarChart3 className="size-4" />, description: "Enrollment trends, demographics & analytics", group: "System" },
     { id: "audit", label: "Audit Log", icon: <FileText className="size-4" />, description: "System activity log with filters", group: "System" },
     { id: "transactions", label: "Transactions", icon: <ArrowUpDown className="size-4" />, description: "View all user transactions", group: "System" },
     { id: "config", label: "System Config", icon: <Settings2 className="size-4" />, description: "Global settings & flags", group: "System" },
@@ -188,6 +198,10 @@ export function AdminDashboard() {
                         </div>
                         <span className="font-bold text-sm">Admin</span>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                        <ThemeSwitcher />
+                    </div>
                 </header>
 
                 {/* Scrollable Content */}
@@ -207,6 +221,10 @@ export function AdminDashboard() {
                         {activeTab === "transactions" && <AdminTransactionsTab />}
                         {activeTab === "config" && <AdminConfigTab />}
                         {activeTab === "suggestions" && <AdminSuggestionsTab />}
+                        {activeTab === "academics" && <AdminAcademicsTab />}
+                        {activeTab === "stats" && <AdminStatsTab />}
+                        {activeTab === "rolesaccess" && <AdminRolesAccessTab />}
+                        {activeTab === "manageusers" && <AdminManageUsersTab />}
                     </div>
                 </main>
             </div>

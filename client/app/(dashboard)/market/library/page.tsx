@@ -42,8 +42,8 @@ export default function LibraryPage() {
       setLoading(true);
       const response = await libraryApi.getLibrary(category, page, limit);
       if (response.success && response.data) {
-        setItems(response.data.data || []);
-        setTotal(response.data.pagination?.total || 0);
+        setItems(response.data || []);
+        setTotal(response.pagination?.total || 0);
       }
     } catch (err) {
       toast.error("Failed to load library");

@@ -258,6 +258,7 @@ export function ConfigTab() {
                         />
                     </div>
                 </div>
+
             </CrudModal>
 
             <ConfirmDialog

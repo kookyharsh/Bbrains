@@ -57,9 +57,9 @@ export function StatsCards({ stats }: StatsCardsProps) {
           <CardTitle className="text-sm font-medium">XP & Level</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-foreground">Level {stats.level}</div>
+          <div className="text-2xl font-bold text-foreground">Level {typeof stats.level === 'number' ? stats.level : stats.level?.level ?? 1}</div>
           <p className="text-xs text-muted-foreground">
-            {Number(stats.xp).toLocaleString()} XP earned
+            {Number(typeof stats.xp === 'number' ? stats.xp : stats.xp?.xp ?? 0).toLocaleString()} XP earned
           </p>
         </CardContent>
       </Card>

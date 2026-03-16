@@ -16,13 +16,13 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar"
 
+import Link from "next/link";
 import {
     Settings,
     BarChart3,
     Circle
-} from "lucide-react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
+} from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { sidebarItems, baseSidebarItems, adminExtraItems, teacherExtraItems } from "./sidebarData"
 import { UserProfileCard, UserStatus, statusColors, statusLabels } from "./user-profile-card"
@@ -32,13 +32,17 @@ import { dashboardApi } from "@/lib/api-services"
 interface AppSidebarProps {
     user?: {
         id: string;
-        email: string;
+        email?: string;
         imageUrl?: string;
         firstName?: string;
         lastName?: string;
         fullName?: string;
         username?: string;
         type?: string;
+        bio?: string;
+        level?: number;
+        xp?: number;
+        createdAt?: string;
     } | null;
 }
 
@@ -144,7 +148,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <SidebarFooter className="bg-sidebar px-3 pb-6 pt-4 border-t border-sidebar-border">
                 {user && (
                     <div className="flex flex-col gap-4">
-                        <button
+                        <Link
+                            href="/profile"
                             className={`flex items-center gap-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/10 transition-colors ${isCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"}`}
                             title="Settings"
                         >
@@ -152,7 +157,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                             {!isCollapsed && (
                                 <span className="font-medium text-[13px]">Settings</span>
                             )}
-                        </button>
+                        </Link>
 
                         <div className={isCollapsed ? "flex justify-center" : "px-2"}>
                             {!isCollapsed && (

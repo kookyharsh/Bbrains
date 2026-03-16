@@ -38,9 +38,9 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
             </div>
             
             <div className="px-4 pb-4">
-                <div className="relative flex justify-between items-end -mt-12 mb-3">
+                <div className="relative flex justify-between items-end -mt-12 mb-2">
                     <div className="relative">
-                        <div className="h-24 w-24 rounded-full border-[6px] border-background-light dark:border-[#221610] bg-gray-300 overflow-hidden relative">
+                        <div className="h-24 w-24 rounded-full border-[6px] border-background-light dark:border-[#221610] bg-gray-300 overflow-hidden relative shadow-sm">
                             <Avatar className="h-full w-full rounded-none">
                                 <AvatarImage src={user?.imageUrl} className="object-cover" />
                                 <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-2xl uppercase rounded-none flex items-center justify-center">
@@ -50,18 +50,9 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                         </div>
                         <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-[4px] border-background-light dark:border-[#221610] ${statusColors[userStatus]}`}></div>
                     </div>
-                    
-                    <div className="flex flex-wrap justify-end gap-1 mb-1 max-w-[120px]">
-                        <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700" title="Verified Student">
-                            <span className="material-symbols-outlined text-brand-purple text-[18px] block">verified</span>
-                        </div>
-                        <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700" title="Bbrains Contributor">
-                            <span className="material-symbols-outlined text-brand-orange text-[18px] block">school</span>
-                        </div>
-                    </div>
                 </div>
                 
-                <div className="bg-gray-100/50 dark:bg-gray-900/50 rounded-xl p-3 mb-3 border border-gray-200/50 dark:border-gray-800/50">
+                <div className="bg-gray-100/50 dark:bg-gray-900/50 rounded-xl p-3 mb-2 border border-gray-200/50 dark:border-gray-800/50">
                     <h1 className="text-gray-900 dark:text-gray-100 text-xl font-bold leading-tight">
                         {user?.fullName || user?.firstName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : "Anonymous User"}
                     </h1>
@@ -77,7 +68,7 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                     </div>
                 </div>
                 
-                <div className="space-y-4 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
                     <div className="space-y-1.5">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Set Status</h3>
                         <div className="flex flex-wrap gap-2">
@@ -101,18 +92,25 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                         </div>
                     </div>
                     
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">About Me</h3>
-                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                            Aspiring learner. When I'm not studying, I'm probably grinding points on Bbrains. 🚀
+                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed min-h-[1.25rem]">
+                            {user?.bio || <span className="text-gray-400 italic text-xs">No bio yet...</span>}
                         </p>
                     </div>
                     
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Bbrains Member Since</h3>
                         <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 text-xs">
-                            <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-                            <span>Sep 12, 2022</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <rect x="3" y="4" width="18" height="18" rx="2" strokeWidth="2" />
+                                <path strokeWidth="2" d="M16 2v4M8 2v4M3 10h18" />
+                            </svg>
+                            <span>
+                                {user?.createdAt
+                                    ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                                    : "Unknown"}
+                            </span>
                         </div>
                     </div>
                 </div>

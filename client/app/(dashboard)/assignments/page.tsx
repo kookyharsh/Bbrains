@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -41,86 +42,13 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Loader2,
+  FileUp,
 } from "lucide-react";
 import { DashboardContent } from "@/components/dashboard-content";
-
-const mockAssignments = [
-  {
-    id: 1,
-    title: "Calculus Assignment 4",
-    description: "Complete chapters 5 to 7 exercises covering integration techniques.",
-    course: "Advanced Math",
-    teacher: "Dr. Smith",
-    teacherInitial: "S",
-    startDate: "2026-03-01",
-    dueDate: "2026-03-10",
-    status: "incomplete" as const,
-    file: null,
-  },
-  {
-    id: 2,
-    title: "Lab Report: Kinematics",
-    description: "Submit lab findings from the kinematics experiment.",
-    course: "Physics 101",
-    teacher: "Prof. Johnson",
-    teacherInitial: "J",
-    startDate: "2026-02-25",
-    dueDate: "2026-03-08",
-    status: "incomplete" as const,
-    file: null,
-  },
-  {
-    id: 3,
-    title: "Essay: Modern Literature",
-    description: "Write a 2000-word essay on post-modern literary themes.",
-    course: "English Literature",
-    teacher: "Ms. Davis",
-    teacherInitial: "D",
-    startDate: "2026-02-20",
-    dueDate: "2026-03-05",
-    status: "submitted" as const,
-    file: "essay_draft.pdf",
-  },
-  {
-    id: 4,
-    title: "Data Structures Quiz",
-    description: "Online quiz covering trees, graphs, and hash tables.",
-    course: "Computer Science",
-    teacher: "Dr. Lee",
-    teacherInitial: "L",
-    startDate: "2026-02-15",
-    dueDate: "2026-02-28",
-    status: "completed" as const,
-    file: "quiz_answers.pdf",
-  },
-  {
-    id: 5,
-    title: "History Research Paper",
-    description: "Research paper on the Industrial Revolution.",
-    course: "World History",
-    teacher: "Prof. Brown",
-    teacherInitial: "B",
-    startDate: "2026-02-10",
-    dueDate: "2026-02-25",
-    status: "completed" as const,
-    file: "research_paper.pdf",
-  },
-];
-
-const mockSubmissions = [
-  { id: 1, title: "Essay: Modern Literature", date: "2026-02-20", submittedAt: "2026-03-04", grade: "A-", attachment: "essay_draft.pdf" },
-  { id: 2, title: "Data Structures Quiz", date: "2026-02-15", submittedAt: "2026-02-27", grade: "A", attachment: "quiz_answers.pdf" },
-  { id: 3, title: "History Research Paper", date: "2026-02-10", submittedAt: "2026-02-24", grade: "B+", attachment: "research_paper.pdf" },
-  { id: 4, title: "Physics Lab 3", date: "2026-01-20", submittedAt: "2026-02-01", grade: "A", attachment: "lab3_report.pdf" },
-  { id: 5, title: "Algebra Homework 5", date: "2026-01-15", submittedAt: "2026-01-28", grade: "B", attachment: "hw5.pdf" },
-  { id: 6, title: "English Presentation", date: "2026-01-10", submittedAt: "2026-01-20", grade: "A+", attachment: "presentation.pptx" },
-  { id: 7, title: "Chemistry Experiment", date: "2026-01-05", submittedAt: "2026-01-15", grade: "B+", attachment: "chem_exp.pdf" },
-  { id: 8, title: "Art Portfolio", date: "2025-12-20", submittedAt: "2025-12-30", grade: "A", attachment: "portfolio.zip" },
-  { id: 9, title: "Statistics Project", date: "2025-12-15", submittedAt: "2025-12-25", grade: "A-", attachment: "stats_project.pdf" },
-  { id: 10, title: "Biology Essay", date: "2025-12-10", submittedAt: "2025-12-20", grade: "B+", attachment: "bio_essay.pdf" },
-  { id: 11, title: "Math Test 2", date: "2025-12-01", submittedAt: "2025-12-10", grade: "A", attachment: "math_test2.pdf" },
-  { id: 12, title: "Programming Assignment", date: "2025-11-25", submittedAt: "2025-12-05", grade: "A+", attachment: "code.zip" },
-];
+import { assignmentApi, type Assignment } from "@/lib/api-services";
+import { toast } from "sonner";
+import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 
 const statusConfig = {
   incomplete: { label: "Incomplete", color: "bg-destructive/10 text-destructive", icon: AlertCircle },
@@ -133,15 +61,44 @@ export default function AssignmentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewAssignment, setViewAssignment] = useState<typeof mockAssignments[0] | null>(null);
-  const [uploadingId, setUploadingId] = useState<number | null>(null);
+  const [viewAssignment, setViewAssignment] = useState<Assignment | null>(null);
+  const [submitAssignment, setSubmitAssignment] = useState<Assignment | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  
+  const { uploadFile, isUploading } = useCloudinaryUpload();
   const itemsPerPage = 10;
 
-  const filteredAssignments = mockAssignments.filter((a) => {
-    if (activeTab !== "all" && a.status !== activeTab) return false;
+  const fetchAssignments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await assignmentApi.getAssignments();
+      if (response.success && response.data) {
+        setAssignments(response.data);
+      }
+    } catch (error) {
+      toast.error("Failed to load assignments");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAssignments();
+  }, [fetchAssignments]);
+
+  const filteredAssignments = assignments.filter((a) => {
+    const status = a.status || "incomplete";
+    if (activeTab !== "all" && status !== activeTab) return false;
     if (searchQuery && !a.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
+
+  // For now, using mock for submissions table as we might need a separate endpoint for history
+  const mockSubmissions = [
+    { id: 1, title: "Essay: Modern Literature", date: "2026-02-20", submittedAt: "2026-03-04", grade: "A-", attachment: "essay_draft.pdf" },
+  ];
 
   const totalPages = Math.ceil(mockSubmissions.length / itemsPerPage);
   const paginatedSubmissions = mockSubmissions.slice(
@@ -149,19 +106,50 @@ export default function AssignmentsPage() {
     currentPage * itemsPerPage
   );
 
-  const handleUpload = (id: number) => {
-    setUploadingId(id);
-    setTimeout(() => setUploadingId(null), 1500);
+  const handleFileSubmit = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !submitAssignment) return;
+
+    const loadingToast = toast.loading("Uploading and submitting...");
+    setSubmitting(true);
+    try {
+      const url = await uploadFile(file);
+      if (url) {
+        const res = await assignmentApi.submitAssignment({
+          assignmentId: submitAssignment.id,
+          content: `Submitted file: ${file.name}`,
+          fileUrl: url
+        });
+
+        if (res.success) {
+          toast.success("Assignment submitted successfully!", { id: loadingToast });
+          setSubmitAssignment(null);
+          fetchAssignments(); // Refresh list
+        } else {
+          toast.error(res.message || "Submission failed", { id: loadingToast });
+        }
+      }
+    } catch (error) {
+      toast.error("An error occurred", { id: loadingToast });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <DashboardContent className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Assignments & Exams</h1>
-        <p className="text-muted-foreground">View, search and submit your assignments</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Assignments & Exams</h1>
+          <p className="text-muted-foreground">View, search and submit your assignments</p>
+        </div>
+        <Button variant="outline" onClick={fetchAssignments} disabled={loading} className="rounded-xl">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Clock className="h-4 w-4 mr-2" />}
+          Refresh List
+        </Button>
       </div>
 
-      {/* Premium Filter Bar */}
+      {/* Filter Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-card/50 backdrop-blur-sm p-3 rounded-[24px] border border-border/40 shadow-sm mt-2">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -204,105 +192,117 @@ export default function AssignmentsPage() {
       </div>
 
       {/* Content Area */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        {/* We keep the tabs triggers here for structure but the logic is linked to the bar above */}
-
-        <TabsContent value={activeTab} className="mt-4">
-          <div className="grid gap-4">
-            {filteredAssignments.map((assignment) => {
-              const config = statusConfig[assignment.status];
-              const StatusIcon = config.icon;
-              return (
-                <Card key={assignment.id}>
-                  <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <Avatar className="w-10 h-10 shrink-0">
-                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                            {assignment.teacherInitial}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-foreground truncate">{assignment.title}</h3>
-                            <Badge variant="outline" className={config.color}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {config.label}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">{assignment.description}</p>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>{assignment.teacher}</span>
-                            <span>•</span>
-                            <span>{assignment.course}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                            </span>
-                          </div>
+      <div className="grid gap-4">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6 h-24 bg-muted/20" />
+            </Card>
+          ))
+        ) : filteredAssignments.length > 0 ? (
+          filteredAssignments.map((assignment) => {
+            const status = assignment.status || "incomplete";
+            const config = statusConfig[status as keyof typeof statusConfig];
+            const StatusIcon = config.icon;
+            return (
+              <Card key={assignment.id} className="group hover:border-brand-purple/40 transition-all duration-300">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="h-12 w-12 rounded-2xl bg-brand-purple/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-6 w-6 text-brand-purple" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-foreground truncate">{assignment.title}</h3>
+                          <Badge variant="outline" className={`${config.color} border-none font-bold uppercase text-[10px] tracking-widest`}>
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {config.label}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate max-w-md">{assignment.description}</p>
+                        <div className="flex items-center gap-3 mt-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <GraduationCap className="w-3 h-3" />
+                            {assignment.course?.name}
+                          </span>
+                          <span className="h-1 w-1 rounded-full bg-border" />
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => setViewAssignment(assignment)}>
-                          <Eye className="w-4 h-4 mr-1" /> View
-                        </Button>
-                        {assignment.status === "incomplete" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpload(assignment.id)}
-                            disabled={uploadingId === assignment.id}
-                          >
-                            <Upload className="w-4 h-4 mr-1" />
-                            {uploadingId === assignment.id ? "Uploading..." : "Submit"}
-                          </Button>
-                        )}
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            {filteredAssignments.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No assignments found</p>
-              </div>
-            )}
+                    <div className="flex gap-2 shrink-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setViewAssignment(assignment)}
+                        className="rounded-xl hover:bg-brand-purple/5 text-brand-purple font-bold"
+                      >
+                        <Eye className="w-4 h-4 mr-1.5" /> Details
+                      </Button>
+                      {status === "incomplete" && (
+                        <Button
+                          size="sm"
+                          onClick={() => setSubmitAssignment(assignment)}
+                          className="rounded-xl bg-brand-purple hover:bg-brand-purple/90 text-white font-bold px-4"
+                        >
+                          <Upload className="w-4 h-4 mr-1.5" />
+                          Submit
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        ) : (
+          <div className="text-center py-16 bg-card/30 rounded-[32px] border border-dashed border-border/60">
+            <div className="h-16 w-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-8 h-8 text-muted-foreground opacity-50" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">No assignments found</h3>
+            <p className="text-sm text-muted-foreground">Check back later or adjust your filters</p>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       {/* Submissions Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Previous Submissions</CardTitle>
+      <Card className="rounded-[32px] overflow-hidden border-border/40 shadow-sm">
+        <CardHeader className="border-b border-border/40 bg-muted/10">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            Previous Submissions
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">Sr.</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="hidden sm:table-cell">Assignment Date</TableHead>
-                  <TableHead className="hidden md:table-cell">Submitted At</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead className="text-right">Attachment</TableHead>
+                <TableRow className="hover:bg-transparent border-border/40">
+                  <TableHead className="w-16 text-center font-black uppercase text-[10px] tracking-widest">Sr.</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] tracking-widest">Assignment Title</TableHead>
+                  <TableHead className="hidden sm:table-cell font-black uppercase text-[10px] tracking-widest">Course</TableHead>
+                  <TableHead className="hidden md:table-cell font-black uppercase text-[10px] tracking-widest">Submitted At</TableHead>
+                  <TableHead className="font-black uppercase text-[10px] tracking-widest text-center">Grade</TableHead>
+                  <TableHead className="text-right font-black uppercase text-[10px] tracking-widest px-6">File</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedSubmissions.map((sub, idx) => (
-                  <TableRow key={sub.id}>
-                    <TableCell className="font-medium">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
-                    <TableCell className="font-medium">{sub.title}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-muted-foreground">{sub.date}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{sub.submittedAt}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{sub.grade}</Badge>
+                  <TableRow key={sub.id} className="border-border/20 hover:bg-muted/5">
+                    <TableCell className="text-center font-bold text-muted-foreground">{(currentPage - 1) * itemsPerPage + idx + 1}</TableCell>
+                    <TableCell className="font-bold text-foreground">{sub.title}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">Physics 101</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{sub.submittedAt}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge className="bg-brand-purple/10 text-brand-purple border-none font-black">{sub.grade}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
+                    <TableCell className="text-right px-6">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-brand-purple/10 text-brand-purple">
                         <Download className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -312,16 +312,27 @@ export default function AssignmentsPage() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between p-4 border-t border-border/20">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
               Page {currentPage} of {totalPages}
             </p>
-            <div className="flex gap-1">
-              <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(currentPage - 1)}
+                className="h-8 w-8 p-0 rounded-lg"
+              >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled={currentPage === totalPages} 
+                onClick={() => setCurrentPage(currentPage + 1)}
+                className="h-8 w-8 p-0 rounded-lg"
+              >
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -331,23 +342,124 @@ export default function AssignmentsPage() {
 
       {/* View Assignment Dialog */}
       <Dialog open={!!viewAssignment} onOpenChange={() => setViewAssignment(null)}>
-        <DialogContent>
+        <DialogContent className="rounded-[32px] sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{viewAssignment?.title}</DialogTitle>
-            <DialogDescription>{viewAssignment?.course}</DialogDescription>
+            <DialogTitle className="text-2xl font-black">{viewAssignment?.title}</DialogTitle>
+            <DialogDescription className="font-bold text-brand-purple">
+              {viewAssignment?.course?.name}
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-foreground">{viewAssignment?.description}</p>
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>Teacher: {viewAssignment?.teacher}</span>
-              <span>Due: {viewAssignment?.dueDate}</span>
+          <div className="space-y-6 py-4">
+            <div className="bg-muted/30 p-4 rounded-2xl border border-border/20">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Description</h4>
+              <p className="text-sm leading-relaxed text-foreground">{viewAssignment?.description || "No description provided."}</p>
             </div>
-            <Badge variant="outline" className={viewAssignment ? statusConfig[viewAssignment.status].color : ""}>
-              {viewAssignment ? statusConfig[viewAssignment.status].label : ""}
-            </Badge>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-brand-orange/10 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-brand-orange" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Due Date</p>
+                  <p className="text-sm font-bold">{viewAssignment ? new Date(viewAssignment.dueDate).toLocaleDateString() : ""}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-brand-mint/10 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-brand-mint" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Status</p>
+                  <p className="text-sm font-bold capitalize">{viewAssignment?.status || "Incomplete"}</p>
+                </div>
+              </div>
+            </div>
           </div>
+          <DialogFooter>
+            <Button onClick={() => setViewAssignment(null)} className="w-full rounded-2xl bg-brand-purple hover:bg-brand-purple/90 font-bold">
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Submit Assignment Dialog */}
+      <Dialog open={!!submitAssignment} onOpenChange={() => !submitting && setSubmitAssignment(null)}>
+        <DialogContent className="rounded-[32px] sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">Submit Assignment</DialogTitle>
+            <DialogDescription className="font-bold">
+              Upload your completed work for <span className="text-brand-purple">{submitAssignment?.title}</span>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-8">
+            <label 
+              htmlFor="assignment-file"
+              className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-border/60 rounded-[32px] hover:border-brand-purple/40 hover:bg-brand-purple/5 transition-all cursor-pointer group"
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <div className="h-16 w-16 bg-brand-purple/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <FileUp className="w-8 h-8 text-brand-purple" />
+                </div>
+                <p className="mb-2 text-sm font-bold text-foreground">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-muted-foreground uppercase font-black tracking-widest">
+                  PDF, PNG, JPG or ZIP (MAX. 10MB)
+                </p>
+              </div>
+              <input 
+                id="assignment-file" 
+                type="file" 
+                className="hidden" 
+                onChange={handleFileSubmit}
+                disabled={submitting}
+              />
+            </label>
+          </div>
+
+          {submitting && (
+            <div className="flex items-center justify-center gap-3 text-brand-purple font-bold italic">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Processing your submission...
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="ghost" 
+              onClick={() => setSubmitAssignment(null)} 
+              disabled={submitting}
+              className="w-full rounded-2xl font-bold"
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardContent>
+  );
+}
+
+// Sub-components used in the render
+function GraduationCap(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+    </svg>
   );
 }

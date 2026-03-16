@@ -41,8 +41,8 @@ export default function ThemesPage() {
       setLoading(true);
       const response = await themeApi.getThemes(page, limit);
       if (response.success && response.data) {
-        setThemes(response.data.data || []);
-        setTotal(response.data.pagination?.total || 0);
+        setThemes(response.data || []);
+        setTotal(response.pagination?.total || 0);
       }
     } catch (err) {
       toast.error("Failed to load themes");

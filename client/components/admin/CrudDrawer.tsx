@@ -3,14 +3,15 @@
 import React from "react"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import {
-    Sheet,
-    SheetContent,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from "@/components/ui/sheet"
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 
 interface CrudDrawerProps {
     open: boolean
@@ -21,6 +22,7 @@ interface CrudDrawerProps {
     submitting?: boolean
     children: React.ReactNode
     submitLabel?: string
+    maxWidth?: string
 }
 
 export function CrudDrawer({
@@ -32,28 +34,41 @@ export function CrudDrawer({
     submitting,
     children,
     submitLabel = "Save",
+    maxWidth = "sm:max-w-2xl"
 }: CrudDrawerProps) {
     return (
-        <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-            <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
-                <SheetHeader className="pb-2">
-                    <SheetTitle>{title}</SheetTitle>
-                    {description && <SheetDescription>{description}</SheetDescription>}
-                </SheetHeader>
-                <div className="space-y-3 px-6 pb-4 pt-2">
+        <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+            <DialogContent className={cn("max-h-[90vh] overflow-y-auto flex flex-col p-0 gap-0 border-none bg-card", maxWidth)}>
+                <DialogHeader className="px-6 pt-6 pb-2">
+                    <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+                    {description && <DialogDescription className="text-sm text-muted-foreground">{description}</DialogDescription>}
+                </DialogHeader>
+                
+                <div className="flex-1 overflow-y-auto px-6 py-4">
                     {children}
                 </div>
-                <SheetFooter className="flex-row items-center justify-end gap-3 border-t border-border bg-muted/40 px-6 py-3">
-                    <Button variant="outline" onClick={onClose} disabled={submitting}>
+
+                <DialogFooter className="flex-row items-center justify-end gap-3 border-t border-border bg-muted/30 px-6 py-4 mt-auto">
+                    <Button variant="ghost" onClick={onClose} disabled={submitting} className="font-medium">
                         Cancel
                     </Button>
-                    <Button onClick={onSubmit} disabled={submitting}>
-                        {submitting && <Loader2 className="mr-2 size-3.5 animate-spin" />}
-                        {submitting ? "Saving..." : submitLabel}
+                    <Button 
+                        onClick={onSubmit} 
+                        disabled={submitting}
+                        className="bg-brand-purple hover:bg-brand-purple/90 text-white min-w-[100px] font-semibold shadow-lg shadow-brand-purple/20 transition-all active:scale-95"
+                    >
+                        {submitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            submitLabel
+                        )}
                     </Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     )
 }
 

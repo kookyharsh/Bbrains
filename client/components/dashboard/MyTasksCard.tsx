@@ -11,14 +11,20 @@ import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import { toast } from "sonner";
 import { format, isTomorrow, isToday, parseISO } from "date-fns";
 import Link from "next/link";
-
 export function MyTasksCard() {
+  const [mounted, setMounted] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [submissionNote, setSubmissionNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { uploadFile, isUploading, progress } = useCloudinaryUpload();
+
+  useEffect(() => {
+    setMounted(true);
+    fetchAssignments();
+  }, []);
 
   const fetchAssignments = async () => {
     try {
@@ -32,11 +38,6 @@ export function MyTasksCard() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchAssignments();
-  }, []);
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedAssignment) return;
@@ -68,6 +69,7 @@ export function MyTasksCard() {
       if (res.success) {
         toast.success("Assignment submitted successfully!");
         setSelectedAssignment(null);
+        setDialogOpen(false);
         setSubmissionNote("");
         fetchAssignments(); // Refresh list
       } else {
@@ -99,72 +101,84 @@ export function MyTasksCard() {
           My Tasks
         </CardTitle>
         <div className="flex items-center gap-2">
-          <Dialog open={!!selectedAssignment} onOpenChange={(open) => !open && setSelectedAssignment(null)}>
-            <DialogTrigger asChild>
-              <Button 
-                onClick={() => assignments.length > 0 && setSelectedAssignment(assignments[0])}
-                size="sm"
-                className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl h-8 px-3 shadow-lg shadow-brand-purple/20 transition-all font-bold text-[10px]"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                UPLOAD ASSIGNMENT
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-3xl border-border/40 bg-card/95 backdrop-blur-md">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <FileUp className="text-brand-purple h-5 w-5" />
-                  Submit Assignment
-                </DialogTitle>
-                <DialogDescription className="text-sm font-medium pt-1">
-                  {selectedAssignment?.title} ({selectedAssignment?.course?.name || "General"})
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Submission Note</label>
-                  <Textarea 
-                    placeholder="Add a few words about your work..."
-                    value={submissionNote}
-                    onChange={(e) => setSubmissionNote(e.target.value)}
-                    className="rounded-2xl border-border/40 bg-background/50 focus:ring-brand-purple min-h-[100px]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Attachment</label>
-                  <div className="relative group">
-                    <input 
-                      type="file" 
-                      id="card-task-file-upload" 
-                      className="hidden" 
-                      onChange={handleFileChange}
-                      disabled={isUploading || isSubmitting}
+          {mounted && (
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              if (!open) {
+                setSelectedAssignment(null);
+                setDialogOpen(false);
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button 
+                  onClick={() => {
+                    if (assignments.length > 0) {
+                      setSelectedAssignment(assignments[0]);
+                      setDialogOpen(true);
+                    }
+                  }}
+                  size="sm"
+                  className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl h-8 px-3 shadow-lg shadow-brand-purple/20 transition-all font-bold text-[10px]"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  UPLOAD ASSIGNMENT
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px] rounded-3xl border-border/40 bg-card/95 backdrop-blur-md">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                    <FileUp className="text-brand-purple h-5 w-5" />
+                    Submit Assignment
+                  </DialogTitle>
+                  <DialogDescription className="text-sm font-medium pt-1">
+                    {selectedAssignment?.title} ({selectedAssignment?.course?.name || "General"})
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Submission Note</label>
+                    <Textarea 
+                      placeholder="Add a few words about your work..."
+                      value={submissionNote}
+                      onChange={(e) => setSubmissionNote(e.target.value)}
+                      className="rounded-2xl border-border/40 bg-background/50 focus:ring-brand-purple min-h-[100px]"
                     />
-                    <label 
-                      htmlFor="card-task-file-upload" 
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border/60 hover:border-brand-purple/50 rounded-2xl cursor-pointer bg-black/5 dark:bg-white/5 transition-all group-hover:scale-[0.99]"
-                    >
-                      <Upload className={`h-8 w-8 mb-2 ${isUploading ? 'animate-bounce text-brand-purple' : 'text-muted-foreground'}`} />
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        {isUploading ? `Uploading ${progress}%...` : "Click to select file"}
-                      </span>
-                    </label>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1">Attachment</label>
+                    <div className="relative group">
+                      <input 
+                        type="file" 
+                        id="card-task-file-upload" 
+                        className="hidden" 
+                        onChange={handleFileChange}
+                        disabled={isUploading || isSubmitting}
+                      />
+                      <label 
+                        htmlFor="card-task-file-upload" 
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border/60 hover:border-brand-purple/50 rounded-2xl cursor-pointer bg-black/5 dark:bg-white/5 transition-all group-hover:scale-[0.99]"
+                      >
+                        <Upload className={`h-8 w-8 mb-2 ${isUploading ? 'animate-bounce text-brand-purple' : 'text-muted-foreground'}`} />
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          {isUploading ? `Uploading ${progress}%...` : "Click to select file"}
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <DialogFooter className="sm:justify-between gap-3">
-                <Button variant="ghost" onClick={() => setSelectedAssignment(null)} className="rounded-xl">Cancel</Button>
-                <Button 
-                  onClick={() => handleSubmit()} 
-                  disabled={isSubmitting || isUploading}
-                  className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl shadow-lg shadow-brand-purple/10 px-6 font-bold"
-                >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  Submit Final
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter className="sm:justify-between gap-3">
+                  <Button variant="ghost" onClick={() => { setSelectedAssignment(null); setDialogOpen(false); }} className="rounded-xl">Cancel</Button>
+                  <Button 
+                    onClick={() => handleSubmit()} 
+                    disabled={isSubmitting || isUploading}
+                    className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl shadow-lg shadow-brand-purple/10 px-6 font-bold"
+                  >
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                    Submit Final
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -197,7 +211,10 @@ export function MyTasksCard() {
                   </div>
                 </div>
                 <Button 
-                  onClick={() => setSelectedAssignment(task)}
+                  onClick={() => {
+                    setSelectedAssignment(task);
+                    setDialogOpen(true);
+                  }}
                   size="sm" 
                   variant="ghost" 
                   className="h-8 w-8 rounded-lg p-0 hover:bg-brand-purple hover:text-white transition-all opacity-0 group-hover:opacity-100"

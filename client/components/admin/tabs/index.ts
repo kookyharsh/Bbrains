@@ -12,4 +12,7 @@ export { TransactionsTab } from "./TransactionsTab"
 export { XpConfigTab } from "./XpConfigTab"
 export { ConfigTab } from "./ConfigTab"
 export { SuggestionsTab } from "./SuggestionsTab"
-
+export { AcademicsTab } from "./AcademicsTab"
+export { StatsTab } from "./StatsTab"
+export { RolesAccessTab } from "./RolesAccessTab"
+export { ManageUsersTab } from "./ManageUsersTab"

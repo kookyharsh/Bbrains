@@ -12,12 +12,13 @@ const assignmentSchema = z.object({
     title: z.string().min(1).max(255),
     description: z.string().optional(),
     courseId: z.number().int().positive(),
-    dueDate: z.string().optional()
+    dueDate: z.string().optional(),
+    file: z.string().url().optional()
 });
 
 const submissionSchema = z.object({
     assignmentId: z.number().int().positive(),
-    content: z.string().min(1),
+    content: z.string().optional(),
     fileUrl: z.string().url().optional()
 });
 
@@ -31,7 +32,8 @@ const announcementSchema = z.object({
 export const createAssignmentHandler = async (req, res) => {
     try {
         const validated = assignmentSchema.parse(req.body);
-        const assignment = await createAssignment(validated);
+        // service function expects (teacherId, courseId, data)
+        const assignment = await createAssignment(req.user.id, validated.courseId, validated);
         await createAuditLog(req.user.id, 'ACADEMIC', 'CREATE', 'Assignment', assignment.id);
         return sendCreated(res, assignment, 'Assignment created');
     } catch (error) {

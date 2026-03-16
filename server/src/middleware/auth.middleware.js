@@ -1,53 +1,54 @@
-import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma.js';
 import { findUserBySupabaseId } from '../modules/user/user.service.js';
 import supabase from '../utils/supabase.js';
+import { sendError } from '../utils/response.js';
 
 const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Auth header:', authHeader ? authHeader.substring(0, 50) + '...' : 'none');
+    console.log('[AuthMiddleware] New request to:', req.path);
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ success: false, message: 'No token provided' });
+      console.warn('[AuthMiddleware] No valid Authorization header provided');
+      return sendError(res, 'No token provided', 401);
     }
 
     const token = authHeader.split('Bearer ')[1];
-    console.log('Token:', token.substring(0, 30) + '...');
     
+    // Verify token with Supabase
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error) {
-      console.log('Supabase auth error:', error?.message);
-      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+      console.error('[AuthMiddleware] Supabase getUser error:', error.message);
+      return sendError(res, 'Invalid or expired authentication', 401);
     }
 
     if (!user) {
-      console.log('No user returned from Supabase');
-      return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+      console.warn('[AuthMiddleware] No user found for provided token');
+      return sendError(res, 'User authentication failed', 401);
     }
 
-    const supabaseUserId = user.id;
-    console.log('Supabase user ID:', supabaseUserId);
+    // Attach Supabase user for potential use in modules
+    req.supabaseUser = user;
 
-    const dbUser = await findUserBySupabaseId(supabaseUserId);
+    // Find local user in database
+    const dbUser = await findUserBySupabaseId(user.id);
 
     if (!dbUser) {
-      console.log('User not found in database for Supabase ID:', supabaseUserId);
-      return res.status(403).json({ 
-        success: false, 
-        message: 'User is authenticated with Supabase but not provisioned in the local database. Please contact an administrator.' 
-      });
+      console.error('[AuthMiddleware] DB User not found for Supabase ID:', user.id);
+      return sendError(res, 'User authenticated but not found in system database', 403);
     }
 
+    // Attach full database user to request
     req.user = dbUser;
-    req.supabaseUser = user;
-    console.log('User authenticated:', dbUser.username);
+    
+    console.log(`[AuthMiddleware] User verified: ${dbUser.username} (${dbUser.type})`);
     next();
-  } catch (error) {
-    console.error('Supabase authentication error:', error);
-    return res.status(401).json({ success: false, message: 'Invalid or expired authentication' });
+  } catch (err) {
+    console.error('[AuthMiddleware] Unexpected server error:', err);
+    return sendError(res, 'Internal server error during authentication', 500);
   }
 };
 
 export default verifyToken;
+

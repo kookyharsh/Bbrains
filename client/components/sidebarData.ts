@@ -46,11 +46,6 @@ export const baseSidebarItems: SidebarItem[] = [
         icon: Home,
     },
     {
-        title: "Suggestions",
-        url: "/suggestions",
-        icon: MessageSquarePlus,
-    },
-    {
         title: "Announcements",
         url: "/announcements",
         icon: Megaphone,
@@ -93,22 +88,23 @@ export const baseSidebarItems: SidebarItem[] = [
                 icon: ShoppingCart,
             },
             {
-                title: "Themes",
-                url: "/market/themes",
-                icon: Palette,
-            },
-            {
                 title: "Library",
                 url: "/market/library",
                 icon: Library,
             },
+            
         ]
     },
     {
         title: "Tools",
         url: "/tools",
         icon: Wrench,
-    }
+    },
+    {
+        title: "Suggestions",
+        url: "/suggestions",
+        icon: MessageSquarePlus,
+    },
 ]
 
 export const adminExtraItems: SidebarItem[] = [

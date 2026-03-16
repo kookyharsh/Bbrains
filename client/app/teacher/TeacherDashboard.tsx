@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 
 import {
     OverviewTab as TeacherOverview, 
@@ -136,6 +137,10 @@ export function TeacherDashboard() {
                             <BarChart3 className="h-4 w-4" />
                         </div>
                         <span className="font-bold text-sm">Teacher</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <ThemeSwitcher />
                     </div>
                 </header>
 

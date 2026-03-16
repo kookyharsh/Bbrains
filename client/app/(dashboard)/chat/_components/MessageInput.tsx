@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/emoji-picker"
 import { PlusCircle, Send, Smile, X, ImagePlus, Loader2, Hash } from "lucide-react"
 import type { Member, Message } from "../data"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface MessageInputProps {
     message: string
@@ -69,7 +69,7 @@ export function MessageInput({
     }, [mentionQuery, members])
 
     return (
-        <div className="px-3 py-2 border-t border-border bg-card mt-auto pb-9 relative">
+        <div className="px-3 py-3 border-t border-border bg-card mt-auto relative">
             {/* Reply Preview */}
             {replyingMessage && (
                 <div className="flex items-center justify-between mb-2 px-2 py-1.5 bg-muted/50 rounded-md text-xs">
@@ -92,11 +92,11 @@ export function MessageInput({
                 </div>
             )}
 
-            <div className="flex items-start gap-1.5">
+            <div className="flex items-end gap-1.5">
                 <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="shrink-0 h-8 w-8 mt-1" 
+                    className="shrink-0 h-8 w-8 mb-1" 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
                 >
@@ -161,8 +161,9 @@ export function MessageInput({
                                         }}
                                         onMouseEnter={() => setMentionIndex(i)}
                                     >
-                                        <Avatar className="w-6 h-6">
-                                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                                        <Avatar className="w-6 h-6 shrink-0">
+                                            <AvatarImage src={member.avatar} />
+                                            <AvatarFallback className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold">
                                                 {member.name.charAt(0)}
                                             </AvatarFallback>
                                         </Avatar>
@@ -218,7 +219,7 @@ export function MessageInput({
                         size="icon" 
                         onClick={onSend} 
                         disabled={isUploading}
-                        className="shrink-0 h-8 w-8 mt-1 animate-in fade-in slide-in-from-right-4 duration-300"
+                        className="shrink-0 h-8 w-8 mb-1 animate-in fade-in slide-in-from-right-4 duration-300"
                     >
                         {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>

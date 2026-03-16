@@ -8,8 +8,20 @@ export interface User {
   lastName?: string;
   type: string;
   avatar?: string;
-  xp?: number;
-  level?: number;
+  bio?: string;
+  phone?: string;
+  sex?: string;
+  wallet?: {
+    balance: number | string;
+  };
+  xp?: {
+    xp: number;
+    level: number;
+  };
+  userAchievements?: {
+    achievement: Achievement;
+  }[];
+  grades?: Grade[];
 }
 
 export interface DashboardData {
@@ -179,6 +191,7 @@ export const userApi = {
     sex?: string; 
     dob?: string; 
     phone?: string; 
+    bio?: string;
   }): Promise<ApiResponse<any>> => {
     return api.put<any>('/user/me/details', data);
   },
@@ -563,46 +576,46 @@ export const libraryApi = {
     category?: string,
     page = 1,
     limit = 20
-  ): Promise<ApiResponse<{ data: LibraryItem[]; pagination: { page: number; limit: number; total: number } }>> => {
+  ): Promise<ApiResponse<LibraryItem[]>> => {
     const params = new URLSearchParams();
     params.set('page', String(page));
     params.set('limit', String(limit));
     if (category) params.set('category', category);
-    return api.get(`/market/library?${params.toString()}`);
+    return api.get<LibraryItem[]>(`/market/library?${params.toString()}`);
   },
 
   getDownloadUrl: async (productId: number): Promise<ApiResponse<{ url: string }>> => {
-    return api.get(`/market/library/${productId}/download`);
+    return api.get<{ url: string }>(`/market/library/${productId}/download`);
   },
 };
 
 export const marketApi = {
-  getProducts: async (page = 1, limit = 20): Promise<ApiResponse<{ data: Product[]; pagination: { page: number; limit: number; total: number } }>> => {
-    return api.get(`/market/products?page=${page}&limit=${limit}`);
+  getProducts: async (page = 1, limit = 20): Promise<ApiResponse<Product[]>> => {
+    return api.get<Product[]>(`/market/products?page=${page}&limit=${limit}`);
   },
   
   getProduct: async (id: number): Promise<ApiResponse<Product>> => {
-    return api.get(`/market/products/${id}`);
+    return api.get<Product>(`/market/products/${id}`);
   },
   
   createProduct: async (data: { name: string; description?: string; price: number; stock: number; imageUrl?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
-    return api.post('/market/products', data);
+    return api.post<Product>('/market/products', data);
   },
   
   buyNow: async (productId: number, quantity: number, pin: string): Promise<ApiResponse<unknown>> => {
-    return api.post('/market/buy-now', { productId, quantity, pin });
+    return api.post<unknown>('/market/buy-now', { productId, quantity, pin });
   },
   
   getCart: async (): Promise<ApiResponse<unknown[]>> => {
-    return api.get('/market/cart');
+    return api.get<unknown[]>('/market/cart');
   },
   
   addToCart: async (productId: number, quantity: number): Promise<ApiResponse<void>> => {
-    return api.post('/market/cart', { productId, quantity });
+    return api.post<void>('/market/cart', { productId, quantity });
   },
   
   checkout: async (pin: string): Promise<ApiResponse<unknown>> => {
-    return api.post('/market/checkout', { pin });
+    return api.post<unknown>('/market/checkout', { pin });
   },
 
   getMyProducts: async (): Promise<ApiResponse<Product[]>> => {
@@ -611,8 +624,8 @@ export const marketApi = {
 };
 
 export const themeApi = {
-  getThemes: async (page = 1, limit = 20): Promise<ApiResponse<{ data: Product[]; pagination: { page: number; limit: number; total: number } }>> => {
-    return api.get(`/market/themes?page=${page}&limit=${limit}`);
+  getThemes: async (page = 1, limit = 20): Promise<ApiResponse<Product[]>> => {
+    return api.get<Product[]>(`/market/themes?page=${page}&limit=${limit}`);
   },
   
   getTheme: async (id: number): Promise<ApiResponse<Product>> => {

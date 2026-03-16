@@ -1,150 +1,154 @@
-"use client"
+"use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { ArrowDownLeft, ArrowUpRight, Receipt, Search, Wallet, XCircle } from "lucide-react"
-import type { Transaction, TransactionType } from "../data"
-import { formatCurrency, formatDate, getInitials } from "../utils"
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Search, AlertCircle, TrendingUp, TrendingDown, Share2, Download } from "lucide-react";
+import { Transaction } from "@/lib/api-services";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
 
 interface TransactionHistoryProps {
-    transactions: Transaction[]
-    txnFilter: "this_month" | "last_30" | "last_90"
-    txnSearch: string
-    onFilterChange: (filter: "this_month" | "last_30" | "last_90") => void
-    onSearchChange: (val: string) => void
-    onTxnClick: (txn: Transaction) => void
+  transactions: Transaction[];
+  loading: boolean;
+  error: string | null;
 }
 
-const FILTER_OPTIONS = [
-    { key: "this_month", label: "This Month" },
-    { key: "last_30", label: "Last 30 Days" },
-    { key: "last_90", label: "Last 90 Days" },
-] as const
+export function TransactionHistory({ transactions, loading, error }: TransactionHistoryProps) {
+  const [txnSearch, setTxnSearch] = useState("");
+  const [showTxnReceipt, setShowTxnReceipt] = useState<Transaction | null>(null);
 
-export function getTxnBadge(type: TransactionType) {
-    switch (type) {
-        case "credit":
-            return (
-                <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800">
-                    <ArrowDownLeft className="size-3 mr-0.5" />Credit
-                </Badge>
-            )
-        case "debit":
-            return (
-                <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800">
-                    <ArrowUpRight className="size-3 mr-0.5" />Debit
-                </Badge>
-            )
-        case "unsuccessful":
-            return (
-                <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
-                    <XCircle className="size-3 mr-0.5" />Failed
-                </Badge>
-            )
+  const formatTxnDate = (dateStr: string | undefined) => {
+    if (!dateStr) return "Unknown date";
+    try {
+      const date = parseISO(dateStr);
+      if (isToday(date)) return `Today, ${format(date, "hh:mm a")}`;
+      if (isYesterday(date)) return `Yesterday, ${format(date, "hh:mm a")}`;
+      return format(date, "MMM dd, yyyy • hh:mm a");
+    } catch (e) {
+      return dateStr;
     }
-}
+  };
 
-export function TransactionHistory({
-    transactions, txnFilter, txnSearch,
-    onFilterChange, onSearchChange, onTxnClick,
-}: TransactionHistoryProps) {
-    return (
-        <Card className="shadow-sm">
-            <CardHeader className="flex flex-row items-start justify-between gap-4 flex-wrap">
-                <div>
-                    <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                        <Receipt className="size-4 text-primary" />
-                        Transaction History
-                    </CardTitle>
-                    <CardDescription>{transactions.length} transactions found</CardDescription>
+  const filteredTxns = transactions.filter((t) => {
+    const desc = t.description || "";
+    const amt = t.amount?.toString() || "";
+    if (txnSearch && !desc.toLowerCase().includes(txnSearch.toLowerCase()) && !amt.includes(txnSearch)) return false;
+    return true;
+  });
+
+  const isCredit = (type: string | undefined) => {
+    const t = type?.toLowerCase() || "";
+    return t === "credit" || t === "received";
+  };
+
+  return (
+    <>
+      <Card className="border-0 shadow-none bg-transparent">
+        <CardHeader className="px-0 pt-0">
+          <div className="flex flex-col gap-3">
+            <CardTitle className="text-lg">Recent Transactions</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search..." value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} className="pl-9 h-9" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0">
+          {loading ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-3 w-full p-3">
+                  <Skeleton className="w-10 h-10 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-32 mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-16" />
                 </div>
-                <CardAction>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {/* Search */}
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                            <Input
-                                placeholder="Search amount or name..."
-                                value={txnSearch}
-                                onChange={e => onSearchChange(e.target.value)}
-                                className="pl-8 h-8 w-48 text-xs"
-                            />
-                        </div>
-                        {/* Filter pills */}
-                        <div className="flex gap-1 bg-muted/50 rounded-full p-0.5">
-                            {FILTER_OPTIONS.map(opt => (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => onFilterChange(opt.key)}
-                                    className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${txnFilter === opt.key
-                                        ? "bg-background text-foreground shadow-sm"
-                                        : "text-muted-foreground hover:text-foreground"
-                                        }`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="flex items-center gap-2 p-4 text-sm text-red-500">
+              <AlertCircle className="h-4 w-4" />
+              {error}
+            </div>
+          ) : filteredTxns.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground text-center">No transactions yet</div>
+          ) : (
+            <div className="space-y-2">
+              {filteredTxns.map((txn) => (
+                <button
+                  key={txn.id}
+                  onClick={() => setShowTxnReceipt(txn)}
+                  className="flex items-center gap-3 w-full p-3 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                >
+                  <Avatar className="w-10 h-10 shrink-0">
+                    <AvatarFallback className={`text-sm ${isCredit(txn.type) ? "bg-green-500/10 text-green-600" : "bg-destructive/10 text-destructive"}`}>
+                      {isCredit(txn.type) ? "+" : "-"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm">{txn.description || "No description"}</p>
+                    <p className="text-xs text-muted-foreground">{txn.createdAt ? formatTxnDate(txn.createdAt) : "Unknown date"}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="flex items-center gap-1">
+                      {isCredit(txn.type) ? (
+                        <TrendingUp className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3 text-destructive" />
+                      )}
+                      <span className={`font-semibold text-sm ${isCredit(txn.type) ? "text-green-600" : "text-destructive"}`}>
+                        {isCredit(txn.type) ? "+" : "-"}{txn.amount ?? 0}
+                      </span>
                     </div>
-                </CardAction>
-            </CardHeader>
+                    <Badge variant="outline" className="text-[10px] capitalize">{txn.type || "unknown"}</Badge>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            <CardContent>
-                {transactions.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <Wallet className="size-10 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium">No transactions found</p>
-                        <p className="text-xs mt-1">Try adjusting your filters or search</p>
-                    </div>
-                ) : (
-                    <div className="space-y-1">
-                        {transactions.map(txn => (
-                            <button
-                                key={txn.id}
-                                onClick={() => onTxnClick(txn)}
-                                className="flex items-center gap-3 w-full p-3 rounded-xl hover:bg-muted/50 transition-all text-left group"
-                            >
-                                <Avatar className="size-9 shrink-0">
-                                    <AvatarFallback className={`font-bold text-xs ${txn.type === "credit"
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : txn.type === "debit"
-                                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                        }`}>
-                                        {getInitials(txn.recipientName)}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold text-foreground truncate">{txn.recipientName}</span>
-                                        <span className="text-[10px] text-muted-foreground font-medium shrink-0">{formatDate(txn.date)}</span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                                        {txn.type === "credit" ? "+" : txn.type === "debit" ? "-" : ""}
-                                        {formatCurrency(txn.amount)}
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-col items-end gap-1 shrink-0">
-                                    {getTxnBadge(txn.type)}
-                                    <span className={`text-sm font-bold ${txn.type === "credit"
-                                        ? "text-green-600 dark:text-green-400"
-                                        : txn.type === "debit"
-                                            ? "text-red-600 dark:text-red-400"
-                                            : "text-yellow-600 dark:text-yellow-400"
-                                        }`}>
-                                        {txn.type === "credit" ? "+" : txn.type === "debit" ? "-" : ""}
-                                        {formatCurrency(txn.amount)}
-                                    </span>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    )
+      {/* Embedded Transaction Receipt Dialog */}
+      <Dialog open={!!showTxnReceipt} onOpenChange={() => setShowTxnReceipt(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">Transaction Receipt</DialogTitle>
+            <DialogDescription className="text-center text-[10px] opacity-50 truncate">
+              ID: {showTxnReceipt?.id}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-center space-y-4 pt-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${isCredit(showTxnReceipt?.type) ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
+              {isCredit(showTxnReceipt?.type) ? (
+                <TrendingUp className="w-8 h-8 text-green-600" />
+              ) : (
+                <TrendingDown className="w-8 h-8 text-destructive" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground capitalize">Transaction Details</h3>
+              <p className="text-sm text-muted-foreground">{showTxnReceipt?.createdAt ? formatTxnDate(showTxnReceipt.createdAt) : ''}</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm text-left">
+              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-foreground">{showTxnReceipt?.amount ?? 0} B-Coins</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Type</span><Badge variant="outline" className="capitalize">{showTxnReceipt?.type || "unknown"}</Badge></div>
+              {showTxnReceipt?.description && <div className="flex justify-between gap-4"><span className="text-muted-foreground shrink-0">Description</span><span className="text-foreground text-right">{showTxnReceipt.description}</span></div>}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1"><Share2 className="w-4 h-4 mr-1" /> Share</Button>
+              <Button variant="outline" className="flex-1"><Download className="w-4 h-4 mr-1" /> Download</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

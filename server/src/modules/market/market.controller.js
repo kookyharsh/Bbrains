@@ -59,39 +59,74 @@ export const getProduct = async (req, res) => {
   }
 };
 
-// POST /market/products
-// Any authenticated user can create a product:
-// - student: created with approval = "pending"
-// - teacher/admin: created with approval = "approved"
 export const createProduct = async (req, res) => {
   try {
-    const validated = productSchema.parse(req.body);
+    const body = req.body;
+    if (!body) return sendError(res, 'No data provided', 400);
+
+    // Simplify schema for debugging
+    const schema = z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      price: z.number(),
+      stock: z.number(),
+      imageUrl: z.string().optional(),
+      category: z.string().optional(),
+      metadata: z.any().optional()
+    });
+
+    const validated = schema.parse(body);
+    
+    if (!req.user) {
+      console.error('[createProduct] req.user is missing! Auth middleware might have failed silently.');
+      return sendError(res, 'User context missing', 401);
+    }
+
     const isPrivileged = req.user.type === "teacher" || req.user.type === "admin";
     const approval = isPrivileged ? "approved" : "pending";
     
-    // Combine category from field and metadata
-    const metadata = {
-      ...(validated.metadata || {}),
-      category: validated.category || validated.metadata?.category || 'product'
+    const productData = {
+      name: validated.name,
+      description: validated.description || '',
+      price: Number(validated.price),
+      stock: Number(validated.stock),
+      image: validated.imageUrl || null,
+      creatorId: req.user.id,
+      approval,
+      metadata: typeof validated.metadata === 'object' ? validated.metadata : {}
     };
 
+    // Include category in metadata if not present
+    if (validated.category) {
+      productData.metadata.category = validated.category;
+    }
+
     const product = await createProductSvc(
-      validated.name,
-      validated.description,
-      validated.price,
-      validated.stock,
-      validated.imageUrl,
-      req.user.id,
-      approval,
-      metadata
+      productData.name,
+      productData.description,
+      productData.price,
+      productData.stock,
+      productData.image,
+      productData.creatorId,
+      productData.approval,
+      productData.metadata
     );
+
     await createAuditLog(req.user.id, 'MARKET', 'CREATE', 'Product', product.id);
     return sendCreated(res, product, 'Product created');
   } catch (error) {
-    if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
-    return sendError(res, 'Failed to create product', 500);
+    console.error('[createProduct] CATCH BLOCK:', error);
+    
+    if (error && (error.name === 'ZodError' || error.constructor?.name === 'ZodError')) {
+      return sendError(res, 'Validation failed', 400, error.errors || []);
+    }
+
+    return sendError(res, error?.message || 'Failed to create product', 500);
   }
 };
+
+
+
 
 // PUT /market/products/:id
 export const updateProduct = async (req, res) => {

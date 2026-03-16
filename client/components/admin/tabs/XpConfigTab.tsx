@@ -14,6 +14,7 @@ export function XpConfigTab() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
     const [selectedLevel, setSelectedLevel] = useState<any>(null)
+    const [submitting, setSubmitting] = useState(false)
     const [formData, setFormData] = useState({ levelNumber: "", requiredXp: "" })
 
     const fetchLevels = async () => {
@@ -21,7 +22,8 @@ export function XpConfigTab() {
         try {
             const res = await xpApi.getLevels()
             if (res.success) {
-                setLevels(res.data)
+                const levelsData = (res.data as any)?.data || res.data;
+                setLevels(Array.isArray(levelsData) ? levelsData : []);
             }
         } catch (error) {
             console.error("Error fetching levels:", error)
@@ -50,6 +52,7 @@ export function XpConfigTab() {
         const levelNum = parseInt(formData.levelNumber)
         const reqXp = parseInt(formData.requiredXp)
         
+        setSubmitting(true)
         try {
             if (selectedLevel) {
                 await xpApi.updateLevel(levelNum, reqXp)
@@ -60,6 +63,8 @@ export function XpConfigTab() {
             fetchLevels()
         } catch (error) {
             console.error("Error saving level:", error)
+        } finally {
+            setSubmitting(false)
         }
     }
 
@@ -83,7 +88,7 @@ export function XpConfigTab() {
         <div className="space-y-6">
             <SectionHeader 
                 title="XP & Levels Configuration" 
-                description="Manage level thresholds and required XP"
+                subtitle="Manage level thresholds and required XP"
                 action={{
                     label: "Add Level",
                     icon: <Plus className="size-4" />,
@@ -94,24 +99,17 @@ export function XpConfigTab() {
             <DataTable 
                 columns={columns}
                 data={levels}
-                isLoading={isLoading}
-                actions={(row) => (
-                    <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleOpenModal(row)} className="p-2 text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 rounded-lg">
-                            <Pencil className="size-4" />
-                        </button>
-                        <button onClick={() => { setSelectedLevel(row); setIsConfirmOpen(true); }} className="p-2 text-red-500/80 hover:text-red-500 bg-red-500/10 hover:bg-red-500/20 rounded-lg">
-                            <Trash2 className="size-4" />
-                        </button>
-                    </div>
-                )}
+                loading={isLoading}
+                onDelete={(row) => { setSelectedLevel(row); setIsConfirmOpen(true); }}
+
             />
 
             <CrudModal
-                isOpen={isModalOpen}
+                open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={selectedLevel ? "Edit Level" : "Add Level"}
-                onSubmit={handleSubmit}
+                onSubmit={async () => await handleSubmit(new Event('submit') as any)}
+                submitting={submitting}
             >
                 <div className="space-y-4">
                     <div>
@@ -136,10 +134,11 @@ export function XpConfigTab() {
                         />
                     </div>
                 </div>
+
             </CrudModal>
 
             <ConfirmDialog
-                isOpen={isConfirmOpen}
+                open={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
                 onConfirm={handleDelete}
                 title="Delete Level"

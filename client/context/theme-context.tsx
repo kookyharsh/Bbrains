@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import { useThemes } from "@/components/theme-provider"
-import { useEffect } from "react"
+import { useEffect, useLayoutEffect } from "react"
+import { useTheme as useNextTheme } from "next-themes"
 
 interface ThemeContextProps {
   themes: ReturnType<typeof useThemes>['themes']
@@ -11,87 +12,66 @@ interface ThemeContextProps {
   addTheme: ReturnType<typeof useThemes>['addTheme']
   currentTheme: string | null
   setTheme: (themeId: string) => void
-  isLoaded: ReturnType<typeof useThemes>['isLoaded']
+  isLoaded: boolean
 }
 
 const ThemeContext = React.createContext<ThemeContextProps | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const { themes, userThemes, hasThemeAccess, addTheme, isLoaded } = useThemes()
+  const { themes, userThemes, hasThemeAccess, addTheme, isLoaded: themesLoaded } = useThemes()
+  const { setTheme: setNextTheme, resolvedTheme } = useNextTheme()
   const [currentTheme, setCurrentTheme] = React.useState<string | null>(null)
+  const [mounted, setMounted] = React.useState(false)
 
-  // Load current theme from localStorage or system preference
+  // Sync with next-themes and localStorage on mount
   useEffect(() => {
-    if (!isLoaded) return
-    
-    const savedTheme = localStorage.getItem('theme')
+    setMounted(true)
+    const savedTheme = localStorage.getItem('theme-preference')
     if (savedTheme && hasThemeAccess(savedTheme)) {
       setCurrentTheme(savedTheme)
-      applyTheme(savedTheme)
     } else {
-      // Check system preference
-      if (typeof window !== 'undefined') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        const systemTheme = prefersDark ? 'dark' : 'light'
-        if (hasThemeAccess(systemTheme)) {
-          setCurrentTheme(systemTheme)
-          applyTheme(systemTheme)
-        } else {
-          // Fallback to first available theme
-          const firstAvailable = themes.find(t => hasThemeAccess(t.id))
-          if (firstAvailable) {
-            setCurrentTheme(firstAvailable.id)
-            applyTheme(firstAvailable.id)
-          }
-        }
-      }
+      setCurrentTheme(resolvedTheme === 'dark' ? 'dark' : 'light')
     }
-  }, [isLoaded, hasThemeAccess, themes])
+  }, [themesLoaded, hasThemeAccess, resolvedTheme])
 
-  // Apply theme when changed
-  useEffect(() => {
-    if (currentTheme) {
-      applyTheme(currentTheme)
-    }
-  }, [currentTheme])
-
-  const applyTheme = (themeId: string) => {
-    const themeDef = themes.find(t => t.id === themeId)
+  // Apply theme whenever it changes
+  useLayoutEffect(() => {
+    if (!mounted || !currentTheme) return
+    
+    const themeDef = themes.find(t => t.id === currentTheme)
     if (!themeDef) return
     
-    // Apply CSS variables
     const root = document.documentElement
+    
+    // 1. Apply CSS variables
+    // First, clear any previously set inline variables from our themes
+    // (Optional: if we want to be very clean, but setting new ones overrides anyway)
+    
     Object.entries(themeDef.variables).forEach(([key, value]) => {
       root.style.setProperty(key, value)
     })
     
-    // Manage classes on root element
-    // 1. Remove all theme- classes
+    // 2. Manage theme classes
     const currentClasses = Array.from(root.classList)
     currentClasses.forEach(cls => {
       if (cls.startsWith('theme-')) {
         root.classList.remove(cls)
       }
     })
+    root.classList.add(`theme-${currentTheme}`)
     
-    // 2. Add new theme class
-    root.classList.add(`theme-${themeId}`)
+    // 3. Sync with next-themes for dark mode logic
+    // This ensures Shadcn and other libraries reacting to 'dark' class/next-themes stay in sync
+    setNextTheme(themeDef.isDark ? 'dark' : 'light')
     
-    // 3. Toggle dark class based on theme definition
-    if (themeDef.isDark) {
-      root.classList.add('dark')
-    } else {
-      root.classList.remove('dark')
-    }
+    // 4. Persist
+    localStorage.setItem('theme-preference', currentTheme)
     
-    // Save to localStorage
-    localStorage.setItem('theme', themeId)
-  }
+  }, [currentTheme, themes, mounted, setNextTheme])
 
   const setTheme = (themeId: string) => {
     if (hasThemeAccess(themeId)) {
       setCurrentTheme(themeId)
-      applyTheme(themeId)
     }
   }
 
@@ -102,7 +82,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     addTheme,
     currentTheme,
     setTheme,
-    isLoaded
+    isLoaded: themesLoaded && mounted
   }
 
   return (

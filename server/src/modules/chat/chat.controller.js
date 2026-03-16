@@ -18,7 +18,7 @@ const normalizeProfile = (user) => {
     const roles = customRoles.length ? customRoles : [user.type];
 
     return {
-        userId: user.id,
+        id: user.id,
         username: user.username,
         displayName,
         avatar: detail.avatar || "",
@@ -36,25 +36,48 @@ export const getChatMessages = async (req, res) => {
         
         const messages = await prisma.chatMessage.findMany({
             where: { chatId },
+            include: {
+                user: {
+                    select: {
+                        username: true,
+                        type: true,
+                        userDetails: {
+                            select: {
+                                avatar: true,
+                                firstName: true,
+                                lastName: true
+                            }
+                        }
+                    }
+                }
+            },
             orderBy: { createdAt: 'asc' },
             take: -limit // Take the last 'limit' messages
         });
         
-        // Normalize for frontend
-        const normalized = messages.map(msg => ({
-            id: msg.id,
-            userId: msg.userId,
-            username: msg.username,
-            displayName: msg.displayName,
-            avatar: msg.avatar,
-            role: msg.role,
-            content: msg.content,
-            mentions: msg.mentions,
-            replyToMessageId: msg.replyTo,
-            attachments: msg.attachments,
-            createdAt: msg.createdAt,
-            updatedAt: msg.updatedAt
-        }));
+        // Normalize for frontend - use live user data if available, fallback to denormalized
+        const normalized = messages.map(msg => {
+            const user = msg.user;
+            const details = user?.userDetails || {};
+            const firstName = details.firstName || "";
+            const lastName = details.lastName || "";
+            const liveDisplayName = `${firstName} ${lastName}`.trim() || user?.username;
+            
+            return {
+                id: msg.id,
+                userId: msg.userId,
+                username: user?.username || msg.username,
+                displayName: liveDisplayName || msg.displayName,
+                avatar: details.avatar || msg.avatar,
+                role: user?.type || msg.role,
+                content: msg.content,
+                mentions: msg.mentions,
+                replyToMessageId: msg.replyTo,
+                attachments: msg.attachments,
+                createdAt: msg.createdAt,
+                updatedAt: msg.updatedAt
+            };
+        });
 
         return sendSuccess(res, normalized);
     } catch (error) {

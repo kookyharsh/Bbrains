@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/client"
 import { NotificationsBell } from "./NotificationsBell"
 
-import { ModeToggle } from "./mode-toggle"
+import { ThemeSwitcher } from "./theme-switcher"
 import { SidebarTrigger } from "./ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -47,10 +47,10 @@ export function MainNavbar({ user }: { user?: any }) {
         <nav className="sticky top-0 z-[var(--z-nav)] flex h-16 md:h-20 w-full items-center border-b bg-ui-light-surface/95 dark:bg-ui-dark-surface/95 px-4 md:px-8 backdrop-blur supports-backdrop-filter:bg-ui-light-surface/60 dark:supports-backdrop-filter:bg-ui-dark-surface/60">
             {/* Left Section: Sidebar Trigger and Mobile Logo (Fix 4) */}
             <div className="flex flex-1 items-center gap-4">
-                <SidebarTrigger className="h-9 w-9 md:h-10 md:w-10 rounded-full border border-border/60 bg-background/80 shadow-sm backdrop-blur-sm hover:bg-muted" />
+                <SidebarTrigger className="hidden md:flex h-9 w-9 md:h-10 md:w-10 rounded-full border border-border/60 bg-background/80 shadow-sm backdrop-blur-sm hover:bg-muted" />
                 
                 {/* Mobile-only identity (Fix 4) */}
-                <div className="flex md:hidden items-center gap-2">
+                <div className="hidden items-center gap-2">
                     <div className="w-8 h-8 bg-brand-purple rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
                         <BarChart3 className="h-4 w-4" />
                     </div>
@@ -68,7 +68,7 @@ export function MainNavbar({ user }: { user?: any }) {
             {/* Right Section - Notifications, Theme & Profile */}
             <div className="flex flex-1 items-center justify-end gap-2 md:gap-6">
                 <div className="flex items-center gap-1 md:gap-2">
-                    <ModeToggle />
+                    <ThemeSwitcher />
                     <NotificationsBell />
                 </div>
 

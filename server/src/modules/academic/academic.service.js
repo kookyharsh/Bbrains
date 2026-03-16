@@ -8,6 +8,7 @@ const createAssignment = async (teacherId, courseId, data) => {
             title: data.title,
             description: data.description,
             content: data.content,
+            file: data.file,
             dueDate: new Date(data.dueDate),
             courseId: parseInt(courseId),
         }

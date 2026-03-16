@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wallet, TrendingUp, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 import { walletApi, WalletData } from "@/lib/api-services";
 
 interface WalletMiniCardProps {
@@ -68,9 +71,15 @@ export function WalletMiniCard({ initialWallet, initialBalance }: WalletMiniCard
           <div className="space-y-1">
             <p className="text-2xl font-bold">${balance.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground">Total balance</p>
+            <Button variant="outline" size="sm" asChild className="w-full mt-2">
+              <Link href="/wallet">
+                Send Money <ArrowUpRight className="h-3 w-3 ml-1" />
+              </Link>
+            </Button>
           </div>
         )}
       </CardContent>
     </Card>
   );
 }
+

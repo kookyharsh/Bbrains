@@ -54,18 +54,7 @@ export function ProfileDialog({ open, onOpenChange, member }: ProfileDialogProps
                                 <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-[4px] border-background-light dark:border-[#221610] ${statusColors[memberStatus] || "bg-gray-400"}`}></div>
                             </div>
                             
-                            <div className="flex flex-wrap justify-end gap-1 mb-1 max-w-[120px]">
-                                {member.roles.includes('admin') && (
-                                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700" title="Admin">
-                                        <Shield className="text-brand-purple h-[18px] w-[18px]" />
-                                    </div>
-                                )}
-                                {(member.roles.includes('teacher') || member.type === 'teacher') && (
-                                    <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg border border-gray-200 dark:border-gray-700" title="Teacher">
-                                        <School className="text-brand-orange h-[18px] w-[18px]" />
-                                    </div>
-                                )}
-                            </div>
+                            
                         </div>
                         
                         <div className="bg-gray-100/50 dark:bg-gray-900/50 rounded-xl p-3 mb-3 border border-gray-200/50 dark:border-gray-800/50">

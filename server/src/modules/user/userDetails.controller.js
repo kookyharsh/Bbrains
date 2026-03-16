@@ -19,6 +19,7 @@ const createDetailsSchema = z.object({
         return age >= 13;
     }, { message: 'User must be at least 13 years old' }),
     phone: z.string().max(15).optional(),
+    bio: z.string().max(500).optional(),
     avatar: z.string().url().optional(),
     addressId: z.number().int().positive().optional()
 });

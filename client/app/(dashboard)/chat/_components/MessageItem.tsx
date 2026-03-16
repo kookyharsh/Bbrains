@@ -75,9 +75,9 @@ export const MessageItem = React.memo(function MessageItem({
     return (
         <div className={`group flex items-start gap-3 px-3 py-1.5 rounded-md transition-colors relative animate-in fade-in slide-in-from-bottom-4 duration-300 ${containerStyle}`}>
             <button onClick={() => onOpenProfile(msg.user.id, msg.user.name, msg.user.username)}>
-                <Avatar className="w-9 h-9 shrink-0 mt-0.5">
-                    <AvatarImage src={msg.user.avatar} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs uppercase">
+                <Avatar className="w-9 h-9 shrink-0 mt-0.5 border border-border/50">
+                    <AvatarImage src={msg.user.avatar || undefined} className="object-cover" />
+                    <AvatarFallback className="bg-brand-purple/10 text-brand-purple text-xs font-bold uppercase">
                         {msg.user.name?.[0] || msg.user.username?.[0] || "U"}
                     </AvatarFallback>
                 </Avatar>

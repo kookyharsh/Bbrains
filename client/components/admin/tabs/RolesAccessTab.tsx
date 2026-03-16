@@ -9,28 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Shield, Plus, Pencil, Trash2, Users, Search, GraduationCap, UserCog } from "lucide-react";
+import { Shield, Plus, Pencil, Users, Search, GraduationCap, UserCog } from "lucide-react";
 
 const mockRoles = [
   { id: 1, name: "Admin", description: "Full system access", users: 2, permissions: ["manage_users", "manage_roles", "manage_courses", "view_audit_log", "manage_products", "view_stats"] },
@@ -70,7 +54,7 @@ const mockUsersWithRoles: UserWithRoles[] = [
   { id: "u10", username: "lisa_m", firstName: "Lisa", lastName: "Miller", email: "lisa@uni.edu", grade: "11th Grade", roles: ["Student"] },
 ];
 
-export default function RolesPage() {
+export function RolesAccessTab() {
   const [showDialog, setShowDialog] = useState(false);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [editRole, setEditRole] = useState<typeof mockRoles[0] | null>(null);
@@ -124,7 +108,6 @@ export default function RolesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Roles & Access</h1>
           <p className="text-muted-foreground">Manage roles and permissions</p>
         </div>
         <Button onClick={() => { setEditRole(null); setSelectedPerms([]); setShowDialog(true); }}>

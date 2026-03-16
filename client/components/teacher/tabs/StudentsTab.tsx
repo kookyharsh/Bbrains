@@ -73,7 +73,7 @@ export function StudentsTab() {
                     },
                     {
                         key: "xp", label: "Level",
-                        render: (r) => r.xp ? `Lv ${r.xp.level}` : "—",
+                        render: (r) => r.xp ? `Lv ${r.xp?.level ?? 1}` : "—",
                     },
                     {
                         key: "wallet", label: "Balance",
@@ -100,8 +100,8 @@ export function StudentsTab() {
                                 {selected.userDetails?.phone && <InfoRow label="Phone" value={selected.userDetails.phone} />}
                                 {selected.userDetails?.sex && <InfoRow label="Sex" value={selected.userDetails.sex} />}
                                 {selected.xp && <>
-                                    <InfoRow label="XP" value={String(selected.xp.xp)} />
-                                    <InfoRow label="Level" value={String(selected.xp.level)} />
+                                    <InfoRow label="XP" value={String(selected.xp?.xp ?? 0)} />
+                                    <InfoRow label="Level" value={String(selected.xp?.level ?? 1)} />
                                 </>}
                                 {selected.wallet && <>
                                     <InfoRow label="Wallet ID" value={selected.wallet.id} />

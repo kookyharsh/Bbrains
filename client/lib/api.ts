@@ -1,13 +1,13 @@
 import { supabase } from './supabase-client';
 
 const getBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-    if (typeof window !== "undefined") {
-      return `http://${window.location.hostname}:5000`;
-    }
-    return "http://localhost:5000";
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window !== "undefined") {
+    return `http://${window.location.hostname}:5000`;
+  }
+  return "http://localhost:5000";
 };
-  
+
 const API_BASE_URL = getBaseUrl();
 
 export interface ApiResponse<T = unknown> {
@@ -15,6 +15,13 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   message?: string;
   error?: string;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  [key: string]: unknown;
 }
 
 export interface ApiError {
@@ -31,9 +38,9 @@ export async function getAuthToken(): Promise<string | null> {
       const { cookies } = await import('next/headers');
       // Use createServerClient from @supabase/ssr as it's more modern and already in use in middleware
       const { createServerClient } = await import('@supabase/ssr');
-      
+
       const cookieStore = await cookies();
-      
+
       const supabaseServer = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -61,10 +68,21 @@ export async function getAuthToken(): Promise<string | null> {
   // Client path: use shared client session via cookies
   try {
     if (!supabase) return null;
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session?.access_token) {
-      return null;
+    
+    // getSession() is fast but can be stale if the tab has been open a while
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    // If we have a session but it might be stale, or if getSession fails, 
+    // try getUser() which forces a fresh check and refresh if possible.
+    if (sessionError || !session?.access_token) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) return null;
+      
+      // Re-fetch session after getUser() has potentially refreshed it
+      const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+      return refreshedSession?.access_token || null;
     }
+    
     return session.access_token;
   } catch (e) {
     console.error('Error getting token:', e);
@@ -72,12 +90,13 @@ export async function getAuthToken(): Promise<string | null> {
   }
 }
 
+
 async function makeRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const token = await getAuthToken();
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -100,9 +119,11 @@ async function makeRequest<T>(
       };
     }
 
+    // Handle standardized response structure { success, data, message, pagination }
     return {
+      ...data,
       success: true,
-      data: data as T,
+      data: (data.data !== undefined ? data.data : data) as T,
       message: data.message,
     };
   } catch (error) {

@@ -66,7 +66,7 @@ export default function SettingsPage() {
             }
 
             if (libraryRes.success && libraryRes.data) {
-                setPurchasedThemes(libraryRes.data.data || [])
+                setPurchasedThemes(libraryRes.data || [])
             }
 
             if (walletRes.success && walletRes.data) {

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react"
 import { supabase } from "@/integrations/supabase/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export interface Member {
   id: string
   name: string
   username: string
   role: string
+  avatar?: string
 }
 
 interface ChatSidebarRightProps {
@@ -85,6 +86,7 @@ export function ChatSidebarRight({ members, currentUserId, onSelectUser }: ChatS
                 >
                   <div className="relative shrink-0">
                     <Avatar className="w-8 h-8">
+                       <AvatarImage src={member.avatar} />
                        <AvatarFallback className="bg-primary/10 text-primary text-xs">{member.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full"></div>
@@ -112,6 +114,7 @@ export function ChatSidebarRight({ members, currentUserId, onSelectUser }: ChatS
                 >
                   <div className="relative shrink-0">
                     <Avatar className="w-8 h-8">
+                       <AvatarImage src={member.avatar} />
                        <AvatarFallback className="bg-primary/10 text-primary text-xs">{member.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-400 border-2 border-background rounded-full"></div>

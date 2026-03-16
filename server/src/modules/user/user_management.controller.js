@@ -24,8 +24,8 @@ export const getMe = async (req, res) => {
         if (!userData) return sendError(res, 'User not found', 404);
         return sendSuccess(res, userData);
     } catch (error) {
-        console.error(error);
-        return sendError(res, 'Failed to fetch profile', 500);
+        console.error('getMe error:', error);
+        return sendError(res, `Failed to fetch profile: ${error.message}`, 500);
     }
 };
 

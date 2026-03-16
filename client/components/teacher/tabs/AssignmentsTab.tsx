@@ -11,6 +11,9 @@ import { FormInput } from "@/components/admin/form/FormInput"
 import { FormSelect } from "@/components/admin/form/FormSelect"
 import { FormTextarea } from "@/components/admin/form/FormTextarea"
 import type { ApiAssignment, ApiCourse } from "@/lib/types/api"
+import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload"
+import { Camera } from "lucide-react"
+import { toast } from "sonner"
 
 
 function fmtDate(s: string) {
@@ -18,9 +21,9 @@ function fmtDate(s: string) {
 }
 
 interface AssignmentForm {
-    title: string; description: string; courseId: string; dueDate: string
+    title: string; description: string; courseId: string; dueDate: string; file: string
 }
-const emptyAssForm: AssignmentForm = { title: "", description: "", courseId: "", dueDate: "" }
+const emptyAssForm: AssignmentForm = { title: "", description: "", courseId: "", dueDate: "", file: "" }
 
 export function AssignmentsTab() {
     const [assignments, setAssignments] = useState<ApiAssignment[]>([])
@@ -32,6 +35,8 @@ export function AssignmentsTab() {
     const [form, setForm] = useState<AssignmentForm>(emptyAssForm)
     const [submitting, setSubmitting] = useState(false)
     const [deleting, setDeleting] = useState(false)
+
+    const { uploadFile, isUploading } = useCloudinaryUpload()
 
     const load = useCallback(async () => {
         try {
@@ -51,8 +56,20 @@ export function AssignmentsTab() {
     function openCreate() { setEditing(null); setForm(emptyAssForm); setModalOpen(true) }
     function openEdit(a: ApiAssignment) {
         setEditing(a)
-        setForm({ title: a.title, description: a.description ?? "", courseId: String(a.courseId), dueDate: a.dueDate?.slice(0, 10) ?? "" })
+        setForm({ title: a.title, description: a.description ?? "", courseId: String(a.courseId), dueDate: a.dueDate?.slice(0, 10) ?? "", file: a.file || "" })
         setModalOpen(true)
+    }
+
+    async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const f = e.target.files?.[0]
+        if (!f) return
+        try {
+            const url = await uploadFile(f)
+            if (url) {
+                setForm(prev => ({ ...prev, file: url }))
+                toast.success("File uploaded successfully")
+            }
+        } catch (err) { toast.error("Upload failed") }
     }
 
     async function handleSubmit() {
@@ -60,7 +77,13 @@ export function AssignmentsTab() {
         try {
             setSubmitting(true)
             const c = await getAuthedClient()
-            const payload = { title: form.title, description: form.description || undefined, courseId: Number(form.courseId), dueDate: form.dueDate || undefined }
+            const payload = { 
+                title: form.title, 
+                description: form.description || undefined, 
+                courseId: Number(form.courseId), 
+                dueDate: form.dueDate || undefined,
+                file: form.file || undefined
+            }
             if (editing) {
                 const r = await c.put<{ success: boolean; data: ApiAssignment }>(`/academic/assignments/${editing.id}`, payload)
                 setAssignments((prev) => prev.map((a) => a.id === editing.id ? r.data.data : a))
@@ -110,6 +133,22 @@ export function AssignmentsTab() {
                     options={[{ value: "", label: "Select course..." }, ...courses.map((c) => ({ value: String(c.id), label: c.name }))]}
                 />
                 <FormInput label="Due Date" type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
+                
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground">Attachment (Optional)</label>
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 rounded-xl cursor-pointer transition-colors border border-border/40">
+                            {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                            <span className="text-xs font-medium">{form.file ? "Change File" : "Upload File"}</span>
+                            <input type="file" className="hidden" onChange={handleFileChange} disabled={isUploading} />
+                        </label>
+                        {form.file && (
+                            <span className="text-[10px] text-brand-purple font-bold truncate max-w-[150px]">
+                                File attached ✓
+                            </span>
+                        )}
+                    </div>
+                </div>
             </CrudDrawer>
 
             <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} confirming={deleting}

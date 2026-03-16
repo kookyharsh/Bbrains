@@ -56,7 +56,7 @@ export function StudentsTab({ getToken }: { getToken: GetToken }) {
                     { key: "username", label: "Username" },
                     { key: "email", label: "Email" },
                     { key: "userDetails", label: "Name", render: (r) => fullName(r.userDetails) },
-                    { key: "xp", label: "Level", render: (r) => r.xp ? `Lv ${r.xp.level} (${r.xp.xp} XP)` : "—" },
+                    { key: "xp", label: "Level", render: (r) => r.xp ? `Lv ${r.xp?.level ?? 1} (${r.xp?.xp ?? 0} XP)` : "—" },
                     { key: "wallet", label: "Balance", render: (r) => r.wallet ? fmtCurrency(r.wallet.balance) : "—" },
                 ]}
                 onDelete={setDeleteTarget}

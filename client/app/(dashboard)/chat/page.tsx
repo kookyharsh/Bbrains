@@ -11,6 +11,7 @@ import { useChatMessages } from "@/hooks/useChatMessages";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import { supabase } from "@/integrations/supabase/client";
+import { chatApi } from "@/lib/api-services";
 
 // Components
 import { ChannelHeader } from "./_components/ChannelHeader";
@@ -41,7 +42,14 @@ export default function ChatPage() {
 
   // State
   const [message, setMessage] = useState("");
-  const [showMembers, setShowMembers] = useState(true);
+  const [showMembers, setShowMembers] = useState(false);
+  
+  // Open members by default only on larger screens
+  useEffect(() => {
+    if (window.innerWidth >= 768) {
+      setShowMembers(true);
+    }
+  }, []);
   const [profileUser, setProfileUser] = useState<Member | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
@@ -61,36 +69,13 @@ export default function ChatPage() {
     return own?.user.username ?? null;
   }, [messages, currentUserId]);
 
-  // Fetch members from Supabase
+  // Fetch members from API
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const { data: users, error: usersError } = await supabase.from("user").select("user_id, username, type");
-        if (usersError) throw usersError;
-
-        const { data: details, error: detailsError } = await supabase
-          .from("user_details")
-          .select("user_id, first_name, last_name, avatar, sex");
-        if (detailsError) {
-          console.warn("Error fetching user details:", detailsError);
-        }
-        
-        if (users) {
-          const detailsList = details ?? [];
-          const members = users.map((u) => {
-            const d = detailsList.find((det) => det.user_id === u.user_id);
-            // Using mapApiMember to ensure consistent structure
-            return mapApiMember({
-                userId: u.user_id,
-                username: u.username,
-                displayName: d ? `${d.first_name} ${d.last_name}`.trim() : u.username,
-                avatar: d?.avatar || "",
-                pronouns: d?.sex === 'male' ? 'he/him' : d?.sex === 'female' ? 'she/her' : 'they/them',
-                grade: "N/A",
-                roles: [],
-                type: u.type || "student"
-            }, []);
-          });
+        const response = await chatApi.getMembers();
+        if (response.success && response.data) {
+          const members = response.data.map((m: any) => mapApiMember(m));
           setMembersList(members);
         }
       } catch (error) {
@@ -133,7 +118,14 @@ export default function ChatPage() {
   // Auto-scroll on new messages
   useEffect(() => {
     const timer = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (messagesEndRef.current) {
+        const viewport = messagesEndRef.current.closest('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+        } else {
+          messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
     }, 100);
     if (messages.length > 0) {
       markAllRead();
@@ -321,7 +313,7 @@ export default function ChatPage() {
               ) : (
                 groupedMessages.map((group) => (
                   <div key={group.label}>
-                    <div className="flex items-center gap-3 my-4">
+                    <div className="flex items-center gap-3 my-2">
                       <Separator className="flex-1" />
                       <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{group.label}</span>
                       <Separator className="flex-1" />
@@ -376,13 +368,20 @@ export default function ChatPage() {
 
         {showMembers && (
           <>
-            <ChatSidebarRight 
-              members={membersList} 
-              currentUserId={currentUserId || ""} 
-              onSelectUser={(user) => handleOpenProfile(user.id)} 
-            />
+            {/* Hide on mobile to avoid overlap; show on md+ */}
+            <div className="hidden md:block">
+              <ChatSidebarRight 
+                members={membersList} 
+                currentUserId={currentUserId || ""} 
+                onSelectUser={(user) => handleOpenProfile(user.id)} 
+              />
+            </div>
 
             <div className="md:hidden">
+              <div 
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
+                onClick={onMembersSidebarClose}
+              />
               <Memberssidebar
                 members={membersList}
                 currentUserId={currentUserId || ""}

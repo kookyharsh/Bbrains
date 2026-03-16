@@ -37,7 +37,7 @@ const createUser = async (userId, username, email, collegeId, password, avatar, 
 };
 
 const getUserDetailsByID = async (id) => {
-    return await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
         where: { id },
         select: {
             id: true,
@@ -58,6 +58,7 @@ const getUserDetailsByID = async (id) => {
                     sex: true,
                     dob: true,
                     phone: true,
+                    bio: true,
                     address: {
                         select: {
                             addressLine1: true,
@@ -92,8 +93,40 @@ const getUserDetailsByID = async (id) => {
                     level: true,
                 },
             },
+            userAchievements: {
+                include: {
+                    achievement: true
+                }
+            },
+            grades: {
+                include: {
+                    assignment: {
+                        select: {
+                            title: true,
+                            course: {
+                                select: {
+                                    name: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: {
+                    gradedAt: 'desc'
+                },
+                take: 10
+            }
         },
     });
+
+    if (!user) return null;
+
+    // Flatten userDetails properties to the top level
+    const { userDetails, ...rest } = user;
+    return {
+        ...rest,
+        ...(userDetails || {})
+    };
 };
 
 const getUserDataHandler = async (req, res) => {
@@ -139,11 +172,28 @@ const getUsersByRole = async (roleName) => {
                 select: {
                     firstName: true,
                     lastName: true,
-                    avatar: true
+                    avatar: true,
+                    sex: true,
+                    dob: true,
+                    phone: true,
+                    bio: true
                 }
+            },
+            wallet: {
+                select: {
+                    id: true,
+                    balance: true,
+                },
+            },
+            xp: {
+                select: {
+                    xp: true,
+                    level: true,
+                },
             }
         }
     });
+
 };
 
 const getUserByName = async (name) => {

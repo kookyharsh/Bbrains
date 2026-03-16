@@ -1,47 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, Plus, Pencil, Trash2, BookOpen, ClipboardList, GraduationCap, MapPin, Phone, Mail } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, BookOpen, ClipboardList, GraduationCap } from "lucide-react";
 
 const mockCourses = [
   { id: 1, name: "Advanced Mathematics", description: "Calculus, Linear Algebra", students: 120, teacher: "Dr. Smith" },
@@ -65,7 +46,7 @@ const mockStudents = [
   { id: "s5", firstName: "Jane", lastName: "Wilson", email: "jane@uni.edu", studentId: "STU-005", year: "Sophomore", status: "inactive" },
 ];
 
-export default function AcademicsPage() {
+export function AcademicsTab() {
   const [tab, setTab] = useState("courses");
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -74,8 +55,6 @@ export default function AcademicsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Academics</h1>
-
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <TabsList>
@@ -240,24 +219,12 @@ export default function AcademicsPage() {
             {dialogType === "student" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>First Name</Label>
-                    <Input placeholder="First name" />
-                  </div>
-                  <div>
-                    <Label>Last Name</Label>
-                    <Input placeholder="Last name" />
-                  </div>
+                  <div><Label>First Name</Label><Input placeholder="First name" /></div>
+                  <div><Label>Last Name</Label><Input placeholder="Last name" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Email</Label>
-                    <Input placeholder="student@uni.edu" type="email" />
-                  </div>
-                  <div>
-                    <Label>Student ID</Label>
-                    <Input placeholder="STU-000" />
-                  </div>
+                  <div><Label>Email</Label><Input placeholder="student@uni.edu" type="email" /></div>
+                  <div><Label>Student ID</Label><Input placeholder="STU-000" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -281,40 +248,6 @@ export default function AcademicsPage() {
                         <SelectItem value="inactive">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                </div>
-                <div>
-                  <Label>Address</Label>
-                  <Input placeholder="Street address" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>City</Label>
-                    <Input placeholder="City" />
-                  </div>
-                  <div>
-                    <Label>State</Label>
-                    <Input placeholder="State" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Zip Code</Label>
-                    <Input placeholder="12345" />
-                  </div>
-                  <div>
-                    <Label>Country</Label>
-                    <Input placeholder="Country" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Emergency Contact Name</Label>
-                    <Input placeholder="Contact name" />
-                  </div>
-                  <div>
-                    <Label>Emergency Contact Phone</Label>
-                    <Input placeholder="+1 555-0000" />
                   </div>
                 </div>
               </>

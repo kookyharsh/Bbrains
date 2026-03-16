@@ -8,6 +8,7 @@ import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
 import { dashboardApi } from "@/lib/api-services";
 import { DashboardContent } from "@/components/dashboard-content";
 import { LevelWidget } from "@/components/dashboard/LevelWidget";
+import { CurrentDate } from "@/components/dashboard/CurrentDate";
 
 export default async function DashboardOverview() {
   let dashboardData = null;
@@ -49,19 +50,16 @@ export default async function DashboardOverview() {
             Here's what's happening with your studies today.
           </p>
         </div>
-        <div className="text-xs text-muted-foreground bg-card border border-border px-3 py-1.5 rounded-lg self-start">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          })}
-        </div>
+        <CurrentDate />
       </div>
 
       {/* Top row cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <LevelWidget level={dashboardData?.stats?.level || 1} xp={dashboardData?.stats?.xp || 0} nextLevelXp={dashboardData?.stats?.nextLevelRequiredXp} />
+        <LevelWidget 
+          level={typeof dashboardData?.stats?.level === 'number' ? dashboardData.stats.level : dashboardData?.stats?.level?.level ?? 1} 
+          xp={typeof dashboardData?.stats?.xp === 'number' ? dashboardData.stats.xp : dashboardData?.stats?.xp?.xp ?? 0} 
+          nextLevelXp={dashboardData?.stats?.nextLevelRequiredXp} 
+        />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
         <AttendanceCard initialAttendance={dashboardData?.attendance} />
