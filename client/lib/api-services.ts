@@ -181,6 +181,9 @@ export const dashboardApi = {
 };
 
 export const userApi = {
+  getStudents: async (): Promise<ApiResponse<User[]>> => {
+    return api.get<User[]>('/user/students');
+  },
   updateProfile: async (id: string, data: { username?: string }): Promise<ApiResponse<User>> => {
     return api.put<User>(`/user/update/${id}`, data);
   },
