@@ -133,13 +133,76 @@ export const updateProduct = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
+
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) return sendError(res, 'Product not found', 404);
+
+    const isCreator = product.creatorId === req.user.id;
+    const isPrivileged = req.user.type === 'teacher' || req.user.type === 'admin';
+
+    if (!isPrivileged && !isCreator) {
+      return sendError(res, 'Unauthorized to update this product', 403);
+    }
+
+    // Regular users can only update if it's pending
+    if (!isPrivileged && product.approval !== 'pending') {
+      return sendError(res, 'Cannot edit approved product directly. Request an edit review instead.', 403);
+    }
+
     const validated = productSchema.partial().parse(req.body);
-    const product = await updateProductSvc(id, validated);
+    
+    // Convert imageUrl to image if present in validated data
+    const updateData = { ...validated };
+    if (updateData.imageUrl) {
+      updateData.image = updateData.imageUrl;
+      delete updateData.imageUrl;
+    }
+
+    const updated = await updateProductSvc(id, updateData);
     await createAuditLog(req.user.id, 'MARKET', 'UPDATE', 'Product', id, { after: validated });
-    return sendSuccess(res, product, 'Product updated');
+    return sendSuccess(res, updated, 'Product updated');
   } catch (error) {
+    console.error('[updateProduct] Error:', error);
+    if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors);
     if (error.code === 'P2025') return sendError(res, 'Product not found', 404);
     return sendError(res, 'Failed to update product', 500);
+  }
+};
+
+// POST /market/products/:id/request-edit
+export const requestProductEdit = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
+
+    const product = await prisma.product.findUnique({ where: { id } });
+    if (!product) return sendError(res, 'Product not found', 404);
+
+    if (product.creatorId !== req.user.id) {
+      return sendError(res, 'Only the creator can request an edit review', 403);
+    }
+
+    const validated = productSchema.partial().parse(req.body);
+    
+    // Store pending changes in metadata
+    const metadata = product.metadata || {};
+    metadata.pendingEdit = {
+      ...validated,
+      requestedAt: new Date().toISOString()
+    };
+    metadata.editStatus = 'pending';
+
+    const updated = await prisma.product.update({
+      where: { id },
+      data: { metadata }
+    });
+
+    await createAuditLog(req.user.id, 'MARKET', 'REQUEST_EDIT', 'Product', id, { changes: validated });
+    return sendSuccess(res, updated, 'Edit review requested');
+  } catch (error) {
+    console.error('[requestProductEdit] Error:', error);
+    if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors);
+    return sendError(res, 'Failed to request edit review', 500);
   }
 };
 

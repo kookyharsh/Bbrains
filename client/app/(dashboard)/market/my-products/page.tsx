@@ -26,6 +26,8 @@ export default function MyProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { uploadFile, isUploading, progress } = useCloudinaryUpload();
@@ -60,6 +62,58 @@ export default function MyProductsPage() {
 
   const resetForm = () => {
     setForm({ name: "", description: "", price: "", stock: "", imageUrl: "" });
+    setSelectedProduct(null);
+  };
+
+  const handleEditClick = (product: any) => {
+    setSelectedProduct(product);
+    setForm({
+      name: product.name,
+      description: product.description || "",
+      price: product.price.toString(),
+      stock: product.stock.toString(),
+      imageUrl: product.image || ""
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!selectedProduct) return;
+    if (!form.name || !form.price || !form.stock) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const data = {
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        imageUrl: form.imageUrl,
+      };
+
+      const isPending = (selectedProduct as any).approval === 'pending';
+      const response = isPending 
+        ? await marketApi.updateProduct(selectedProduct.id, data)
+        : await marketApi.requestEditReview(selectedProduct.id, data);
+
+      if (response.success) {
+        toast.success(isPending ? "Product updated" : "Edit review requested", { 
+          description: isPending ? "Your changes have been saved." : "An admin will review your changes." 
+        });
+        setShowEditDialog(false);
+        resetForm();
+        fetchMyProducts();
+      } else {
+        toast.error(response.message || "Failed to update product");
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,7 +233,17 @@ export default function MyProductsPage() {
                   </div>
                 </div>
                 <CardContent className="p-6">
-                  <h3 className="font-black text-lg text-foreground line-clamp-1 group-hover:text-brand-orange transition-colors">{product.name}</h3>
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <h3 className="font-black text-lg text-foreground line-clamp-1 group-hover:text-brand-orange transition-colors">{product.name}</h3>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleEditClick(product)}
+                      className="h-8 w-8 rounded-lg hover:bg-brand-orange/10 hover:text-brand-orange transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-2 line-clamp-2 min-h-[2rem] font-medium leading-relaxed">{product.description}</p>
                   
                   <div className="flex items-center justify-between mt-6 pt-6 border-t border-white/5">
@@ -320,6 +384,141 @@ export default function MyProductsPage() {
                   <>
                     <Upload className="w-4 h-4 mr-2" />
                     Finalize Listing
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Product Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={(open) => { if (!open) { setShowEditDialog(false); resetForm(); } }}>
+          <DialogContent className="max-w-2xl rounded-[2.5rem] border-white/10 bg-slate-950/95 backdrop-blur-2xl p-0 overflow-hidden shadow-2xl">
+            <div className="p-8 space-y-8">
+              <DialogHeader>
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="w-12 h-12 bg-brand-orange/10 rounded-2xl flex items-center justify-center">
+                    <Pencil className="w-6 h-6 text-brand-orange" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-black tracking-tight">
+                      {(selectedProduct as any)?.approval === 'approved' ? 'Request Edit Review' : 'Update Asset'}
+                    </DialogTitle>
+                    <DialogDescription className="font-medium text-white/40">
+                      {(selectedProduct as any)?.approval === 'approved' 
+                        ? 'Approved products require admin review for updates.' 
+                        : 'Modify specifications for your marketplace entry'}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Left Side: Media */}
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-2">Visual Representation</label>
+                    <div className={cn(
+                      "aspect-square relative rounded-[2rem] border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center overflow-hidden group/img transition-all",
+                      isUploading && "animate-pulse border-brand-orange/30"
+                    )}>
+                      {form.imageUrl ? (
+                        <>
+                          <Image src={form.imageUrl} alt="Preview" fill className="object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button variant="destructive" size="icon" onClick={() => setForm(p => ({ ...p, imageUrl: "" }))} className="rounded-full">
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {isUploading ? (
+                            <div className="flex flex-col items-center gap-3">
+                              <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+                              <span className="text-[10px] font-black text-brand-orange uppercase tracking-widest">{progress}%</span>
+                            </div>
+                          ) : (
+                            <>
+                              <ImageIcon className="w-10 h-10 text-white/10 mb-4" />
+                              <label className="cursor-pointer">
+                                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                                <span className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white/60 transition-colors border border-white/5">
+                                  Upload Image
+                                </span>
+                              </label>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Side: Fields */}
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-2">Asset Name</label>
+                    <Input 
+                      value={form.name} 
+                      onChange={(e) => setForm({ ...form, name: e.target.value })} 
+                      placeholder="e.g. Premium Study Notes" 
+                      className="h-12 rounded-xl bg-white/5 border-white/5 focus:border-brand-orange/50 transition-all font-bold placeholder:text-white/10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-2">Description</label>
+                    <Textarea 
+                      value={form.description} 
+                      onChange={(e) => setForm({ ...form, description: e.target.value })} 
+                      placeholder="Detail the capabilities and quality of your asset..." 
+                      className="min-h-[100px] rounded-xl bg-white/5 border-white/5 focus:border-brand-orange/50 transition-all font-medium placeholder:text-white/10 resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-2">Price (B-Coins)</label>
+                      <Input 
+                        type="number" 
+                        value={form.price} 
+                        onChange={(e) => setForm({ ...form, price: e.target.value })} 
+                        placeholder="0" 
+                        className="h-12 rounded-xl bg-white/5 border-white/5 focus:border-brand-orange/50 transition-all font-black"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-2">Available Stock</label>
+                      <Input 
+                        type="number" 
+                        value={form.stock} 
+                        onChange={(e) => setForm({ ...form, stock: e.target.value })} 
+                        placeholder="0" 
+                        className="h-12 rounded-xl bg-white/5 border-white/5 focus:border-brand-orange/50 transition-all font-black"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="bg-white/5 p-6 mt-4">
+              <Button variant="ghost" onClick={() => setShowEditDialog(false)} className="rounded-xl font-bold text-white/40 hover:text-white hover:bg-white/5">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleUpdateProduct} 
+                disabled={isSubmitting || isUploading}
+                className="bg-brand-orange hover:bg-brand-orange/90 text-white font-black px-8 rounded-xl h-12 shadow-lg shadow-brand-orange/20"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {(selectedProduct as any)?.approval === 'approved' ? 'Submit Review Request' : 'Save Changes'}
                   </>
                 )}
               </Button>

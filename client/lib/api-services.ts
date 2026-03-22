@@ -552,6 +552,7 @@ export interface Product {
   image?: string;
   price: number;
   stock: number;
+  approval: 'pending' | 'approved' | 'rejected';
   metadata?: ProductMetadata;
   createdAt: string;
 }
@@ -620,6 +621,14 @@ export const marketApi = {
 
   getMyProducts: async (): Promise<ApiResponse<Product[]>> => {
     return api.get<Product[]>('/market/my-products');
+  },
+
+  updateProduct: async (id: number, data: { name?: string; description?: string; price?: number; stock?: number; imageUrl?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
+    return api.put<Product>(`/market/products/${id}`, data);
+  },
+
+  requestEditReview: async (id: number, data: { name?: string; description?: string; price?: number; stock?: number; imageUrl?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
+    return api.post<Product>(`/market/products/${id}/request-edit`, data);
   },
 };
 

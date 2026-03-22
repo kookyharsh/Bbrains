@@ -3,7 +3,7 @@ import {
     getAllProducts, getProduct, createProduct, updateProduct, deleteProduct,
     searchProductsHandler, addToCartHandler, getCartHandler,
     removeFromCartHandler, checkoutHandler, buyNowHandler,
-    getMyProducts, getPendingProducts, approveProduct,
+    getMyProducts, getPendingProducts, approveProduct, requestProductEdit,
     getAllThemes, getTheme, getLibrary, getDownloadUrl, applyTheme, getActiveTheme
 } from './market.controller.js';
 import verifyToken from '../../middleware/auth.middleware.js';
@@ -20,7 +20,9 @@ router.get('/products/search', verifyToken, searchProductsHandler);
 router.get('/products/:id', verifyToken, getProduct);
 // Any authenticated user can create products; approval is handled in controller
 router.post('/products', verifyToken, createProduct);
-router.put('/products/:id', verifyToken, authorize('teacher', 'admin'), updateProduct);
+// updateProduct controller now handles creator vs admin checks
+router.put('/products/:id', verifyToken, updateProduct);
+router.post('/products/:id/request-edit', verifyToken, requestProductEdit);
 router.delete('/products/:id', verifyToken, authorize('admin'), deleteProduct);
 
 // My Products (any user can see their own)
