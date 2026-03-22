@@ -17,7 +17,6 @@ import {
     AssignmentsTab as AdminAssignmentsTab, 
     AnnouncementsTab as AdminAnnouncementsTab, 
     RolesTab as AdminRolesTab,
-    UserRolesTab as AdminUserRolesTab, 
     ProductsTab as AdminProductsTab, 
     AchievementsTab as AdminAchievementsTab,
     AuditLogTab as AdminAuditLogTab, 
@@ -35,7 +34,7 @@ import {
 
 type AdminTab =
     | "overview" | "teachers" | "students" | "assignments"
-    | "announcements" | "roles" | "userroles" | "products"
+    | "announcements" | "roles" | "products"
     | "achievements" | "audit" | "transactions" | "xpconfig" | "config" | "suggestions"
     | "academics" | "stats" | "rolesaccess" | "manageusers"
 
@@ -55,7 +54,6 @@ const TABS: TabItem[] = [
     { id: "students", label: "Students", icon: <Users className="size-4" />, description: "Manage student accounts", group: "Users" },
     { id: "rolesaccess", label: "Roles & Access", icon: <Shield className="size-4" />, description: "Manage roles, permissions & user access", group: "Users" },
     { id: "roles", label: "Quick Roles", icon: <Shield className="size-4" />, description: "Create & manage custom roles", group: "Users" },
-    { id: "userroles", label: "User Roles", icon: <Shield className="size-4" />, description: "Assign roles to users", group: "Users" },
     // Academic group
     { id: "academics", label: "Academics", icon: <GraduationCap className="size-4" />, description: "Courses, students & assignments", group: "Academic" },
     { id: "assignments", label: "Assignments", icon: <BookOpen className="size-4" />, description: "Manage all assignments", group: "Academic" },
@@ -213,7 +211,6 @@ export function AdminDashboard() {
                         {activeTab === "assignments" && <AdminAssignmentsTab />}
                         {activeTab === "announcements" && <AdminAnnouncementsTab />}
                         {activeTab === "roles" && <AdminRolesTab />}
-                        {activeTab === "userroles" && <AdminUserRolesTab />}
                         {activeTab === "products" && <AdminProductsTab />}
                         {activeTab === "achievements" && <AdminAchievementsTab />}
                         {activeTab === "xpconfig" && <AdminXpConfigTab />}

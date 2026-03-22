@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { TeacherDashboard } from "./TeacherDashboard"
 import { dashboardApi } from "@/lib/api-services"
 
 export default function TeacherPage() {
@@ -18,6 +17,10 @@ export default function TeacherPage() {
                     if (userType !== 'teacher' && userType !== 'admin') {
                         router.push('/dashboard')
                         return
+                    } else if (userType === 'teacher') {
+                        router.push('/teacher/overview')
+                    } else if (userType === 'admin') {
+                        router.push('/admin/overview')
                     }
                 } else {
                     router.push('/dashboard')
@@ -40,5 +43,5 @@ export default function TeacherPage() {
         )
     }
 
-    return <TeacherDashboard />
+    return null
 }

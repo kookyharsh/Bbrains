@@ -11,7 +11,7 @@ import { AcademicsDialog } from "./_components/AcademicsDialog";
 import { DeleteDialog } from "./_components/DeleteDialog";
 import { courseApi, userApi, assignmentApi } from "@/lib/api-services";
 import { Course, AdminAssignment, Student } from "./_types";
-import { Loader2 } from "lucide-react";
+import { BookOpen, ClipboardList, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AcademicsPage() {
@@ -58,6 +58,27 @@ export default function AcademicsPage() {
     setShowDialog(true);
   };
 
+  const statCards = [
+    {
+      label: "Courses",
+      value: courses.length,
+      icon: BookOpen,
+      accent: "from-blue-500/20 to-cyan-500/10 border-blue-500/30"
+    },
+    {
+      label: "Students",
+      value: students.length,
+      icon: Users,
+      accent: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30"
+    },
+    {
+      label: "Assignments",
+      value: assignments.length,
+      icon: ClipboardList,
+      accent: "from-amber-500/20 to-orange-500/10 border-amber-500/30"
+    },
+  ];
+
   if (loading && courses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -69,47 +90,79 @@ export default function AcademicsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Academics</h1>
+      <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-card/70 p-5 md:p-6">
+        <div className="pointer-events-none absolute inset-0 opacity-40">
+          <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
+          <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
+        </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <AcademicsControls 
-          tab={tab} 
-          search={search} 
-          onSearchChange={setSearch} 
-          onAddClick={handleAddClick} 
-        />
+        <div className="relative space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">Academic Operations</h2>
+            <p className="text-sm text-muted-foreground">Manage courses, enrollments, and assignments from one workspace.</p>
+          </div>
 
-        <TabsContent value="courses">
-          <Card>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {statCards.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div
+                  key={stat.label}
+                  className={`rounded-2xl border bg-gradient-to-br ${stat.accent} p-4 backdrop-blur-sm`}
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
+                    <Icon className="h-4 w-4 text-foreground/80" />
+                  </div>
+                  <p className="mt-2 text-2xl font-black leading-none text-foreground">{stat.value}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <Tabs value={tab} onValueChange={setTab} className="flex-col gap-4">
+        <div className="rounded-2xl border border-border/70 bg-card/70 p-3 md:p-4">
+          <AcademicsControls
+            tab={tab}
+            search={search}
+            onSearchChange={setSearch}
+            onAddClick={handleAddClick}
+          />
+        </div>
+
+        <TabsContent value="courses" className="mt-0">
+          <Card className="overflow-hidden rounded-2xl border border-border/70 bg-card/90">
             <CardContent className="p-0">
-              <CoursesTable 
-                courses={courses} 
-                search={search} 
-                onDelete={setDeleteId} 
+              <CoursesTable
+                courses={courses}
+                search={search}
+                onDelete={setDeleteId}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="students">
-          <Card>
+        <TabsContent value="students" className="mt-0">
+          <Card className="overflow-hidden rounded-2xl border border-border/70 bg-card/90">
             <CardContent className="p-0">
-              <StudentsTable 
-                students={students} 
-                search={search} 
-                onDelete={(id) => setDeleteId(id)} 
+              <StudentsTable
+                students={students}
+                search={search}
+                onDelete={(id) => setDeleteId(id)}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="assignments">
-          <Card>
+        <TabsContent value="assignments" className="mt-0">
+          <Card className="overflow-hidden rounded-2xl border border-border/70 bg-card/90">
             <CardContent className="p-0">
-              <AssignmentsTable 
-                assignments={assignments} 
-                search={search} 
-                onDelete={(id) => setDeleteId(id)} 
+              <AssignmentsTable
+                assignments={assignments}
+                search={search}
+                onDelete={(id) => setDeleteId(id)}
               />
             </CardContent>
           </Card>

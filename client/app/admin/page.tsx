@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AdminDashboard } from "./AdminDashboard"
 import { dashboardApi } from "@/lib/api-services"
 
 export default function AdminPage() {
@@ -18,6 +17,8 @@ export default function AdminPage() {
                     if (userType !== 'admin') {
                         router.push('/dashboard')
                         return
+                    } else {
+                        router.push('/admin/overview')
                     }
                 } else {
                     router.push('/dashboard')
@@ -40,5 +41,5 @@ export default function AdminPage() {
         )
     }
 
-    return <AdminDashboard />
+    return null
 }
