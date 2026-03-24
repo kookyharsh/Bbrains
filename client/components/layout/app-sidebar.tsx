@@ -1,33 +1,18 @@
 "use client"
-
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarRail,
+    Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
+    SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
+    SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail,
     useSidebar,
 } from "@/components/ui/sidebar"
-
 import Link from "next/link";
-import {
-    Settings,
-    BarChart3,
-    Circle
-} from "lucide-react";
+import { Settings, BarChart3 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { sidebarItems, baseSidebarItems, adminExtraItems, teacherExtraItems } from "./sidebarData"
+import { getSidebarGroups, Role } from "./sidebarData"
 import { UserProfileCard, UserStatus, statusColors, statusLabels } from "../user-profile-card"
 import { useNotifications } from "../providers/notification-provider"
-import { dashboardApi } from "@/services/api/client"
 
 interface AppSidebarProps {
     user?: {
@@ -51,14 +36,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
     const { state } = useSidebar()
     const isCollapsed = state === "collapsed"
     const { unreadCount } = useNotifications()
-    
+
     const [showProfileCard, setShowProfileCard] = useState(false)
     const [userStatus, setUserStatus] = useState<UserStatus>("online")
-    
-    const userType = user?.type?.toLowerCase() || 'student'
 
-    const extraItems = userType === 'admin' ? adminExtraItems : userType === 'teacher' ? teacherExtraItems : []
-    const items = [...extraItems, ...baseSidebarItems]
+    const role = (user?.type?.toLowerCase() ?? "student") as Role
+    const groups = getSidebarGroups(role)
 
     return (
         <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -72,77 +55,83 @@ export function AppSidebar({ user }: AppSidebarProps) {
                             <span className="font-bold text-xl tracking-tight truncate">Bbrains</span>
                         )}
                     </div>
-
                 </div>
             </SidebarHeader>
 
             <SidebarContent className={`bg-sidebar custom-scrollbar ${isCollapsed ? "px-1.5" : "px-3"}`}>
-                <SidebarGroup>
-                    <SidebarGroupLabel className="px-4 text-[10px] font-bold text-sidebar-foreground/60 uppercase tracking-[0.1em] mb-4 group-data-[collapsible=icon]:hidden">
-                        Main menu
-                    </SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu className={`${isCollapsed ? "space-y-2" : "space-y-1.5"}`}>
-                            {items.map((item) => {
-                                const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
-                                const isChat = item.url === "/chat";
-                                return (
-                                    <React.Fragment key={item.url}>
-                                        <SidebarMenuItem>
-                                            <SidebarMenuButton asChild tooltip={item.title}>
-                                                <Link
-                                                    href={item.url}
-                                                    className={`flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl transition-all duration-200 ${isCollapsed ? "!size-11 !min-h-0 !p-0 !gap-0 justify-center mx-auto" : ""} ${isActive
-                                                        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm font-semibold"
-                                                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/10"
-                                                        }`}
-                                                >
-                                                    <div className="relative">
-                                                        <item.icon className={`${isCollapsed ? "h-[22px] w-[22px]" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
-                                                        {isChat && unreadCount > 0 && isCollapsed && (
-                                                            <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
-                                                        )}
-                                                    </div>
-                                                    <span className="text-[13px] group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
-                                                    {isChat && unreadCount > 0 && !isCollapsed && (
-                                                        <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full group-data-[collapsible=icon]:hidden">
-                                                            {unreadCount}
-                                                        </span>
-                                                    )}
-                                                </Link>
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
+                {groups.map((group, groupIndex) => (
+                    <SidebarGroup key={groupIndex}>
+                        <SidebarGroupLabel className="px-4 text-[10px] font-bold text-sidebar-foreground/60 uppercase tracking-[0.1em] mb-4 group-data-[collapsible=icon]:hidden">
+                            {/* First group always says "Main Menu"; role panels use their label */}
+                            {group.groupLabel ?? "Main Menu"}
+                        </SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu className={`${isCollapsed ? "space-y-2" : "space-y-1.5"}`}>
+                                {group.items.map((item) => {
+                                    const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
+                                    const isChat = item.url === "/chat";
 
-                                        {item.subItems && item.subItems.length > 0 && isActive && (
-                                            <div className="group-data-[collapsible=icon]:hidden">
-                                                <SidebarMenu className="mt-1 space-y-1">
-                                                    {item.subItems.map((subItem) => {
-                                                        const isSubActive = pathname === subItem.url;
-                                                        return (
-                                                            <SidebarMenuItem key={subItem.url} className="ml-10">
-                                                                <SidebarMenuButton asChild>
-                                                                    <Link
-                                                                        href={subItem.url}
-                                                                        className={`flex items-center gap-3 py-2 transition-colors text-[12px] ${isSubActive
-                                                                            ? "text-ui-light-textPrimary dark:text-ui-dark-textPrimary font-medium"
-                                                                            : "text-ui-light-textSecondary hover:text-ui-light-textPrimary dark:text-ui-dark-textSecondary dark:hover:text-white"
-                                                                            }`}
-                                                                    >
-                                                                        <span>{subItem.title}</span>
-                                                                    </Link>
-                                                                </SidebarMenuButton>
-                                                            </SidebarMenuItem>
-                                                        )
-                                                    })}
-                                                </SidebarMenu>
-                                            </div>
-                                        )}
-                                    </React.Fragment>
-                                )
-                            })}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                                    return (
+                                        <React.Fragment key={item.url}>
+                                            <SidebarMenuItem>
+                                                <SidebarMenuButton asChild tooltip={item.title}>
+                                                    <Link
+                                                        href={item.url}
+                                                        className={`flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl transition-all duration-200
+                                                            ${isCollapsed ? "!size-11 !min-h-0 !p-0 !gap-0 justify-center mx-auto" : ""}
+                                                            ${isActive
+                                                                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm font-semibold"
+                                                                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/10"
+                                                            }`}
+                                                    >
+                                                        <div className="relative">
+                                                            <item.icon className={`${isCollapsed ? "h-[22px] w-[22px]" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
+                                                            {isChat && unreadCount > 0 && isCollapsed && (
+                                                                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
+                                                            )}
+                                                        </div>
+                                                        <span className="text-[13px] group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
+                                                        {isChat && unreadCount > 0 && !isCollapsed && (
+                                                            <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full group-data-[collapsible=icon]:hidden">
+                                                                {unreadCount}
+                                                            </span>
+                                                        )}
+                                                    </Link>
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+
+                                            {item.subItems && item.subItems.length > 0 && isActive && (
+                                                <div className="group-data-[collapsible=icon]:hidden">
+                                                    <SidebarMenu className="mt-1 space-y-1">
+                                                        {item.subItems.map((subItem) => {
+                                                            const isSubActive = pathname === subItem.url;
+                                                            return (
+                                                                <SidebarMenuItem key={subItem.url} className="ml-10">
+                                                                    <SidebarMenuButton asChild>
+                                                                        <Link
+                                                                            href={subItem.url}
+                                                                            className={`flex items-center gap-3 py-2 transition-colors text-[12px]
+                                                                                ${isSubActive
+                                                                                    ? "text-ui-light-textPrimary dark:text-ui-dark-textPrimary font-medium"
+                                                                                    : "text-ui-light-textSecondary hover:text-ui-light-textPrimary dark:text-ui-dark-textSecondary dark:hover:text-white"
+                                                                                }`}
+                                                                        >
+                                                                            <span>{subItem.title}</span>
+                                                                        </Link>
+                                                                    </SidebarMenuButton>
+                                                                </SidebarMenuItem>
+                                                            )
+                                                        })}
+                                                    </SidebarMenu>
+                                                </div>
+                                            )}
+                                        </React.Fragment>
+                                    )
+                                })}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ))}
             </SidebarContent>
 
             <SidebarFooter className="bg-sidebar px-3 pb-6 pt-4 border-t border-sidebar-border">
@@ -154,9 +143,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                             title="Settings"
                         >
                             <Settings className="h-5 w-5 shrink-0" />
-                            {!isCollapsed && (
-                                <span className="font-medium text-[13px]">Settings</span>
-                            )}
+                            {!isCollapsed && <span className="font-medium text-[13px]">Settings</span>}
                         </Link>
 
                         <div className={isCollapsed ? "flex justify-center" : "px-2"}>
@@ -187,20 +174,19 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                     </div>
                                 )}
                             </button>
-                            
+
                             {showProfileCard && !isCollapsed && (
-                                <UserProfileCard 
-                                    user={user} 
-                                    userStatus={userStatus} 
-                                    setUserStatus={setUserStatus} 
+                                <UserProfileCard
+                                    user={user}
+                                    userStatus={userStatus}
+                                    setUserStatus={setUserStatus}
                                 />
                             )}
                         </div>
                     </div>
                 )}
             </SidebarFooter>
-
             <SidebarRail />
-        </Sidebar >
+        </Sidebar>
     )
 }

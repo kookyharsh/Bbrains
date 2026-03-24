@@ -289,10 +289,12 @@ export interface Announcement {
 
 
 export interface Event {
-  id: string;
+  id: string | number;
   title: string;
   description?: string;
   date: string;
+  startDate: string;
+  endDate: string;
   time?: string;
   location?: string;
   type?: string;
