@@ -3,8 +3,8 @@
 import React from "react"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/admin/DataTable"
-import { RoleBadge } from "@/components/admin/RoleBadge"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
 import { fmtCurrency } from "../_types"
 import type { ApiProduct } from "../_types"
 

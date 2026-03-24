@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useCallback } from "react"
 import { getAuthedClient } from "@/lib/http"
 import { Loader2 } from "lucide-react"
-import { DataTable } from "@/components/admin/DataTable"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { CrudDrawer } from "@/components/admin/CrudDrawer"
-import { ConfirmDialog } from "@/components/admin/ConfirmDialog"
-import { FormInput } from "@/components/admin/form/FormInput"
-import { FormTextarea } from "@/components/admin/form/FormTextarea"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { CrudDrawer } from "@/app/(dashboard)/admin/_components/CrudDrawer"
+import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
+import { FormInput } from "@/app/(dashboard)/admin/_components/form/FormInput"
+import { FormTextarea } from "@/app/(dashboard)/admin/_components/form/FormTextarea"
 import type { ApiAnnouncement } from "@/lib/types/api"
 
 

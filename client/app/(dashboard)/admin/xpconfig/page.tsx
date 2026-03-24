@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from "react"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { xpApi } from "@/lib/api-services"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { DataTable } from "@/components/admin/DataTable"
-import { CrudModal } from "@/components/admin/CrudModal"
-import { ConfirmDialog } from "@/components/admin/ConfirmDialog"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { CrudModal } from "@/app/(dashboard)/admin/_components/CrudModal"
+import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
 
 export default function XpConfigPage() {
     const [levels, setLevels] = useState<any[]>([])

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { getAuthedClient } from "@/lib/http"
 import { Loader2, Users, BookOpen, CheckCircle, Award } from "lucide-react"
-import { StatCard } from "@/components/admin/StatCard"
+import { StatCard } from "@/app/(dashboard)/admin/_components/StatCard"
 
 export default function OverviewPage() {
     const [stats, setStats] = useState({ students: 0, assignments: 0, pendingProducts: 0, announcements: 0 })

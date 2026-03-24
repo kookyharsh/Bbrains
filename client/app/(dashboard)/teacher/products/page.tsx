@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback } from "react"
 import { getAuthedClient } from "@/lib/http"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/components/admin/DataTable"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { RoleBadge } from "@/components/admin/RoleBadge"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
 import type { ApiProduct } from "@/lib/types/api"
 
 

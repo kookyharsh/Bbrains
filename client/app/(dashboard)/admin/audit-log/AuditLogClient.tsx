@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { DataTable } from "@/components/admin/DataTable"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
 import { CategoryFilter } from "./_components/CategoryFilter"
 import { fetchAuditLogs } from "./data"
 import { categoryColors } from "./_types"

@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
-import { DataTable } from "@/components/admin/DataTable"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { RoleBadge } from "@/components/admin/RoleBadge"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
 import type { ApiUser } from "@/lib/types/api"
 
 

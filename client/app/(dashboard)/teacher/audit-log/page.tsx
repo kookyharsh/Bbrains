@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react"
 import { getAuthedClient } from "@/lib/http"
 import { Loader2 } from "lucide-react"
-import { DataTable } from "@/components/admin/DataTable"
-import { SectionHeader } from "@/components/admin/SectionHeader"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
 import type { ApiAuditLog } from "@/lib/types/api"
 
 

@@ -67,9 +67,9 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         if (userResp.success && userResp.data) {
           const role = userResp.data.type
           if (role === 'admin') {
-            router.push('/admin')
+            router.push('/admin/overview')
           } else if (role === 'teacher') {
-            router.push('/teacher')
+            router.push('/teacher/overview')
           } else {
             router.push('/dashboard')
           }

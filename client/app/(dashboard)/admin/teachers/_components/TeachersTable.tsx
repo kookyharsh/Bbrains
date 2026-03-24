@@ -1,8 +1,8 @@
 "use client"
 
 import React from "react"
-import { DataTable } from "@/components/admin/DataTable"
-import { RoleBadge } from "@/components/admin/RoleBadge"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
 import { fullName, type ApiUser } from "../_types"
 
 interface TeachersTableProps {

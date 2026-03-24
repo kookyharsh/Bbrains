@@ -18,7 +18,7 @@ import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { attendanceApi, AttendanceRecord } from "@/lib/api-services"
 import { getAuthedClient } from "@/lib/http"
-import { SectionHeader } from "@/components/admin/SectionHeader"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
 import type { ApiUser } from "@/lib/types/api"
 import { toast } from "sonner"
 

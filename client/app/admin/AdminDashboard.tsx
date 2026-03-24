@@ -28,7 +28,7 @@ import {
     StatsTab as AdminStatsTab,
     RolesAccessTab as AdminRolesAccessTab,
     ManageUsersTab as AdminManageUsersTab,
-} from "@/components/admin/tabs"
+} from "@/app/(dashboard)/admin/_components/tabs"
 
 // ─── Tab Config ───────────────────────────────────────────────────────────────
 

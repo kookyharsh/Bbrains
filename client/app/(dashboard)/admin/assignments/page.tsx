@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { getAuthedClient } from "@/lib/http"
-import { DataTable } from "@/components/admin/DataTable"
-import { CrudDrawer } from "@/components/admin/CrudDrawer"
-import { ConfirmDialog } from "@/components/admin/ConfirmDialog"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { FormInput, FormSelect, FormTextarea } from "@/components/admin/form"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { CrudDrawer } from "@/app/(dashboard)/admin/_components/CrudDrawer"
+import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { FormInput, FormSelect, FormTextarea } from "@/app/(dashboard)/admin/_components/form"
 import type { ApiAssignment, ApiCourse } from "@/lib/types/api"
 
 function fmtDate(s: string) {

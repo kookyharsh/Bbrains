@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react"
 import { api } from "@/lib/api"
 import { Loader2, ArrowUpDown } from "lucide-react"
-import { SectionHeader } from "@/components/admin/SectionHeader"
-import { DataTable } from "@/components/admin/DataTable"
-import { RoleBadge } from "@/components/admin/RoleBadge"
+import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
 import type { ApiUser, ApiTransaction } from "@/lib/types/api"
 import { toast } from "sonner"
 

@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { DataTable } from "@/components/admin/DataTable"
+import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
 import { getTypeIcon, type SystemConfig } from "../_types"
 
 interface ConfigTableProps {
