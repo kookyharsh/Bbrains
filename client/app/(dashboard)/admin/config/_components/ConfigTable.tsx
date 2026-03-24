@@ -2,7 +2,7 @@
 
 import { Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { DataTable } from "@/features/admin/components/DataTable"
 import { getTypeIcon, type SystemConfig } from "../_types"
 
 interface ConfigTableProps {
@@ -56,7 +56,7 @@ export function ConfigTable({ loading, data, onEdit, onDelete }: ConfigTableProp
             data={data}
             isLoading={loading}
             searchKeys={["key", "description"]}
-            actions={(row) => (
+            extraActions={(row) => (
                 <div className="flex items-center justify-end gap-2">
                     <button
                         onClick={() => onEdit(row)}

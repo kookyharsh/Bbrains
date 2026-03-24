@@ -39,7 +39,7 @@ import {
   Download,
   Building2,
 } from "lucide-react";
-import { transactionApi, Transaction } from "@/lib/api-services";
+import { transactionApi, type Transaction } from "@/services/api/client";
 
 interface PaymentItem {
   name: string;
@@ -160,7 +160,7 @@ export default function PaymentHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedPayment, setSelectedPayment] = useState<Payment | PaymentDetails | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   const fetchPayments = async () => {
     try {
@@ -172,19 +172,19 @@ export default function PaymentHistoryPage() {
       if (txnRes.success && txnRes.data) {
         const txns = Array.isArray(txnRes.data) ? txnRes.data : [];
         walletPayments = txns.map((t: Transaction) => ({
-          id: t.id,
+          id: String(t.id),
           type: "wallet" as const,
-          amount: t.type === "credit" || t.type === "received" ? Math.abs(t.amount) : -Math.abs(t.amount),
-          status: "completed" as const,
-          description: t.description,
-          createdAt: t.createdAt,
+          amount: t.type === "credit" ? Math.abs(Number(t.amount)) : -Math.abs(Number(t.amount)),
+          status: (t.status === "success" ? "completed" : t.status === "pending" ? "pending" : "failed") as any,
+          description: t.note || "Wallet Transaction",
+          createdAt: t.transactionDate,
         }));
       }
 
       const marketPayments: Payment[] = mockMarketOrders.map((order) => ({
         id: order.id,
         type: "market",
-        amount: order.total,
+        amount: -order.total,
         status: order.status,
         description: order.items?.map(i => i.name).join(", ") || "Market Order",
         createdAt: order.date,
@@ -197,7 +197,7 @@ export default function PaymentHistoryPage() {
       setPayments([...mockWalletPayments, ...mockMarketOrders.map((order) => ({
         id: order.id,
         type: "market" as const,
-        amount: order.total,
+        amount: -order.total,
         status: order.status,
         description: order.items?.map(i => i.name).join(", ") || "Market Order",
         createdAt: order.date,
@@ -243,7 +243,7 @@ export default function PaymentHistoryPage() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
+    return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -254,7 +254,7 @@ export default function PaymentHistoryPage() {
 
   const formatShortDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
+    return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -462,7 +462,7 @@ export default function PaymentHistoryPage() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                {selectedPayment && "type" in selectedPayment && selectedPayment.type === "market" ? (
+                {selectedPayment && selectedPayment.type === "market" ? (
                   <>
                     <ShoppingBag className="w-5 h-5 text-blue-600" />
                     Market Order Details
@@ -531,11 +531,11 @@ export default function PaymentHistoryPage() {
                       Type
                     </span>
                     <span className="font-medium text-foreground capitalize">
-                      {"type" in selectedPayment ? selectedPayment.type : "Payment"}
+                      {selectedPayment.type}
                     </span>
                   </div>
 
-                  {"details" in selectedPayment && selectedPayment.details && (
+                  {selectedPayment.details && (
                     <>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground flex items-center gap-2">
@@ -547,11 +547,11 @@ export default function PaymentHistoryPage() {
                         </span>
                       </div>
 
-                      {"items" in selectedPayment.details && selectedPayment.details.items && (
+                      {selectedPayment.details.items && (
                         <div className="border-t border-border pt-3 mt-3">
                           <p className="text-muted-foreground text-sm mb-2">Items</p>
                           <div className="space-y-2">
-                            {selectedPayment.details.items.map((item, i) => (
+                            {selectedPayment.details.items.map((item: PaymentItem, i: number) => (
                               <div key={i} className="flex items-center gap-3">
                                 <span className="text-xl">{item.image}</span>
                                 <div className="flex-1 min-w-0">

@@ -1,11 +1,11 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { api } from "@/lib/api"
+import { api } from "@/services/api/client"
 import { Loader2, ArrowUpDown } from "lucide-react"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
-import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { DataTable } from "@/features/admin/components/DataTable"
+import { RoleBadge } from "@/features/admin/components/RoleBadge"
 import type { ApiUser, ApiTransaction } from "@/lib/types/api"
 import { toast } from "sonner"
 

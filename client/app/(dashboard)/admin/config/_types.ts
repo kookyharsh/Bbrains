@@ -1,4 +1,5 @@
-import type { SystemConfig } from "@/lib/api-services"
+import type { SystemConfig } from "@/services/api/client"
+export type { SystemConfig }
 
 import { ToggleLeft, Hash, Braces, Type } from "lucide-react"
 import React, { type ReactNode } from "react"

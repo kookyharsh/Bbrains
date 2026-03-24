@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { api } from "@/lib/api"
+import { api } from "@/services/api/client"
 import { Loader2, XCircle, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {

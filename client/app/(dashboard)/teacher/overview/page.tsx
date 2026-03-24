@@ -1,9 +1,9 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { getAuthedClient } from "@/lib/http"
+import { getAuthedClient } from "@/services/api/client"
 import { Loader2, Users, BookOpen, CheckCircle, Award } from "lucide-react"
-import { StatCard } from "@/app/(dashboard)/admin/_components/StatCard"
+import { StatCard } from "@/features/admin/components/StatCard"
 
 export default function OverviewPage() {
     const [stats, setStats] = useState({ students: 0, assignments: 0, pendingProducts: 0, announcements: 0 })

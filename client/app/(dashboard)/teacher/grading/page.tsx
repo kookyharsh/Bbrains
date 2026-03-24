@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { getAuthedClient } from "@/lib/http"
+import { getAuthedClient } from "@/services/api/client"
 import { Loader2, BookOpen, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { CrudDrawer } from "@/app/(dashboard)/admin/_components/CrudDrawer"
-import { FormInput } from "@/app/(dashboard)/admin/_components/form/FormInput"
+import { DataTable } from "@/features/admin/components/DataTable"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
+import { FormInput } from "@/features/admin/components/form/FormInput"
 import type { ApiAssignment, ApiSubmission, ApiGrade } from "@/lib/types/api"
 
 function fmtDate(s: string) {

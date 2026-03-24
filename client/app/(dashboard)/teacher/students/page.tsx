@@ -1,15 +1,15 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { getAuthedClient } from "@/lib/http"
+import { getAuthedClient } from "@/services/api/client"
 import { Loader2, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { RoleBadge } from "@/app/(dashboard)/admin/_components/RoleBadge"
+import { DataTable } from "@/features/admin/components/DataTable"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { RoleBadge } from "@/features/admin/components/RoleBadge"
 import type { ApiUser } from "@/lib/types/api"
 
 

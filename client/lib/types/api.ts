@@ -1,5 +1,7 @@
 // Shared API Types
 
+export type LogCategory = "AUTH" | "ACADEMIC" | "MARKET" | "FINANCE" | "USER" | "SYSTEM";
+
 export interface ApiUser {
     id: string
     username: string
@@ -12,6 +14,7 @@ export interface ApiUser {
         sex?: string
         dob?: string
         phone?: string
+        bio?: string
     }
     wallet?: { id: string; balance: number }
     xp?: { xp: number; level: number }
@@ -24,6 +27,7 @@ export interface ApiAssignment {
     title: string
     description?: string
     content?: string
+    file?: string // Added missing file property
     dueDate: string
     createdAt: string
     course?: { name: string }
@@ -124,5 +128,40 @@ export interface ApiGrade {
     user?: { username: string }
 }
 
-export type LogCategory = "AUTH" | "ACADEMIC" | "MARKET" | "FINANCE" | "USER" | "SYSTEM"
-
+export interface DashboardData {
+  user: ApiUser;
+  stats: {
+    totalCourses: number;
+    xp: number;
+    level: number;
+    nextLevelRequiredXp?: number;
+    walletBalance: number;
+    leaderboardRank: number | null;
+    totalAchievements: number;
+    streak: number;
+  };
+  wallet: {
+    id?: string;
+    balance: number | string;
+    pinSet?: boolean;
+  };
+  attendance: {
+    total: number;
+    present: number;
+    absent: number;
+    percentage: number;
+    records?: any[];
+  };
+  leaderboard: any[];
+  announcements: ApiAnnouncement[];
+  recentGrades?: {
+    assignment: { title: string };
+    grade: string | number;
+    gradedAt: string;
+  }[];
+  events: any[];
+  streak: {
+    current: number;
+    longest: number;
+  };
+}

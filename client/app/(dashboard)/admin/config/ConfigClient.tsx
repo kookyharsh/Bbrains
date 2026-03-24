@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { Plus } from "lucide-react"
-import { configApi } from "@/lib/api-services"
+import { configApi } from "@/services/api/client"
 import { toast } from "sonner"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { CrudModal } from "@/app/(dashboard)/admin/_components/CrudModal"
-import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { CrudModal } from "@/features/admin/components/CrudModal"
+import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
 import { ConfigTable } from "./_components/ConfigTable"
 import { ConfigForm } from "./_components/ConfigForm"
 import { fetchConfigs } from "./data"
@@ -53,8 +53,7 @@ export function ConfigClient({ initialConfigs }: ConfigClientProps) {
         setIsModalOpen(true)
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const handleSubmit = async () => {
         setSubmitting(true)
         try {
             const res = await configApi.updateConfig(formData)

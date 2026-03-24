@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { api } from "@/lib/api"
+import { api } from "@/services/api/client"
 import { toast } from "sonner"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
 import { StudentsTable } from "./_components/StudentsTable"
 import { fetchStudents } from "./data"
 import type { ApiUser } from "./_types"

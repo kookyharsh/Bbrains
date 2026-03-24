@@ -17,7 +17,7 @@ import {
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Palette, Search, Star, Download, Check, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { themeApi, Product, ProductMetadata } from "@/lib/api-services";
+import { themeApi, Product, ProductMetadata } from "@/services/api/client";
 
 export default function ThemesPage() {
   const [themes, setThemes] = useState<Product[]>([]);

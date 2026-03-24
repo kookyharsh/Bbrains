@@ -5,11 +5,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import { ChatMessageItem } from '@/components/chat-message'
-import { useChatScroll } from '@/hooks/use-chat-scroll'
+import { useChatScroll } from '@/features/chat/hooks/use-chat-scroll'
 import {
   useRealtimeChat,
   type ChatMessage,
-} from '@/hooks/use-realtime-chat'
+} from '@/features/chat/hooks/use-realtime-chat'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 

@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { cn } from '@/lib/utils'
-import type { ChatMessage } from '@/hooks/use-realtime-chat'
+import type { ChatMessage } from '@/features/chat/hooks/use-realtime-chat'
 
 interface ChatMessageItemProps {
   message: ChatMessage

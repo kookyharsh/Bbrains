@@ -7,11 +7,11 @@ import {
   ChevronRight, Star, Settings, CheckCircle2, UserCircle2
 } from "lucide-react";
 import { DashboardContent } from "@/components/dashboard-content";
-import { dashboardApi, userApi, type User as UserType } from "@/lib/api-services";
-import { CrudModal } from "@/components/admin/CrudModal";
-import { FormInput } from "@/components/admin/form/FormInput";
-import { FormTextarea } from "@/components/admin/form/FormTextarea";
-import { FormSelect } from "@/components/admin/form/FormSelect";
+import { dashboardApi, userApi, type User as UserType } from "@/services/api/client";
+import { CrudModal } from "@/features/admin/components/CrudModal";
+import { FormInput } from "@/features/admin/components/form/FormInput";
+import { FormTextarea } from "@/features/admin/components/form/FormTextarea";
+import { FormSelect } from "@/features/admin/components/form/FormSelect";
 import { toast } from "sonner";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 
+import { User } from "@/services/api/client"
+
 // Mock user hook - replace with actual auth implementation
 export function useUser() {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

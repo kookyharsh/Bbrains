@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardContent } from "@/components/dashboard-content";
-import { marketApi, Product } from "@/lib/api-services";
+import { marketApi, Product } from "@/services/api/client";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 

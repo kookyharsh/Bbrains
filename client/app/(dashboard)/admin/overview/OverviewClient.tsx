@@ -1,6 +1,6 @@
 "use client"
 
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { OverviewStatsGrid } from "./_components/OverviewStatsGrid"
 import type { OverviewStats } from "./_types"
 

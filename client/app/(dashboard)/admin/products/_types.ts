@@ -1,4 +1,5 @@
-export { type ApiProduct } from "@/lib/types/api";
+import type { ApiProduct } from "@/lib/types/api";
+export type { ApiProduct };
 
 export interface ProductFormData {
     name: string;

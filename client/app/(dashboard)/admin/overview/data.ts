@@ -1,4 +1,4 @@
-import { getAuthToken } from "@/lib/api"
+import { getAuthToken } from "@/services/api/client"
 import { type OverviewStats, emptyStats } from "./_types"
 
 const getBaseUrl = () => {

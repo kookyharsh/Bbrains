@@ -2,16 +2,16 @@
 
 import * as React from "react"
 import { useUser } from "@/hooks/use-user"
-import { useWallet } from "@/hooks/use-wallet"
-import { useThemes } from "@/components/theme-provider"
+import { useWallet } from "@/features/wallet/hooks/use-wallet"
+import { useTheme } from "@/context/theme"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckersCircle, DollarSign, Sparkles } from "lucide-react"
+import { CheckCircle, DollarSign, Sparkles } from "lucide-react"
 
 export default function ThemesPage() {
   const { user } = useUser()
   const { wallet } = useWallet()
-  const { themes, userThemes, hasThemeAccess, addTheme } = useThemes()
+  const { themes, userThemes, hasThemeAccess, addTheme, currentTheme, setTheme } = useTheme()
   
   const [loading, setLoading] = React.useState(false)
   
@@ -62,7 +62,7 @@ export default function ThemesPage() {
       if (themeDef) {
         const root = document.documentElement
         Object.entries(themeDef.variables).forEach(([key, value]) => {
-          root.style.setProperty(key, value)
+          root.style.setProperty(key, value as string)
         })
         root.className = `theme-${themeId}`
       }
@@ -77,7 +77,7 @@ export default function ThemesPage() {
     const themeDef = themes.find(t => t.id === currentTheme)
     if (themeDef) {
       Object.entries(themeDef.variables).forEach(([key, value]) => {
-        root.style.setProperty(key, value)
+        root.style.setProperty(key, value as string)
       })
       root.className = `theme-${currentTheme}`
     }

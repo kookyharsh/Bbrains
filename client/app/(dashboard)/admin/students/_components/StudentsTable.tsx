@@ -1,6 +1,6 @@
 "use client"
 
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { DataTable } from "@/features/admin/components/DataTable"
 import { fullName, fmtCurrency, type ApiUser } from "../_types"
 
 interface StudentsTableProps {

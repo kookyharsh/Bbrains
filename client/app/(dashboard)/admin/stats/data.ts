@@ -1,4 +1,4 @@
-import { getAuthedClient } from "@/lib/http";
+import { getAuthedClient } from "@/services/api/client";
 import type { AdminStats } from "./_types";
 
 export async function fetchAdminStats(): Promise<AdminStats> {

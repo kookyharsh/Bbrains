@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { FormInput, FormSelect } from "@/app/(dashboard)/admin/_components/form"
+import { FormInput, FormSelect } from "@/features/admin/components/form"
 import type { TeacherForm } from "../_types"
 
 interface TeacherFormFieldsProps {

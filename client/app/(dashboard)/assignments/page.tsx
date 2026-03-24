@@ -46,7 +46,7 @@ import {
   FileUp,
 } from "lucide-react";
 import { DashboardContent } from "@/components/dashboard-content";
-import { assignmentApi, type Assignment } from "@/lib/api-services";
+import { assignmentApi, type Assignment } from "@/services/api/client";
 import { toast } from "sonner";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 

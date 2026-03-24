@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { getAuthedClient } from "@/lib/http"
+import { getAuthedClient } from "@/services/api/client"
 import { Loader2 } from "lucide-react"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
+import { DataTable } from "@/features/admin/components/DataTable"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import type { ApiAuditLog } from "@/lib/types/api"
 
 

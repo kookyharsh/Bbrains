@@ -16,11 +16,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
     dashboardApi, userApi, walletApi, themeApi, libraryApi, 
     User as ApiUser, LibraryItem 
-} from "@/lib/api-services"
+} from "@/services/api/client"
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/integrations/supabase/client"
+import { supabase } from "@/services/supabase/client"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 
 export default function SettingsPage() {

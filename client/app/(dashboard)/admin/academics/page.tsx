@@ -9,7 +9,7 @@ import { StudentsTable } from "./_components/StudentsTable";
 import { AssignmentsTable } from "./_components/AssignmentsTable";
 import { AcademicsDialog } from "./_components/AcademicsDialog";
 import { DeleteDialog } from "./_components/DeleteDialog";
-import { courseApi, userApi, assignmentApi } from "@/lib/api-services";
+import { courseApi, userApi, assignmentApi } from "@/services/api/client";
 import { Course, AdminAssignment, Student } from "./_types";
 import { BookOpen, ClipboardList, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";

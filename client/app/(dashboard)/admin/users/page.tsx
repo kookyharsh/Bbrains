@@ -9,19 +9,22 @@ import { UsersTable } from "./_components/UsersTable";
 import { UserDialog } from "./_components/UserDialog";
 import { DeleteConfirmationDialog } from "./_components/DeleteConfirmationDialog";
 import { mockUsers } from "./_types";
-import type { UserDetails } from "./_types";
+import type { ApiUser } from "@/lib/types/api";
 
 export default function ManageUsersPage() {
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [showDialog, setShowDialog] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editUser, setEditUser] = useState<UserDetails | null>(null);
+  const [editUser, setEditUser] = useState<ApiUser | null>(null);
 
   const filtered = useMemo(() => {
     return mockUsers.filter((u) => {
-      const fullName = `${u.firstName} ${u.lastName}`;
-      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      const firstName = u.userDetails?.firstName || "";
+      const lastName = u.userDetails?.lastName || "";
+      const fullName = `${firstName} ${lastName}`;
+      
+      if (typeFilter !== "all" && u.type !== typeFilter) return false;
       if (
         search &&
         !fullName.toLowerCase().includes(search.toLowerCase()) &&
@@ -30,14 +33,14 @@ export default function ManageUsersPage() {
         return false;
       return true;
     });
-  }, [search, roleFilter]);
+  }, [search, typeFilter]);
 
   const handleAddUser = () => {
     setEditUser(null);
     setShowDialog(true);
   };
 
-  const handleEditUser = (user: UserDetails) => {
+  const handleEditUser = (user: ApiUser) => {
     setEditUser(user);
     setShowDialog(true);
   };
@@ -48,6 +51,10 @@ export default function ManageUsersPage() {
 
   const handleConfirmDelete = () => {
     setDeleteId(null);
+  };
+
+  const handleManageRoles = (user: ApiUser) => {
+    console.log("Manage roles for", user.username);
   };
 
   return (
@@ -67,14 +74,15 @@ export default function ManageUsersPage() {
       <UserFilters
         search={search}
         onSearchChange={setSearch}
-        roleFilter={roleFilter}
-        onRoleFilterChange={setRoleFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
       />
 
       <UsersTable
         users={filtered}
         onEdit={handleEditUser}
         onDelete={handleDeleteUser}
+        onManageRoles={handleManageRoles}
       />
 
       <UserDialog

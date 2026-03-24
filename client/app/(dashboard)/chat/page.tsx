@@ -7,23 +7,23 @@ import { Loader2, Hash } from "lucide-react";
 import { toast } from "sonner";
 
 // Hooks
-import { useChatMessages } from "@/hooks/useChatMessages";
+import { useChatMessages } from "@/features/chat/hooks/useChatMessages";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
-import { supabase } from "@/integrations/supabase/client";
-import { chatApi } from "@/lib/api-services";
+import { supabase } from "@/services/supabase/client";
+import { chatApi } from "@/services/api/client";
 
 // Components
-import { ChannelHeader } from "./_components/ChannelHeader";
-import { MessageItem } from "./_components/MessageItem";
-import { MessageInput } from "./_components/MessageInput";
-import { ChatSidebarRight } from "./_components/ChatSidebarRight";
-import { ProfileDialog } from "./_components/ProfileDialog";
-import { Memberssidebar } from "./_components/Memberssidebar";
+import { ChannelHeader } from "@/features/chat/components/ChannelHeader";
+import { MessageItem } from "@/features/chat/components/MessageItem";
+import { MessageInput } from "@/features/chat/components/MessageInput";
+import { ChatSidebarRight } from "@/features/chat/components/ChatSidebarRight";
+import { ProfileDialog } from "@/features/chat/components/ProfileDialog";
+import { Memberssidebar } from "@/features/chat/components/MembersSidebar";
 
 // Data & Utils
-import { Message, Member } from "./data";
-import { extractMentions, mapApiMember } from "./utils";
+import { Message, Member } from "@/features/chat/data";
+import { extractMentions, mapApiMember } from "@/features/chat/utils";
 
 export default function ChatPage() {
   // Hooks

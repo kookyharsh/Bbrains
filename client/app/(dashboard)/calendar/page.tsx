@@ -1,9 +1,9 @@
 "use client"
 
 import React, { useState } from "react"
-import { CalendarHeader } from "./_components/CalendarHeader"
-import { CalendarFilters } from "./_components/CalendarFilters"
-import { CalendarView, CalendarEvent } from "./_components/CalendarView"
+import { CalendarHeader } from "@/features/calendar/components/CalendarHeader"
+import { CalendarFilters } from "@/features/calendar/components/CalendarFilters"
+import { CalendarView, CalendarEvent } from "@/features/calendar/components/CalendarView"
 import { DashboardContent } from "@/components/dashboard-content"
 
 // Dummy data matching the classes in the Stitch view

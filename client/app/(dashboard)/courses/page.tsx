@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BookOpen, Users, Clock, AlertCircle, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { courseApi, enrollmentApi, Course } from "@/lib/api-services";
+import { courseApi, enrollmentApi, Course } from "@/services/api/client";
 import { DashboardContent } from "@/components/dashboard-content";
 
 export default function CoursesPage() {

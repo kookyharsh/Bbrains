@@ -1,4 +1,5 @@
-export { type ApiAuditLog, type LogCategory } from "@/lib/types/api";
+import type { ApiAuditLog, LogCategory } from "@/lib/types/api";
+export type { ApiAuditLog, LogCategory };
 
 export const LOG_CATEGORIES: LogCategory[] = [
     "AUTH",

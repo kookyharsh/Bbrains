@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDropzone, type FileError, type FileRejection } from 'react-dropzone'
 
-import { createClient } from '@/lib/client'
+import { createClient } from '@/services/supabase/client'
 
 const supabase = createClient()
 

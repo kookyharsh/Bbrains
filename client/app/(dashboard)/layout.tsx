@@ -1,6 +1,6 @@
-import { MainNavbar } from "@/components/main-navbar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { MobileBottomNav } from "@/components/mobile-bottom-nav"
+import { MainNavbar } from "@/components/layout/main-navbar"
+import { AppSidebar } from "@/components/layout/app-sidebar"
+import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav"
 
 import {
     SidebarInset,
@@ -9,7 +9,7 @@ import {
 import React from 'react'
 import { NotificationProvider } from "@/components/providers/notification-provider"
 
-import { createClient } from "@/lib/server"
+import { getServerSupabase as createClient } from "@/services/supabase/server"
 
 async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()

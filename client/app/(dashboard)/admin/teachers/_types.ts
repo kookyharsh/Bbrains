@@ -1,4 +1,5 @@
-export { type ApiUser } from "@/lib/types/api";
+import type { ApiUser } from "@/lib/types/api"
+export type { ApiUser }
 
 export function fullName(u?: { firstName?: string; lastName?: string } | null): string {
     if (!u) return "—"

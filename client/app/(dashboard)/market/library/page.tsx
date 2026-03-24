@@ -17,7 +17,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Library, Search, Download, Star, BookOpen, Palette, FileText, Eye, Play, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { libraryApi, themeApi, LibraryItem, Product } from "@/lib/api-services";
+import { libraryApi, themeApi, LibraryItem, Product } from "@/services/api/client";
 
 export default function LibraryPage() {
   const [items, setItems] = useState<LibraryItem[]>([]);

@@ -8,9 +8,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Product } from "../types"
-import { fetchPendingProducts, approveRejectProduct } from "../data"
-import { dashboardApi, type User as ApiUser } from "@/lib/api-services"
+import type { Product } from "@/features/market/types"
+import { fetchPendingProducts, approveRejectProduct } from "@/features/market/data"
+import { dashboardApi, type User as ApiUser } from "@/services/api/client"
 
 interface PendingProduct extends Product {
     creatorName: string
@@ -39,8 +39,8 @@ export default function ApprovalsPage() {
         loadUser()
     }, [])
 
-    const userRole = user?.role ?? "student"
-    const hasAccess = userRole === "admin" || userRole === "teacher"
+    const userRole = user?.type ?? "student"
+    const hasAccess = userRole === "admin" || userRole === "teacher" || (user as any)?.role === "admin"
 
     useEffect(() => {
         if (loadingAuth || !hasAccess) {

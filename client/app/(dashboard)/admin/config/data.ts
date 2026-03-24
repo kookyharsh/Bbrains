@@ -1,5 +1,5 @@
-import { getAuthToken } from "@/lib/api"
-import type { SystemConfig } from "@/lib/api-services"
+import { getAuthToken } from "@/services/api/client"
+import type { SystemConfig } from "@/services/api/client"
 
 const getBaseUrl = () => {
     if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL

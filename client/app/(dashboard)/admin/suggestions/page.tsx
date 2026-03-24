@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react"
 import { CheckCircle2, Search, XCircle, Clock, Trash2, Eye } from "lucide-react"
-import { suggestionApi, Suggestion } from "@/lib/api-services"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
+import { suggestionApi, Suggestion } from "@/services/api/client"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { DataTable } from "@/features/admin/components/DataTable"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -36,7 +36,7 @@ export default function SuggestionsPage() {
         try {
             const res = await suggestionApi.getSuggestions()
             if (res.success) {
-                setSuggestions(res.data)
+                setSuggestions(res.data || [])
             } else {
                 toast.error(res.message || "Failed to load suggestions")
             }
@@ -135,7 +135,7 @@ export default function SuggestionsPage() {
                 data={suggestions}
                 isLoading={loading}
                 searchKeys={["title", "content"]}
-                actions={(row) => (
+                extraActions={(row) => (
                     <div className="flex items-center justify-end gap-2">
                         <button 
                             onClick={() => { setSelected(row); setViewOpen(true); }} 

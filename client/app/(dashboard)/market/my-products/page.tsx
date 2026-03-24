@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Package, Plus, Pencil, Trash2, Loader2, Image as ImageIcon, X, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { marketApi, Product } from "@/lib/api-services";
+import { marketApi, Product } from "@/services/api/client";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import Image from "next/image";
 import { DashboardContent } from "@/components/dashboard-content";

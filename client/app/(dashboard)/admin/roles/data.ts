@@ -1,4 +1,4 @@
-import { getAuthToken } from "@/lib/api"
+import { getAuthToken } from "@/services/api/client"
 import type { Role, UserWithRoles } from "./_types"
 
 const getBaseUrl = () => {

@@ -1,14 +1,14 @@
-import { DailyRewardCard } from "@/components/dashboard/DailyRewardCard";
-import { WalletMiniCard } from "@/components/dashboard/WalletMiniCard";
-import { AttendanceCard } from "@/components/dashboard/AttendanceCard";
-import { LeaderboardCard } from "@/components/dashboard/LeaderboardCard";
-import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
-import { AnnouncementsCard } from "@/components/dashboard/AnnouncementsCard";
-import { MyTasksCard } from "@/components/dashboard/MyTasksCard";
-import { dashboardApi } from "@/lib/api-services";
+import { DailyRewardCard } from "@/features/dashboard/components/DailyRewardCard";
+import { WalletMiniCard } from "@/features/dashboard/components/WalletMiniCard";
+import { AttendanceCard } from "@/features/dashboard/components/AttendanceCard";
+import { LeaderboardCard } from "@/features/dashboard/components/LeaderboardCard";
+import { UpcomingEventsCard } from "@/features/dashboard/components/UpcomingEventsCard";
+import { AnnouncementsCard } from "@/features/dashboard/components/AnnouncementsCard";
+import { MyTasksCard } from "@/features/dashboard/components/MyTasksCard";
+import { dashboardApi } from "@/services/api/client";
 import { DashboardContent } from "@/components/dashboard-content";
-import { LevelWidget } from "@/components/dashboard/LevelWidget";
-import { CurrentDate } from "@/components/dashboard/CurrentDate";
+import { LevelWidget } from "@/features/dashboard/components/LevelWidget";
+import { CurrentDate } from "@/features/dashboard/components/CurrentDate";
 
 export default async function DashboardOverview() {
   let dashboardData = null;
@@ -56,8 +56,8 @@ export default async function DashboardOverview() {
       {/* Top row cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <LevelWidget 
-          level={typeof dashboardData?.stats?.level === 'number' ? dashboardData.stats.level : dashboardData?.stats?.level?.level ?? 1} 
-          xp={typeof dashboardData?.stats?.xp === 'number' ? dashboardData.stats.xp : dashboardData?.stats?.xp?.xp ?? 0} 
+          level={dashboardData?.stats?.level ?? 1} 
+          xp={dashboardData?.stats?.xp ?? 0} 
           nextLevelXp={dashboardData?.stats?.nextLevelRequiredXp} 
         />
         <DailyRewardCard initialStreak={dashboardData?.streak} />

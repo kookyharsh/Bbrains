@@ -1,8 +1,8 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
-import { notificationApi, Notification } from "@/lib/api-services"
-import { supabase } from "@/integrations/supabase/client"
+import { notificationApi, Notification } from "@/services/api/client"
+import { supabase } from "@/services/supabase/client"
 
 interface NotificationContextType {
     notifications: Notification[]
@@ -48,7 +48,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                     schema: 'public',
                     table: 'notification'
                 },
-                (payload) => {
+                (payload: any) => {
                     // Check if the notification is for the current user
                     // We need the current user ID here. 
                     // For now, let's just re-fetch to be safe and simple

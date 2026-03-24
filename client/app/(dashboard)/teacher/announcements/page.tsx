@@ -1,14 +1,14 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { getAuthedClient } from "@/lib/http"
+import { getAuthedClient } from "@/services/api/client"
 import { Loader2 } from "lucide-react"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { CrudDrawer } from "@/app/(dashboard)/admin/_components/CrudDrawer"
-import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
-import { FormInput } from "@/app/(dashboard)/admin/_components/form/FormInput"
-import { FormTextarea } from "@/app/(dashboard)/admin/_components/form/FormTextarea"
+import { DataTable } from "@/features/admin/components/DataTable"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
+import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
+import { FormInput } from "@/features/admin/components/form/FormInput"
+import { FormTextarea } from "@/features/admin/components/form/FormTextarea"
 import type { ApiAnnouncement } from "@/lib/types/api"
 
 

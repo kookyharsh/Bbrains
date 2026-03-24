@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { DashboardContent } from "@/components/dashboard-content";
 
 // API and Types
-import { walletApi, transactionApi, dashboardApi, Transaction, WalletData, User } from "@/lib/api-services";
+import { walletApi, transactionApi, dashboardApi, Transaction, WalletData, User } from "@/services/api/client";
 
 // Modular Components
-import { WalletHero } from "./_components/wallethero";
-import { SpendingsChart } from "./_components/spendingschart";
-import { TransactionHistory } from "./_components/transactionHistory";
-import { WalletDialogs } from "./_components/dialogs"; // Ensure you move your dialogs here!
+import { WalletHero } from "@/features/wallet/components/WalletHero";
+import { SpendingsChart } from "@/features/wallet/components/SpendingsChart";
+import { TransactionHistory } from "@/features/wallet/components/TransactionHistory";
+import { WalletDialogs } from "@/features/wallet/components/Dialogs"; // Ensure you move your dialogs here!
 
 export default function WalletPage() {
   const [wallet, setWallet] = useState<WalletData | null>(null);

@@ -1,7 +1,7 @@
 "use client"
 
 import { UserCheck, Users, ShoppingBag, CheckCircle, BookOpen, FileText, Shield, Trophy } from "lucide-react"
-import { StatCard } from "@/app/(dashboard)/admin/_components/StatCard"
+import { StatCard } from "@/features/admin/components/StatCard"
 import type { OverviewStats } from "../_types"
 
 interface OverviewStatsGridProps {

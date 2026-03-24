@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { suggestionApi, Suggestion } from "@/lib/api-services"
+import { suggestionApi, Suggestion } from "@/services/api/client"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -24,7 +24,7 @@ export default function SuggestionsPage() {
             setLoading(true)
             const res = await suggestionApi.getSuggestions()
             if (res.success) {
-                setSuggestions(res.data)
+                setSuggestions(res.data || [])
             }
         } catch (error) {
             console.error("Failed to fetch suggestions:", error)

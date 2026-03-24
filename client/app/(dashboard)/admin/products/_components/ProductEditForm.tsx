@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { FormInput, FormTextarea } from "@/app/(dashboard)/admin/_components/form"
+import { FormInput, FormTextarea } from "@/features/admin/components/form"
 import type { ProductFormData } from "../_types"
 
 interface ProductEditFormProps {

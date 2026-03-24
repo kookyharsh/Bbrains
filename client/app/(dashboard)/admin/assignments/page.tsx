@@ -1,12 +1,12 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { getAuthedClient } from "@/lib/http"
-import { DataTable } from "@/app/(dashboard)/admin/_components/DataTable"
-import { CrudDrawer } from "@/app/(dashboard)/admin/_components/CrudDrawer"
-import { ConfirmDialog } from "@/app/(dashboard)/admin/_components/ConfirmDialog"
-import { SectionHeader } from "@/app/(dashboard)/admin/_components/SectionHeader"
-import { FormInput, FormSelect, FormTextarea } from "@/app/(dashboard)/admin/_components/form"
+import { getAuthedClient } from "@/services/api/client"
+import { DataTable } from "@/features/admin/components/DataTable"
+import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
+import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
+import { SectionHeader } from "@/features/admin/components/SectionHeader"
+import { FormInput, FormSelect, FormTextarea } from "@/features/admin/components/form"
 import type { ApiAssignment, ApiCourse } from "@/lib/types/api"
 
 function fmtDate(s: string) {
