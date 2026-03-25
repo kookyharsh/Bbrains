@@ -285,6 +285,7 @@ export interface Announcement {
       lastName: string;
     };
   };
+  image?: string;
 }
 
 
@@ -460,6 +461,7 @@ export const announcementApi = {
     title: string;
     description: string;
     category?: string;
+    image?: string;
   }): Promise<ApiResponse<Announcement>> => {
     return api.post<Announcement>('/announcements', data);
   },

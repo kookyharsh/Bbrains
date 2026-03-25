@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Bell, 
   Search, 
@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { announcementApi, Announcement, User as ProfileUser } from "@/services/api/client";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 
 interface AnnouncementsContentProps {
   initialAnnouncements: Announcement[];
@@ -22,10 +23,20 @@ interface AnnouncementsContentProps {
 }
 
 export function AnnouncementsContent({ initialAnnouncements, currentUser }: AnnouncementsContentProps) {
+  const [mounted, setMounted] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [newAnnouncement, setNewAnnouncement] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const { uploadFile, isUploading } = useCloudinaryUpload();
 
   const filteredAnnouncements = announcements.filter(
     (a) =>
@@ -33,27 +44,51 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
       a.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeAttachment = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+  };
+
   const handlePost = async () => {
-    if (!newAnnouncement.trim()) return;
+    if (!newDescription.trim() && !newTitle.trim() && !selectedFile) return;
     
     setPosting(true);
     try {
-      // Extract first line as title, max 60 chars.
-      const lines = newAnnouncement.trim().split('\n');
-      let title = lines[0];
-      if (title.length > 60) {
-        title = title.substring(0, 60) + "...";
+      let imageUrl = undefined;
+      if (selectedFile) {
+        imageUrl = await uploadFile(selectedFile);
+        if (!imageUrl) {
+          toast.error("Failed to upload image");
+          setPosting(false);
+          return;
+        }
       }
 
       const response = await announcementApi.createAnnouncement({
-        title,
-        description: newAnnouncement.trim(),
-        category: "general"
+        title: newTitle.trim() || "New Announcement",
+        description: newDescription.trim(),
+        category: "general",
+        image: imageUrl || undefined
       });
       
       if (response.success && response.data) {
         setAnnouncements([response.data, ...announcements]);
-        setNewAnnouncement("");
+        setNewTitle("");
+        setNewDescription("");
+        setSelectedFile(null);
+        setFilePreview(null);
         toast.success("Announcement posted successfully");
       } else {
         toast.error(response.message || "Failed to post announcement");
@@ -112,7 +147,10 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
                           {announcement.user?.userDetails?.firstName || 'System'} {announcement.user?.userDetails?.lastName || ''}
                         </h4>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })} • {announcement.category}
+                          {mounted 
+                            ? formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })
+                            : format(new Date(announcement.createdAt), "MMM d, yyyy")
+                          } • {announcement.category}
                         </p>
                       </div>
                     </div>
@@ -123,12 +161,21 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
                     )}
                   </div>
                   <div className="mt-4">
-                    {announcement.title && announcement.title !== newAnnouncement.trim().split('\n')[0].substring(0, 60) + (newAnnouncement.trim().split('\n')[0].length > 60 ? "..." : "") && (
+                    {announcement.title && (
                        <h3 className="text-xl font-bold text-foreground">{announcement.title}</h3>
                     )}
                     <div className="mt-3 text-muted-foreground leading-relaxed whitespace-pre-wrap">
                       {announcement.description}
                     </div>
+                    {announcement.image && (
+                      <div className="mt-4 rounded-xl overflow-hidden border border-border">
+                        <img 
+                          src={announcement.image} 
+                          alt={announcement.title || "Announcement image"} 
+                          className="w-full h-auto max-h-[500px] object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="px-6 py-4 bg-muted/30 border-t border-border flex items-center justify-between">
@@ -181,33 +228,76 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
       {/* Floating Chat Bar for Teachers/Admins */}
       {isStaff && (
         <div className="sticky bottom-6 left-0 right-0 max-w-4xl mx-auto w-full z-10 px-4 md:px-0 pointer-events-none">
-          <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-xl flex items-end gap-3 p-2 pointer-events-auto">
-            <button className="p-3 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center shrink-0">
-              <Paperclip className="h-5 w-5" />
-            </button>
-            <textarea
-              className="flex-1 bg-transparent border-none py-3 px-2 text-sm text-foreground focus:outline-none focus:ring-0 resize-none min-h-[44px] max-h-[150px] placeholder:text-muted-foreground"
-              placeholder="Send a new announcement..."
-              value={newAnnouncement}
-              onChange={(e) => {
-                setNewAnnouncement(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handlePost();
-                }
-              }}
-            />
-            <button
-              onClick={handlePost}
-              disabled={!newAnnouncement.trim() || posting}
-              className="h-11 w-11 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+          <div className="flex flex-col gap-3 pointer-events-auto">
+            {/* Media Preview Area */}
+            {filePreview && (
+              <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-lg p-2 w-fit relative animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <button 
+                  onClick={removeAttachment}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow-lg hover:scale-110 transition-transform active:scale-95"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+                {selectedFile?.type.startsWith('image/') ? (
+                  <img src={filePreview} alt="Preview" className="h-24 w-auto rounded-xl object-cover" />
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 rounded-xl">
+                    <Paperclip className="h-5 w-5 text-primary" />
+                    <span className="text-xs font-medium max-w-[150px] truncate">{selectedFile?.name}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-xl p-2">
+              <div className="flex flex-col gap-1 px-2 py-1">
+                <input
+                  type="text"
+                  placeholder="Title (optional)"
+                  className="bg-transparent border-none text-sm font-bold text-foreground focus:outline-none focus:ring-0 placeholder:text-muted-foreground/60 w-full"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                />
+              </div>
+              <div className="flex items-end gap-3">
+                <input 
+                  type="file" 
+                  id="announcement-file" 
+                  className="hidden" 
+                  onChange={handleFileSelect}
+                  accept="image/*,application/pdf,video/*"
+                />
+                <label 
+                  htmlFor="announcement-file"
+                  className="p-3 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                >
+                  <Paperclip className="h-5 w-5" />
+                </label>
+                <textarea
+                  className="flex-1 bg-transparent border-none py-3 px-2 text-sm text-foreground focus:outline-none focus:ring-0 resize-none min-h-[44px] max-h-[150px] placeholder:text-muted-foreground"
+                  placeholder="Description..."
+                  value={newDescription}
+                  onChange={(e) => {
+                    setNewDescription(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handlePost();
+                    }
+                  }}
+                />
+                <button
+                  onClick={handlePost}
+                  disabled={(!newDescription.trim() && !newTitle.trim() && !selectedFile) || posting || isUploading}
+                  className="h-11 w-11 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-0.5"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
