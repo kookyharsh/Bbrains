@@ -10,7 +10,7 @@ import Link from "next/link";
 import { Settings, BarChart3 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getSidebarGroups, Role } from "./sidebarData"
+import { getSidebarGroups, resolveSidebarRole } from "./sidebarData"
 import { UserProfileCard, UserStatus, statusColors, statusLabels } from "../user-profile-card"
 import { useNotifications } from "../providers/notification-provider"
 
@@ -28,6 +28,8 @@ interface AppSidebarProps {
         level?: number;
         xp?: number;
         createdAt?: string;
+        isSuperAdmin?: boolean;
+        roleNames?: string[];
     } | null;
 }
 
@@ -40,8 +42,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
     const [showProfileCard, setShowProfileCard] = useState(false)
     const [userStatus, setUserStatus] = useState<UserStatus>("online")
 
-    const role = (user?.type?.toLowerCase() ?? "student") as Role
-    const groups = getSidebarGroups(role)
+    const role = resolveSidebarRole(user)
+    const groups = getSidebarGroups(role, user?.isSuperAdmin)
 
     return (
         <Sidebar collapsible="icon" className="border-r border-sidebar-border">

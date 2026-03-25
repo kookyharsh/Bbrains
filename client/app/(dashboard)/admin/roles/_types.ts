@@ -1,9 +1,19 @@
+export interface Permission {
+    id: number
+    name: string
+    description?: string
+}
+
 export interface Role {
     id: number
     name: string
     description?: string
+    rank: number
+    collegeId?: number | null
     users: number
-    permissions: string[]
+    permissions: {
+        permission: Permission
+    }[]
 }
 
 export interface UserWithRoles {
@@ -14,26 +24,52 @@ export interface UserWithRoles {
     email: string
     avatar?: string
     grade?: string
-    roles: string[]
+    isSuperAdmin: boolean
+    roles: {
+        role: Role
+    }[]
 }
 
 export const allPermissions = [
-    "manage_users",
-    "manage_roles",
+    // Academic
     "manage_courses",
-    "view_audit_log",
-    "manage_products",
-    "view_stats",
-    "manage_students",
     "manage_assignments",
-    "grade_assignments",
+    "manage_enrollments",
+    "manage_grades",
+    "view_submissions",
+    "manage_submissions",
+    "manage_attendance",
+    // Content / Events
     "manage_announcements",
-    "view_courses",
-    "submit_assignments",
-    "use_wallet",
-    "use_market",
-    "use_chat",
+    "manage_suggestions",
+    "create_events",
+    "manage_events",
+    // Marketplace
+    "manage_products",
+    "approve_products",
+    "view_orders",
+    "view_transactions",
+    // User & Access
+    "manage_users",
     "view_users",
+    "manage_roles",
+    "manage_permissions",
+    "administrator",
+    // Profile
+    "manage_displayname",
+    "change_nickname",
+    // Communication
+    "send_messages",
+    "manage_messages",
+    "mention_everyone",
+    "pin_messages",
+    // Finance
+    "view_wallets",
+    "manage_wallets",
+    // System
+    "manage_system_config",
+    "view_audit_logs",
+    "manage_gamification",
 ]
 
 export function getRoleBadgeColor(role: string): string {

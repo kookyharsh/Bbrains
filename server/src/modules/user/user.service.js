@@ -8,9 +8,34 @@ const findUserByEmail = async (email) => {
     });
 };
 
-const findUserBySupabaseId = async (supabaseId) => {
-    return await prisma.user.findUnique({
+const findUserBySupabaseId = async (supabaseId, email) => {
+    const include = {
+        roles: {
+            include: {
+                role: {
+                    include: {
+                        permissions: {
+                            include: {
+                                permission: true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    const byId = await prisma.user.findUnique({
         where: { id: supabaseId },
+        include
+    });
+    if (byId) return byId;
+
+    if (!email) return null;
+
+    return await prisma.user.findUnique({
+        where: { email },
+        include
     });
 };
 

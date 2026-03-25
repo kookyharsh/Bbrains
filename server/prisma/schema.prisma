@@ -16,6 +16,7 @@ model College {
   createdAt DateTime @default(now())
   address   Address? @relation(fields: [addressId], references: [id])
   users     User[]
+  roles     Role[]
 
   @@map("college")
 }
@@ -28,6 +29,7 @@ model User {
   username         String               @unique @db.VarChar(32)
   password         String?              @db.VarChar(255)
   type             UserRole             @default(student)
+  isSuperAdmin     Boolean              @default(false) @map("is_super_admin")
   createdAt        DateTime             @default(now()) @map("created_at")
   updatedAt        DateTime             @updatedAt @map("updated_at")
   addresses        Address[]
@@ -165,12 +167,35 @@ model Grade {
 }
 
 model Role {
-  id          Int         @id @default(autoincrement()) @map("role_id")
-  name        String      @unique @db.VarChar(50)
-  description String?     @db.VarChar(255)
+  id          Int              @id @default(autoincrement()) @map("role_id")
+  name        String           @unique @db.VarChar(50)
+  description String?          @db.VarChar(255)
+  rank        Int              @default(100)
+  collegeId   Int?             @map("college_id")
+  college     College?         @relation(fields: [collegeId], references: [id])
+  permissions RolePermission[]
   users       UserRoles[]
 
   @@map("role")
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique @db.VarChar(100)
+  description String?          @db.VarChar(255)
+  roles       RolePermission[]
+
+  @@map("permission")
+}
+
+model RolePermission {
+  roleId       Int            @map("role_id")
+  permissionId Int            @map("permission_id")
+  role         Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission     @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permission")
 }
 
 model UserRoles {

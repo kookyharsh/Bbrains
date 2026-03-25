@@ -1,3 +1,8 @@
+/**
+ * @deprecated This hook is not used anywhere in the app.
+ * User data is fetched server-side in app/(dashboard)/layout.tsx
+ * and passed down via props. Do not use this hook for new features.
+ */
 import { useEffect, useState } from "react"
 
 import { User } from "@/services/api/client"

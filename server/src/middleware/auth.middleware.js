@@ -32,10 +32,10 @@ const verifyToken = async (req, res, next) => {
     req.supabaseUser = user;
 
     // Find local user in database
-    const dbUser = await findUserBySupabaseId(user.id);
+    const dbUser = await findUserBySupabaseId(user.id, user.email);
 
     if (!dbUser) {
-      console.error('[AuthMiddleware] DB User not found for Supabase ID:', user.id);
+      console.error('[AuthMiddleware] DB User not found for Supabase ID/email:', user.id, user.email);
       return sendError(res, 'User authenticated but not found in system database', 403);
     }
 

@@ -68,13 +68,21 @@ export function UserRolesGrid({ users, onEdit }: UserRolesGridProps) {
                                     {user.grade}
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                    {user.roles.map((role) => (
+                                    {user.isSuperAdmin && (
                                         <Badge
-                                            key={role}
                                             variant="outline"
-                                            className={`text-[10px] ${getRoleBadgeColor(role)}`}
+                                            className="text-[10px] bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border-purple-200"
                                         >
-                                            {role}
+                                            Super Admin
+                                        </Badge>
+                                    )}
+                                    {user.roles.map((roleRecord: any) => (
+                                        <Badge
+                                            key={roleRecord.role.id}
+                                            variant="outline"
+                                            className={`text-[10px] ${getRoleBadgeColor(roleRecord.role.name)}`}
+                                        >
+                                            {roleRecord.role.name}
                                         </Badge>
                                     ))}
                                 </div>

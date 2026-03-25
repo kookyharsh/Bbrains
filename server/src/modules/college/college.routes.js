@@ -5,10 +5,19 @@ import authorize from '../../middleware/authorize.js';
 
 const router = express.Router();
 
-router.post('/', verifyToken, authorize('admin'), createCollege);
-router.get('/', verifyToken, getColleges);
-router.get('/:id', verifyToken, getCollege);
+// Only Super Admin can create colleges
+router.post('/', verifyToken, authorize('super_admin'), createCollege);
+
+// Only Super Admin can see ALL colleges
+router.get('/', verifyToken, authorize('super_admin'), getColleges);
+
+// Admins can see their own college, Super Admin can see any
+router.get('/:id', verifyToken, authorize('admin'), getCollege);
+
+// Admins can update their own college
 router.put('/:id', verifyToken, authorize('admin'), updateCollege);
-router.delete('/:id', verifyToken, authorize('admin'), deleteCollege);
+
+// Only Super Admin can delete colleges
+router.delete('/:id', verifyToken, authorize('super_admin'), deleteCollege);
 
 export default router;

@@ -61,6 +61,11 @@ export const getCollege = async (req, res) => {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid college ID', 400);
 
+        // Security check for regular admins
+        if (!req.user.isSuperAdmin && req.user.collegeId !== id) {
+            return sendError(res, 'Unauthorized: You can only view your own college', 403);
+        }
+
         const college = await getCollegeById(id);
         if (!college) return sendError(res, 'College not found', 404);
 
@@ -76,6 +81,11 @@ export const updateCollege = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid college ID', 400);
+
+        // Security check for regular admins
+        if (!req.user.isSuperAdmin && req.user.collegeId !== id) {
+            return sendError(res, 'Unauthorized: You can only update your own college', 403);
+        }
 
         const validated = updateCollegeSchema.parse(req.body);
         const college = await updateCollegeRecord(id, validated);

@@ -66,6 +66,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         
         if (userResp.success && userResp.data) {
           const role = userResp.data.type
+          router.refresh()
           if (role === 'admin') {
             router.push('/admin/overview')
           } else if (role === 'teacher') {
@@ -75,10 +76,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
           }
         } else {
           // Fallback if we can't get role
+          router.refresh()
           router.push('/dashboard')
         }
       } catch (err) {
         console.error("Failed to fetch user role:", err)
+        router.refresh()
         router.push('/dashboard')
       }
 

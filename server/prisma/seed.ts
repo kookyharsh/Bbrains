@@ -23,6 +23,8 @@ async function main() {
   try {
     console.log("🧹 Cleaning database...");
 
+    await prisma.rolePermission.deleteMany();
+    await prisma.permission.deleteMany();
     await prisma.streak.deleteMany();
     await prisma.attendance.deleteMany();
     await prisma.event.deleteMany();
@@ -65,6 +67,56 @@ async function main() {
     }
 
     console.log("✅ Database and Auth cleaned.");
+
+    console.log("🔐 Seeding Permissions...");
+    const permissionsList = [
+      // Academic
+      { name: 'manage_courses', description: 'Can create, update, and delete courses' },
+      { name: 'manage_assignments', description: 'Can manage course assignments' },
+      { name: 'manage_enrollments', description: 'Can enroll students in courses' },
+      { name: 'manage_grades', description: 'Can grade submissions' },
+      { name: 'view_submissions', description: 'Can view student submissions' },
+      { name: 'manage_submissions', description: 'Can update or delete submissions' },
+      { name: 'manage_attendance', description: 'Can mark and view attendance' },
+      // Content / Events
+      { name: 'manage_announcements', description: 'Can post system-wide announcements' },
+      { name: 'manage_suggestions', description: 'Can manage user suggestions' },
+      { name: 'create_events', description: 'Can create campus events' },
+      { name: 'manage_events', description: 'Can manage all campus events' },
+      // Marketplace
+      { name: 'manage_products', description: 'Can manage marketplace products' },
+      { name: 'approve_products', description: 'Can approve or reject products' },
+      { name: 'view_orders', description: 'Can view all orders' },
+      { name: 'view_transactions', description: 'Can view financial transactions' },
+      // User & Access
+      { name: 'manage_users', description: 'Can manage user accounts' },
+      { name: 'view_users', description: 'Can view user list' },
+      { name: 'manage_roles', description: 'Can create and manage roles' },
+      { name: 'manage_permissions', description: 'Can manage role permissions' },
+      { name: 'administrator', description: 'Bypass all standard checks' },
+      // Profile
+      { name: 'manage_displayname', description: 'Can edit own and others display name' },
+      { name: 'change_nickname', description: 'Can change their own nickname' },
+      // Communication
+      { name: 'send_messages', description: 'Can send chat messages' },
+      { name: 'manage_messages', description: 'Can delete others messages' },
+      { name: 'mention_everyone', description: 'Can use @everyone' },
+      { name: 'pin_messages', description: 'Can pin messages' },
+      // Finance
+      { name: 'view_wallets', description: 'Can view user wallet balances' },
+      { name: 'manage_wallets', description: 'Can adjust wallet balances' },
+      // System
+      { name: 'manage_system_config', description: 'Can manage system configuration' },
+      { name: 'view_audit_logs', description: 'Can view system audit logs' },
+      { name: 'manage_gamification', description: 'Can manage XP, levels, and achievements' },
+    ];
+
+    const createdPermissions = [];
+    for (const p of permissionsList) {
+      const perm = await prisma.permission.create({ data: p });
+      createdPermissions.push(perm);
+    }
+    console.log(`✅ ${createdPermissions.length} Permissions created.`);
 
     console.log("📍 Creating addresses...");
     const collegeAddresses = [];
@@ -113,12 +165,42 @@ async function main() {
     console.log(`✅ ${colleges.length} Colleges created.`);
 
     console.log("👥 Seeding Roles...");
-    const roles = await Promise.all([
-      prisma.role.create({ data: { name: 'Student', description: 'Student role' } }),
-      prisma.role.create({ data: { name: 'Teacher', description: 'Instructor role' } }),
-      prisma.role.create({ data: { name: 'Admin', description: 'System Administrator' } }),
-    ]);
-    console.log("✅ 3 Roles created.");
+    // Admin roles (rank 10)
+    const adminRole = await prisma.role.create({ data: { name: 'Admin', description: 'System Administrator', rank: 10 } });
+    const teacherRole = await prisma.role.create({ data: { name: 'Teacher', description: 'Instructor role', rank: 20 } });
+    const staffRole = await prisma.role.create({ data: { name: 'Staff', description: 'Support staff', rank: 30 } });
+    const studentRole = await prisma.role.create({ data: { name: 'Student', description: 'Student role', rank: 100 } });
+    
+    const roles = [studentRole, teacherRole, adminRole, staffRole];
+    console.log("✅ Default Roles created.");
+
+    // Assign Permissions to Roles
+    console.log("🔗 Assigning Permissions to Roles...");
+    // Admin gets almost everything
+    const adminPerms = createdPermissions.filter(p => p.name !== 'administrator');
+    for (const p of adminPerms) {
+      await prisma.rolePermission.create({
+        data: { roleId: adminRole.id, permissionId: p.id }
+      });
+    }
+
+    // Teacher permissions
+    const teacherPermNames = ['manage_courses', 'manage_assignments', 'manage_grades', 'view_submissions', 'manage_attendance', 'manage_announcements', 'create_events', 'send_messages', 'mention_everyone'];
+    const teacherPerms = createdPermissions.filter(p => teacherPermNames.includes(p.name));
+    for (const p of teacherPerms) {
+      await prisma.rolePermission.create({
+        data: { roleId: teacherRole.id, permissionId: p.id }
+      });
+    }
+
+    // Student permissions
+    const studentPermNames = ['send_messages', 'change_nickname'];
+    const studentPerms = createdPermissions.filter(p => studentPermNames.includes(p.name));
+    for (const p of studentPerms) {
+      await prisma.rolePermission.create({
+        data: { roleId: studentRole.id, permissionId: p.id }
+      });
+    }
 
     console.log("👥 Seeding Users...");
 
@@ -135,6 +217,7 @@ async function main() {
           password: userData.password ?? "seed_password_123",
           type: userData.type,
           collegeId: userData.collegeId,
+          isSuperAdmin: userData.isSuperAdmin ?? false,
           userDetails: {
             create: {
               firstName: detailsData.firstName,
@@ -175,7 +258,37 @@ async function main() {
       return user;
     }
 
-    console.log("  Creating 2 admins...");
+    // Create BBRAINS SUPER ADMIN
+    console.log("🌟 Creating BBRAINS SUPER ADMIN (admin@bbrains.co)...");
+    const superAdminEmail = "admin@bbrains.co";
+    const superSupabaseUser = await createSupabaseUser(superAdminEmail, "superadmin123", {
+      username: "bbrains_admin"
+    });
+    
+    const superAdmin = await createUserComplete(
+      superSupabaseUser.id,
+      {
+        email: superAdminEmail,
+        username: "bbrains_admin",
+        type: UserRole.admin,
+        collegeId: colleges[0].id,
+        isSuperAdmin: true
+      },
+      {
+        firstName: "BBrains",
+        lastName: "Super Admin",
+        sex: Sex.male,
+        dob: new Date('1990-01-01'),
+        phone: "0000000000"
+      },
+      'admin'
+    );
+    await prisma.userRoles.create({
+      data: { userId: superAdmin.id, roleId: adminRole.id }
+    });
+    console.log(`    ✅ Super Admin created with ID: ${superAdmin.id}`);
+
+    console.log("  Creating 2 more admins...");
     for (let i = 1; i <= 2; i++) {
       const email = `admin${i}@learnytics.com`;
       const supabaseUser = await createSupabaseUser(email, "admin123", {
@@ -192,7 +305,7 @@ async function main() {
           collegeId: colleges[0].id
         },
         {
-          firstName: "Super",
+          firstName: "College",
           lastName: `Admin ${i}`,
           sex: Sex.male,
           dob: new Date('1990-01-01'),
@@ -203,7 +316,7 @@ async function main() {
       admins.push(admin);
 
       await prisma.userRoles.create({
-        data: { userId: admin.id, roleId: roles[2].id }
+        data: { userId: admin.id, roleId: adminRole.id }
       });
 
       console.log(`    ✅ Admin ${i} created with Supabase ID: ${admin.id}`);
@@ -238,7 +351,7 @@ async function main() {
       teachers.push(teacher);
 
       await prisma.userRoles.create({
-        data: { userId: teacher.id, roleId: roles[1].id }
+        data: { userId: teacher.id, roleId: teacherRole.id }
       });
 
       console.log(`    ✅ Teacher ${i + 1} created with Supabase ID: ${teacher.id}`);
@@ -284,7 +397,7 @@ async function main() {
       students.push(student);
 
       await prisma.userRoles.create({
-        data: { userId: student.id, roleId: roles[0].id }
+        data: { userId: student.id, roleId: studentRole.id }
       });
 
       const attendanceDays = 15;
@@ -301,7 +414,7 @@ async function main() {
       console.log(`    ✅ Student ${i + 1} created with Supabase ID: ${student.id}`);
     }
 
-    console.log(`✅ All users created: ${admins.length} admins, ${teachers.length} teachers, ${students.length} students`);
+    console.log(`✅ All users created: ${admins.length + 1} admins, ${teachers.length} teachers, ${students.length} students`);
 
     console.log("📚 Seeding Courses...");
     const courseData = [
@@ -423,7 +536,7 @@ async function main() {
         name: "Hand-Drawn Theme", 
         desc: "Creative hand-drawn aesthetic with paper texture and sketchy elements", 
         price: 150, 
-        stock: 999, // Unlimited for digital products
+        stock: 999,
         metadata: {
           category: 'theme',
           themeConfig: {
@@ -456,158 +569,6 @@ async function main() {
             }
           }
         }
-      },
-      { 
-        name: "Vibrant Orange Theme", 
-        desc: "Energetic theme based on brand orange color", 
-        price: 200, 
-        stock: 999,
-        metadata: {
-          category: 'theme',
-          themeConfig: {
-            id: 'brand-orange',
-            name: 'Vibrant Orange',
-            variables: {
-              '--background': '#FFF5F5',
-              '--foreground': '#2F3640',
-              '--card': '#FFFFFF',
-              '--card-foreground': '#2F3640',
-              '--popover': '#FFF5F5',
-              '--popover-foreground': '#2F3640',
-              '--primary': '#FF7675',
-              '--primary-foreground': '#FFFFFF',
-              '--secondary': '#FED7D7',
-              '--secondary-foreground': '#2F3640',
-              '--muted': '#FADBD8',
-              '--muted-foreground': '#636E72',
-              '--accent': '#F39C12',
-              '--accent-foreground': '#FFFFFF',
-              '--destructive': '#E74C3C',
-              '--border': '#E8DAEF',
-              '--input': '#FFFFFF',
-              '--ring': '#FF7675',
-              '--chart-1': '#FF7675',
-              '--chart-2': '#E74C3C',
-              '--chart-3': '#F39C12',
-              '--chart-4': '#FAB1A0',
-              '--chart-5': '#FF9F43'
-            }
-          }
-        }
-      },
-      { 
-        name: "Royal Purple Theme", 
-        desc: "Sophisticated theme based on brand purple color", 
-        price: 200, 
-        stock: 999,
-        metadata: {
-          category: 'theme',
-          themeConfig: {
-            id: 'brand-purple',
-            name: 'Royal Purple',
-            variables: {
-              '--background': '#F5F0FF',
-              '--foreground': '#2F3640',
-              '--card': '#FFFFFF',
-              '--card-foreground': '#2F3640',
-              '--popover': '#F5F0FF',
-              '--popover-foreground': '#2F3640',
-              '--primary': '#6C5CE7',
-              '--primary-foreground': '#FFFFFF',
-              '--secondary': '#D6C4E9',
-              '--secondary-foreground': '#2F3640',
-              '--muted': '#E8DAEF',
-              '--muted-foreground': '#636E72',
-              '--accent': '#9B59B6',
-              '--accent-foreground': '#FFFFFF',
-              '--destructive': '#E74C3C',
-              '--border': '#D6C4E9',
-              '--input': '#FFFFFF',
-              '--ring': '#6C5CE7',
-              '--chart-1': '#6C5CE7',
-              '--chart-2': '#9B59B6',
-              '--chart-3': '#A29BFE',
-              '--chart-4': '#706FD3',
-              '--chart-5': '#4834D4'
-            }
-          }
-        }
-      },
-      { 
-        name: "Fresh Mint Theme", 
-        desc: "Refreshing theme based on brand mint color", 
-        price: 180, 
-        stock: 999,
-        metadata: {
-          category: 'theme',
-          themeConfig: {
-            id: 'brand-mint',
-            name: 'Fresh Mint',
-            variables: {
-              '--background': '#F0FFF9',
-              '--foreground': '#2F3640',
-              '--card': '#FFFFFF',
-              '--card-foreground': '#2F3640',
-              '--popover': '#F0FFF9',
-              '--popover-foreground': '#2F3640',
-              '--primary': '#55E6C1',
-              '--primary-foreground': '#2F3640',
-              '--secondary': '#D5F5E3',
-              '--secondary-foreground': '#2F3640',
-              '--muted': '#D5F5E3',
-              '--muted-foreground': '#2F3640',
-              '--accent': '#27AE60',
-              '--accent-foreground': '#FFFFFF',
-              '--destructive': '#E74C3C',
-              '--border': '#A9DFBF',
-              '--input': '#FFFFFF',
-              '--ring': '#55E6C1',
-              '--chart-1': '#55E6C1',
-              '--chart-2': '#27AE60',
-              '--chart-3': '#2ECC71',
-              '--chart-4': '#55EFC4',
-              '--chart-5': '#1ABC9C'
-            }
-          }
-        }
-      },
-      { 
-        name: "Slate Professional Theme", 
-        desc: "Professional theme based on brand slate color", 
-        price: 180, 
-        stock: 999,
-        metadata: {
-          category: 'theme',
-          themeConfig: {
-            id: 'brand-slate',
-            name: 'Slate Professional',
-            variables: {
-              '--background': '#F8F9FA',
-              '--foreground': '#2F3640',
-              '--card': '#FFFFFF',
-              '--card-foreground': '#2F3640',
-              '--popover': '#F8F9FA',
-              '--popover-foreground': '#2F3640',
-              '--primary': '#2F3640',
-              '--primary-foreground': '#FFFFFF',
-              '--secondary': '#EDEDED',
-              '--secondary-foreground': '#2F3640',
-              '--muted': '#BDC3C7',
-              '--muted-foreground': '#2F3640',
-              '--accent': '#95A5A6',
-              '--accent-foreground': '#FFFFFF',
-              '--destructive': '#E74C3C',
-              '--border': '#BDC3C7',
-              '--input': '#FFFFFF',
-              '--ring': '#2F3640',
-              '--chart-1': '#2F3640',
-              '--chart-2': '#535C68',
-              '--chart-3': '#95A5A6',
-              '--chart-4': '#BDC3C7',
-              '--chart-5': '#7F8C8D'
-            }
-          }
-        }
       }
     ];
 
@@ -620,7 +581,7 @@ async function main() {
           price: t.price,
           stock: t.stock,
           creatorId: getRandomItem(teachers).id,
-          image: `https://placehold.co/400/6C5CE7/FFFFFF?text=${encodeURIComponent(t.name.split(' ')[0])}`, // Simple placeholder
+          image: `https://placehold.co/400/6C5CE7/FFFFFF?text=${encodeURIComponent(t.name.split(' ')[0])}`,
           approval: ProductApproval.approved,
           metadata: t.metadata
         }
@@ -685,7 +646,7 @@ async function main() {
     for (const a of announcements) {
       await prisma.announcement.create({
         data: {
-          userId: getRandomItem(admins).id,
+          userId: superAdmin.id,
           title: a.title,
           description: a.desc,
         }
@@ -697,8 +658,6 @@ async function main() {
     const eventData = [
       { title: "Triwizard Tournament", description: "The legendary magical contest between three schools.", type: "Tournament", location: "Hogwarts Stadium" },
       { title: "Yule Ball", description: "A formal Christmas celebration and dance.", type: "Social", location: "Great Hall" },
-      { title: "Dueling Club", description: "Practice your defensive and offensive spells.", type: "Workshop", location: "Grand Hall" },
-      { title: "Potions Workshop", description: "Advanced brewing techniques from industry experts.", type: "Academic", location: "Dungeons" },
     ];
 
     for (const e of eventData) {
@@ -718,109 +677,15 @@ async function main() {
     }
     console.log(`✅ ${eventData.length} Events created.`);
 
-    console.log("🏆 Seeding Leaderboards...");
-    const categories = [LeaderboardCategory.allTime, LeaderboardCategory.weekly, LeaderboardCategory.monthly];
-    let lbCount = 0;
-
-    for (const student of students) {
-      for (const cat of categories) {
-        try {
-          await prisma.leaderboard.create({
-            data: {
-              userId: student.id,
-              score: getRandomInt(100, 10000),
-              category: cat,
-              periodStart: new Date(),
-            }
-          });
-          lbCount++;
-        } catch (e: any) { }
-      }
-    }
-    console.log(`✅ ${lbCount} Leaderboard entries created.`);
-
-    console.log("🎖️ Seeding Achievements...");
-    const achievementData = [
-      { name: "First Steps", description: "Joined the BBrains community.", requiredXp: 0, category: "Milestone" },
-      { name: "Quick Learner", description: "Reached Level 5 efficiently.", requiredXp: 2500, category: "Milestone" },
-      { name: "Scholar", description: "Completed 10 unique assignments.", requiredXp: 5000, category: "Academic" },
-      { name: "Market Guru", description: "Traded 5+ items in the marketplace.", requiredXp: 2000, category: "Market" },
-      { name: "Legendary", description: "Reached Level 20.", requiredXp: 10000, category: "Milestone" },
-    ];
-
-    const achievements = [];
-    for (const a of achievementData) {
-      const ach = await prisma.achievement.create({ data: a });
-      achievements.push(ach);
-    }
-
-    let achCount = 0;
-    for (const student of students) {
-      const count = getRandomInt(1, 4);
-      const userAchs = getRandomItems(achievements, count);
-
-      for (const ach of userAchs) {
-        try {
-          await prisma.userAchievements.create({
-            data: { userId: student.id, achievementId: ach.id }
-          });
-          achCount++;
-        } catch (e: any) { }
-      }
-    }
-    console.log(`✅ ${achievements.length} Achievements, ${achCount} assigned.`);
-
-    console.log("💳 Seeding Transactions...");
-    for (let i = 0; i < 30; i++) {
-      const user = getRandomItem([...students, ...teachers]);
-      try {
-        await prisma.transactionHistory.create({
-          data: {
-            userId: user.id,
-            amount: getRandomInt(20, 1000),
-            type: getRandomItem([TransactionType.credit, TransactionType.debit]),
-            status: i % 10 === 0 ? TransactionStatus.pending : TransactionStatus.success,
-            note: `Market Purchase / Reward #${i + 1}`,
-          }
-        });
-      } catch (e: any) { }
-    }
-    console.log("✅ 30 Transactions created.");
-
-    console.log("🕵️ Seeding Audit Logs...");
-    const logActions = ["CREATE", "UPDATE", "DELETE", "AUTH_LOGIN", "AUTH_LOGOUT", "PURCHASE"];
-    const logEntities = ["Product", "Grade", "User", "Order", "Cart", "Event"];
-
-    for (let i = 0; i < 30; i++) {
-      try {
-        await prisma.auditLog.create({
-          data: {
-            userId: getRandomItem([...students, ...teachers, ...admins]).id,
-            category: getRandomItem([LogCategory.AUTH, LogCategory.ACADEMIC, LogCategory.MARKET, LogCategory.FINANCE]),
-            action: getRandomItem(logActions),
-            entity: getRandomItem(logEntities),
-            entityId: `id-${i}-${Math.random().toString(36).substring(7)}`,
-            change: { old: { status: "inactive" }, new: { status: "active" } },
-            reason: "System seeding process",
-          }
-        });
-      } catch (e: any) { }
-    }
-    console.log("✅ 30 Audit logs created.");
-
     console.log("\n" + "=".repeat(70));
     console.log("✅ ✅ ✅ BBRAINS SEEDING COMPLETED SUCCESSFULLY! ✅ ✅ ✅");
     console.log("=".repeat(70));
     console.log("\n📊 Summary:");
+    console.log(`  • ${createdPermissions.length} Permissions`);
     console.log(`  • ${colleges.length} Colleges`);
-    console.log(`  • ${admins.length} Admins (Supabase UID)`);
+    console.log(`  • ${admins.length + 1} Admins (including SUPER ADMIN)`);
     console.log(`  • ${teachers.length} Teachers`);
-    console.log(`  • ${students.length} Students (+ Attendance & Streaks)`);
-    console.log(`  • ${courses.length} Courses`);
-    console.log(`  • ${assignments.length} Assignments`);
-    console.log(`  • ${products.length} Products`);
-    console.log(`  • ${eventData.length} Events`);
-    console.log(`  • ${orderCount} Orders`);
+    console.log(`  • ${students.length} Students`);
     (process as any).exit(0);
 
   } catch (error) {

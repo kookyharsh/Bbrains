@@ -4,9 +4,23 @@ export const createRoleRecord = async (data) => {
     return await prisma.role.create({ data });
 };
 
-export const getAllRoles = async () => {
+export const getAllRoles = async (collegeId = null) => {
     return await prisma.role.findMany({
-        include: { _count: { select: { users: true } } }
+        where: collegeId ? {
+            OR: [
+                { collegeId: collegeId },
+                { collegeId: null }
+            ]
+        } : {},
+        include: {
+            _count: { select: { users: true } },
+            permissions: {
+                include: {
+                    permission: true
+                }
+            }
+        },
+        orderBy: { rank: 'asc' }
     });
 };
 
@@ -36,6 +50,61 @@ export const removeRoleFromUser = async (userId, roleId) => {
 export const getUserRoles = async (userId) => {
     return await prisma.userRoles.findMany({
         where: { userId },
-        include: { role: true }
+        include: {
+            role: {
+                include: {
+                    permissions: {
+                        include: {
+                            permission: true
+                        }
+                    }
+                }
+            }
+        }
     });
+};
+
+export const updateRolePermissions = async (roleId, permissionIds) => {
+    // Use transaction to ensure atomicity
+    return await prisma.$transaction(async (tx) => {
+        // Delete existing permissions for this role
+        await tx.rolePermission.deleteMany({
+            where: { roleId }
+        });
+
+        // Add new permissions
+        if (permissionIds.length > 0) {
+            await tx.rolePermission.createMany({
+                data: permissionIds.map(pId => ({
+                    roleId,
+                    permissionId: pId
+                }))
+            });
+        }
+
+        return await tx.role.findUnique({
+            where: { id: roleId },
+            include: { permissions: { include: { permission: true } } }
+        });
+    });
+};
+
+export const getAllPermissions = async () => {
+    return await prisma.permission.findMany({
+        orderBy: { name: 'asc' }
+    });
+};
+
+export const getHighestRank = (user) => {
+    if (user.isSuperAdmin) return 0;
+    if (!user.roles || user.roles.length === 0) return 1000; // Lowest priority
+    return Math.min(...user.roles.map(ur => ur.role.rank));
+};
+
+export const canManageRole = (currentUser, targetRole) => {
+    if (currentUser.isSuperAdmin) return true;
+    
+    const userRank = getHighestRank(currentUser);
+    // User can only manage roles with a strictly higher rank number (lower priority)
+    return userRank < targetRole.rank;
 };

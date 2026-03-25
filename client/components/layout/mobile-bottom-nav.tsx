@@ -3,11 +3,15 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getSidebarGroups, Role } from "./sidebarData"
+import { getSidebarGroups, resolveSidebarRole, SidebarUserRoleContext } from "./sidebarData"
 import React, { useRef, useEffect, useCallback } from "react"
 
 interface MobileBottomNavProps {
-    user?: any;
+    user?: SidebarUserRoleContext & {
+        imageUrl?: string;
+        firstName?: string;
+        username?: string;
+    };
 }
 
 export function MobileBottomNav({ user }: MobileBottomNavProps) {
@@ -17,8 +21,8 @@ export function MobileBottomNav({ user }: MobileBottomNavProps) {
     const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
     const isUserScrolling = useRef(false)
 
-    const role = (user?.type?.toLowerCase() ?? "student") as Role
-    const navItems = getSidebarGroups(role).flatMap(g => g.items)
+    const role = resolveSidebarRole(user)
+    const navItems = getSidebarGroups(role, user?.isSuperAdmin || false).flatMap(g => g.items)
 
     const ITEM_WIDTH = 80 // px — must match min-w below
 
