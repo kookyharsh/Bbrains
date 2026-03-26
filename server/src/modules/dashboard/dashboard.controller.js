@@ -12,13 +12,282 @@ export const getDashboard = async (req, res) => {
             case 'teacher':
                 return await teacherDashboard(id, res);
             case 'admin':
-                return await adminDashboard(res);
+                return await adminDashboard(id, res);
             default:
                 return await studentDashboard(id, res);
         }
     } catch (error) {
         console.error('Dashboard error:', error);
         return res.status(500).json({ success: false, message: error.message || 'Failed to fetch dashboard' });
+    }
+};
+
+const feePerStudentKeys = [
+    'ANNUAL_STUDENT_FEE',
+    'STUDENT_FEE',
+    'FEE_PER_STUDENT',
+    'TUITION_FEE',
+    'ANNUAL_FEE_PER_STUDENT',
+];
+
+const receivedIncomeKeys = [
+    'TOTAL_FEES_RECEIVED',
+    'FEES_RECEIVED',
+    'TOTAL_INCOME_RECEIVED',
+    'RECEIVED_INCOME',
+];
+
+const currencyKeys = ['CURRENCY', 'CURRENCY_CODE'];
+
+function parseConfigValue(config) {
+    if (!config) return null;
+
+    switch (config.type) {
+        case 'number':
+            return Number(config.value);
+        case 'boolean':
+            return config.value === 'true';
+        case 'json':
+            try {
+                return JSON.parse(config.value);
+            } catch {
+                return config.value;
+            }
+        default:
+            return config.value;
+    }
+}
+
+function firstDefinedConfig(configMap, keys, fallback = null) {
+    for (const key of keys) {
+        if (configMap.has(key)) {
+            const value = parseConfigValue(configMap.get(key));
+            if (value !== null && value !== undefined && value !== '') {
+                return value;
+            }
+        }
+    }
+    return fallback;
+}
+
+function formatAddress(address) {
+    if (!address) return null;
+
+    return [
+        address.addressLine1,
+        address.addressLine2,
+        address.city,
+        address.state,
+        address.postalCode,
+        address.country,
+    ]
+        .filter(Boolean)
+        .join(', ');
+}
+
+export const getAdminOverview = async (req, res) => {
+    try {
+        const adminId = req.user.id;
+
+        const [
+            adminUser,
+            students,
+            teachersCount,
+            staffCount,
+            roleCounts,
+            configs,
+            feeTaggedCredits,
+            latestTransactions,
+        ] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: adminId },
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    type: true,
+                    createdAt: true,
+                    college: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            regNo: true,
+                            createdAt: true,
+                            address: true,
+                        },
+                    },
+                    userDetails: {
+                        select: {
+                            avatar: true,
+                            firstName: true,
+                            lastName: true,
+                            phone: true,
+                            bio: true,
+                        },
+                    },
+                    wallet: {
+                        select: {
+                            balance: true,
+                        },
+                    },
+                    roles: {
+                        select: {
+                            role: {
+                                select: {
+                                    name: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            }),
+            prisma.user.findMany({
+                where: { type: 'student' },
+                select: {
+                    id: true,
+                    wallet: {
+                        select: {
+                            balance: true,
+                        },
+                    },
+                    userDetails: {
+                        select: {
+                            sex: true,
+                        },
+                    },
+                },
+            }),
+            prisma.user.count({ where: { type: 'teacher' } }),
+            prisma.user.count({ where: { type: 'staff' } }),
+            prisma.role.findMany({
+                select: {
+                    name: true,
+                    _count: {
+                        select: {
+                            users: true,
+                        },
+                    },
+                },
+            }),
+            prisma.systemConfig.findMany(),
+            prisma.transactionHistory.aggregate({
+                _sum: {
+                    amount: true,
+                },
+                where: {
+                    type: 'credit',
+                    status: 'success',
+                    OR: [
+                        { note: { contains: 'fee', mode: 'insensitive' } },
+                        { note: { contains: 'fees', mode: 'insensitive' } },
+                        { note: { contains: 'tuition', mode: 'insensitive' } },
+                        { note: { contains: 'admission', mode: 'insensitive' } },
+                    ],
+                },
+            }),
+            prisma.transactionHistory.findMany({
+                where: { status: 'success' },
+                select: {
+                    amount: true,
+                    type: true,
+                    transactionDate: true,
+                    note: true,
+                },
+                orderBy: { transactionDate: 'desc' },
+                take: 5,
+            }),
+        ]);
+
+        if (!adminUser) {
+            return sendError(res, 'Admin user not found', 404);
+        }
+
+        const configMap = new Map(configs.map((config) => [config.key, config]));
+
+        const studentsCount = students.length;
+        const boysCount = students.filter((student) => student.userDetails?.sex === 'male').length;
+        const girlsCount = students.filter((student) => student.userDetails?.sex === 'female').length;
+        const otherStudentsCount = Math.max(studentsCount - boysCount - girlsCount, 0);
+
+        const managerCount = roleCounts
+            .filter((role) => role.name.toLowerCase().includes('manager'))
+            .reduce((sum, role) => sum + role._count.users, 0);
+
+        const otherStaffCount = Math.max(staffCount - managerCount, 0);
+        const studentToTeacherRatio = teachersCount > 0
+            ? Number((studentsCount / teachersCount).toFixed(1))
+            : null;
+
+        const feePerStudent = Number(firstDefinedConfig(configMap, feePerStudentKeys, 0) || 0);
+        const configuredReceivedIncome = Number(firstDefinedConfig(configMap, receivedIncomeKeys, 0) || 0);
+        const transactionReceivedIncome = Number(feeTaggedCredits._sum.amount || 0);
+        const receivedIncome = configuredReceivedIncome || transactionReceivedIncome;
+        const accruedIncome = feePerStudent > 0 ? studentsCount * feePerStudent : 0;
+        const receivableIncome = Math.max(accruedIncome - receivedIncome, 0);
+        const currency = String(firstDefinedConfig(configMap, currencyKeys, 'INR') || 'INR');
+
+        const currentRoles = adminUser.roles
+            .map((entry) => entry.role?.name)
+            .filter(Boolean);
+
+        return sendSuccess(res, {
+            people: {
+                teachers: teachersCount,
+                managers: managerCount,
+                staff: otherStaffCount,
+                students: studentsCount,
+                studentToTeacherRatio,
+            },
+            students: {
+                total: studentsCount,
+                boys: boysCount,
+                girls: girlsCount,
+                others: otherStudentsCount,
+            },
+            finance: {
+                currency,
+                feePerStudent,
+                receivedIncome,
+                accruedIncome,
+                receivableIncome,
+                receivedSource: configuredReceivedIncome > 0 ? 'config' : 'transactions',
+                accruedSource: feePerStudent > 0 ? 'config' : 'unavailable',
+                latestTransactions: latestTransactions.map((transaction) => ({
+                    amount: Number(transaction.amount || 0),
+                    type: transaction.type,
+                    transactionDate: transaction.transactionDate,
+                    note: transaction.note || '',
+                })),
+            },
+            admin: {
+                id: adminUser.id,
+                username: adminUser.username,
+                email: adminUser.email,
+                type: adminUser.type,
+                createdAt: adminUser.createdAt,
+                avatar: adminUser.userDetails?.avatar || null,
+                firstName: adminUser.userDetails?.firstName || '',
+                lastName: adminUser.userDetails?.lastName || '',
+                phone: adminUser.userDetails?.phone || '',
+                bio: adminUser.userDetails?.bio || '',
+                walletBalance: Number(adminUser.wallet?.balance || 0),
+                roles: currentRoles,
+            },
+            institution: adminUser.college
+                ? {
+                    id: adminUser.college.id,
+                    name: adminUser.college.name,
+                    email: adminUser.college.email,
+                    regNo: adminUser.college.regNo,
+                    createdAt: adminUser.college.createdAt,
+                    address: formatAddress(adminUser.college.address),
+                }
+                : null,
+        });
+    } catch (error) {
+        console.error('Admin Overview error details:', error);
+        return sendError(res, 'Failed to fetch admin overview', 500);
     }
 };
 
@@ -208,9 +477,13 @@ async function teacherDashboard(userId, res) {
     }
 }
 
-async function adminDashboard(res) {
+async function adminDashboard(userId, res) {
     try {
-        const [totalUsers, totalStudents, totalTeachers, totalCourses, totalProducts, totalOrders, recentLogs, systemStats] = await Promise.all([
+        const [user, totalUsers, totalStudents, totalTeachers, totalCourses, totalProducts, totalOrders, recentLogs, systemStats] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: { id: true, username: true, email: true, type: true, userDetails: true }
+            }),
             prisma.user.count(),
             prisma.user.count({ where: { type: 'student' } }),
             prisma.user.count({ where: { type: 'teacher' } }),
