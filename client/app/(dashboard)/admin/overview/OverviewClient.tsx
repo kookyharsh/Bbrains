@@ -1,6 +1,8 @@
 "use client"
 
+import Link from "next/link"
 import {
+    ArrowUpRight,
     BadgeIndianRupee,
     BriefcaseBusiness,
     Building2,
@@ -84,26 +86,37 @@ function MetricCard({
     sub,
     icon,
     iconTone,
+    href,
 }: {
     label: string
     value: string | number
     sub: string
     icon: ReactNode
     iconTone: string
+    href: string
 }) {
-    return (
+    const content = (
         <Card className="overflow-hidden border-border/60 bg-card/90 shadow-sm">
-            <CardContent className="flex items-start justify-between p-5">
+            <CardContent className="flex items-start justify-between p-5 transition-all hover:border-primary/40 hover:shadow-md">
                 <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
                     <p className="mt-2 text-3xl font-bold text-foreground">{value}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{sub}</p>
                 </div>
-                <div className={`rounded-2xl p-3 ${iconTone}`}>
-                    {icon}
+                <div className="flex flex-col items-end gap-3">
+                    <div className={`rounded-2xl p-3 ${iconTone}`}>
+                        {icon}
+                    </div>
+                    <ArrowUpRight className="size-4 text-muted-foreground" />
                 </div>
             </CardContent>
         </Card>
+    )
+
+    return (
+        <Link href={href} className="block">
+            {content}
+        </Link>
     )
 }
 
@@ -160,6 +173,7 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                     sub="Active faculty count"
                     icon={<UserCheck className="size-5 text-blue-700" />}
                     iconTone="bg-blue-500/10"
+                    href="/admin/teachers"
                 />
                 <MetricCard
                     label="Managers"
@@ -167,6 +181,7 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                     sub="Users carrying manager roles"
                     icon={<BriefcaseBusiness className="size-5 text-amber-700" />}
                     iconTone="bg-amber-500/10"
+                    href="/admin/roles"
                 />
                 <MetricCard
                     label="Other Staff"
@@ -174,6 +189,7 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                     sub="Support staff beyond managers"
                     icon={<ShieldCheck className="size-5 text-emerald-700" />}
                     iconTone="bg-emerald-500/10"
+                    href="/admin/users"
                 />
                 <MetricCard
                     label="Students"
@@ -181,16 +197,23 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                     sub={stats.people.studentToTeacherRatio ? `${stats.people.studentToTeacherRatio}:1 student-teacher ratio` : "No teacher ratio available"}
                     icon={<Users className="size-5 text-primary" />}
                     iconTone="bg-primary/10"
+                    href="/admin/students"
                 />
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-                <Card className="border-border/60 shadow-sm">
+                <Link href="/admin/stats" className="block">
+                <Card className="border-border/60 shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
                     <CardHeader>
-                        <CardTitle>Student Distribution</CardTitle>
-                        <CardDescription>
-                            Girls and boys ratio, with other genders tracked separately when present.
-                        </CardDescription>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <CardTitle>Student Distribution</CardTitle>
+                                <CardDescription>
+                                    Girls and boys ratio, with other genders tracked separately when present.
+                                </CardDescription>
+                            </div>
+                            <ArrowUpRight className="size-4 text-muted-foreground" />
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid gap-4 sm:grid-cols-3">
@@ -232,13 +255,20 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                         </div>
                     </CardContent>
                 </Card>
+                </Link>
 
-                <Card className="border-border/60 shadow-sm">
+                <Link href="/admin/finance" className="block">
+                <Card className="border-border/60 shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
                     <CardHeader>
-                        <CardTitle>Finance Visibility</CardTitle>
-                        <CardDescription>
-                            Tracks received fee income, accrued receivables, and the configured fee base.
-                        </CardDescription>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <CardTitle>Finance Visibility</CardTitle>
+                                <CardDescription>
+                                    Tracks received fee income, accrued receivables, and the configured fee base.
+                                </CardDescription>
+                            </div>
+                            <ArrowUpRight className="size-4 text-muted-foreground" />
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-5">
                         <div className="rounded-[1.5rem] bg-emerald-500/10 p-5">
@@ -305,15 +335,22 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                         </div>
                     </CardContent>
                 </Card>
+                </Link>
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
-                <Card className="border-border/60 shadow-sm">
+                <Link href="/profile" className="block">
+                <Card className="border-border/60 shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
                     <CardHeader>
-                        <CardTitle>Admin Information</CardTitle>
-                        <CardDescription>
-                            Current administrator identity, contact details, and wallet balance.
-                        </CardDescription>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <CardTitle>Admin Information</CardTitle>
+                                <CardDescription>
+                                    Current administrator identity, contact details, and wallet balance.
+                                </CardDescription>
+                            </div>
+                            <ArrowUpRight className="size-4 text-muted-foreground" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="flex items-start gap-4 rounded-[1.5rem] border border-border/60 bg-muted/20 p-5">
@@ -354,13 +391,20 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                         </div>
                     </CardContent>
                 </Card>
+                </Link>
 
-                <Card className="border-border/60 shadow-sm">
+                <Link href="/admin/institution" className="block">
+                <Card className="border-border/60 shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
                     <CardHeader>
-                        <CardTitle>University Information</CardTitle>
-                        <CardDescription>
-                            Linked institution details for this admin account.
-                        </CardDescription>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <CardTitle>University Information</CardTitle>
+                                <CardDescription>
+                                    Linked institution details for this admin account.
+                                </CardDescription>
+                            </div>
+                            <ArrowUpRight className="size-4 text-muted-foreground" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {stats.institution ? (
@@ -407,6 +451,7 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                         )}
                     </CardContent>
                 </Card>
+                </Link>
             </div>
         </div>
     )
