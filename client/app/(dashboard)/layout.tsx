@@ -79,7 +79,7 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <AppSidebar user={formattedUser} />
 
                     {/* Main Content Area on the right */}
-                    <SidebarInset className="flex flex-col h-full overflow-hidden min-w-0 w-full">
+                    <SidebarInset className="md:ml-2 flex flex-col h-full overflow-hidden min-w-0 w-full">
                         {/* Navbar starts after the sidebar and spans the remaining width */}
                         <MainNavbar user={formattedUser} />
 
