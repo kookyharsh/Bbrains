@@ -170,11 +170,24 @@
   }
 }
 
-/* Scrollbar hide utility */
-.scrollbar-hide {
+/* Scrollbar hide utilities */
+.scrollbar-hide,
+.no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
+.scrollbar-hide::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+[data-sidebar="content"] {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+[data-sidebar="content"]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
   display: none;
 }

@@ -58,7 +58,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 </div>
             </SidebarHeader>
 
-            <SidebarContent className={`bg-sidebar custom-scrollbar ${isCollapsed ? "px-1.5" : "px-3"}`}>
+            <SidebarContent className={`bg-sidebar ${isCollapsed ? "px-1.5" : "px-3"}`}>
                 {groups.map((group, groupIndex) => (
                     <SidebarGroup key={groupIndex}>
                         <SidebarGroupLabel className="px-4 text-[10px] font-bold text-sidebar-foreground/60 uppercase tracking-[0.1em] mb-4 group-data-[collapsible=icon]:hidden">

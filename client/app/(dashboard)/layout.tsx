@@ -89,7 +89,7 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
                             This ensures that children like Chat (which use h-full) are strictly constrained.
                             Pages that need to scroll will now have their own scroll containers.
                         */}
-                        <main className="flex-1 min-h-0 flex flex-col relative pb-16 md:pb-0 overflow-hidden">
+                        <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-16 md:pb-0">
                              {children}
                         </main>
                         <MobileBottomNav user={formattedUser} />
