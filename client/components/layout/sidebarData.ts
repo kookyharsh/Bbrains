@@ -1,13 +1,13 @@
 import {
-    Calendar, Home, MessageSquare, MessageSquarePlus, User,
-    Megaphone, Wallet, Book, ShoppingCart, FileText, Palette,
+    Calendar, Home, MessageSquare, MessageSquarePlus,
+    Megaphone, Wallet, Book, ShoppingCart, FileText,
     Library, CreditCard, Shield, LayoutDashboard, Wrench,
     GraduationCap, BarChart3, Settings2, ShoppingBag, UserCheck,
     Users, ArrowUpDown, Trophy, BookOpen, UserCog, CheckSquare
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
-export type Role = "student" | "teacher" | "admin";
+export type Role = "student" | "teacher" | "admin" | "staff" | "manager";
 
 export type SubItem = {
     title: string;
@@ -87,11 +87,17 @@ const teacherExtraItems: SidebarItem[] = [
     { title: "Suggestions",   url: "/admin/suggestions",     icon: MessageSquarePlus },
 ];
 
+const managerExtraItems: SidebarItem[] = [
+    { title: "Overview",      url: "/manager/overview",      icon: LayoutDashboard },
+];
+
 // ─── Role → grouped sidebar ────────────────────────────────────────────────
 const extraItemsMap: Record<Role, { label: string; items: SidebarItem[] } | null> = {
     student: null,
     teacher: { label: "Teacher Panel", items: teacherExtraItems },
     admin:   { label: "Admin Panel",   items: adminExtraItems },
+    staff: null,
+    manager: { label: "Manager Panel", items: managerExtraItems },
 };
 
 export function getSidebarGroups(role: Role): SidebarGroup[] {

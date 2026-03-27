@@ -11,6 +11,19 @@ import { NotificationProvider } from "@/components/providers/notification-provid
 
 import { getServerSupabase as createClient } from "@/services/supabase/server"
 
+type LayoutRoleEntry = {
+    role?: {
+        name?: string | null;
+    } | null;
+}
+
+type LayoutUserDetails = {
+    avatar?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    bio?: string | null;
+}
+
 async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -37,6 +50,11 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
                 type,
                 username,
                 created_at,
+                roles:user_roles (
+                    role:role_id (
+                        name
+                    )
+                ),
                 userDetails:user_details (
                     avatar,
                     first_name,
@@ -50,10 +68,13 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         const userXpData = Array.isArray(dbUser?.xp) ? dbUser?.xp[0] : dbUser?.xp;
         const userXp = userXpData || { level: 1, xp: 0 };
+        const roleEntries = Array.isArray(dbUser?.roles) ? (dbUser.roles as LayoutRoleEntry[]) : [];
+        const hasManagerRole = roleEntries.some((entry) => entry.role?.name?.toLowerCase().includes('manager'));
+        const appRole = hasManagerRole && dbUser?.type !== 'admin' ? 'manager' : (dbUser?.type || 'student');
         
         // Get details from user_details table if they exist
-        const rawDetails = (dbUser as any)?.userDetails;
-        const details = Array.isArray(rawDetails) ? rawDetails[0] : rawDetails;
+        const rawDetails = dbUser?.userDetails;
+        const details = (Array.isArray(rawDetails) ? rawDetails[0] : rawDetails) as LayoutUserDetails | null | undefined;
         
         formattedUser = {
             id: user.id,
@@ -64,7 +85,7 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
             bio: details?.bio || "",
             fullName: details?.first_name ? `${details.first_name} ${details.last_name || ""}` : (dbUser?.username || user.email?.split('@')[0] || ""),
             username: dbUser?.username || user.email?.split('@')[0] || "",
-            type: dbUser?.type || 'student',
+            type: appRole,
             level: userXp.level,
             xp: userXp.xp,
             createdAt: dbUser?.created_at,
