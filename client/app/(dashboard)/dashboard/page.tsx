@@ -74,12 +74,12 @@ export default async function DashboardOverview() {
     redirect("/admin/overview");
   }
 
-  if (dbUser?.type === "teacher") {
-    redirect("/teacher/overview");
+  if (isManager) {
+    redirect("/manager/overview");
   }
 
-  if (isManager) {
-    redirect("/admin/overview");
+  if (dbUser?.type === "teacher") {
+    redirect("/teacher/overview");
   }
 
   let dashboardData: DashboardData | null = null;

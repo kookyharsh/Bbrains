@@ -19,7 +19,17 @@ import { HandLabel } from '@/components/hand-drawn/label'
 import Link from 'next/link'
 import { validate, commonRules, hasErrors, ValidationErrors } from '@/lib/validation'
 
-export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+type LoginFormProps = React.ComponentPropsWithoutRef<'div'> & {
+  title?: string
+  description?: string
+}
+
+export function LoginForm({
+  className,
+  title = 'Login',
+  description = 'Enter your email below to login to your account',
+  ...props
+}: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<ValidationErrors>({})
@@ -45,7 +55,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
     try {
       // Sign in with password and capture the session so we can reuse the token on API calls
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
@@ -66,8 +76,14 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         
         if (userResp.success && userResp.data) {
           const role = userResp.data.type
+          const isManager = (userResp.data.roles || []).some((entry) =>
+            entry?.role?.name?.toLowerCase().includes('manager')
+          )
+
           if (role === 'admin') {
             router.push('/admin/overview')
+          } else if (isManager) {
+            router.push('/manager/overview')
           } else if (role === 'teacher') {
             router.push('/teacher/overview')
           } else {
@@ -101,8 +117,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     <div className={cn('flex flex-col gap-6 rotate-1', className)} {...props}>
       <HandCard decoration="tape">
         <HandCardHeader>
-          <HandCardTitle className="text-4xl">Login</HandCardTitle>
-          <HandCardDescription>Enter your email below to login to your account</HandCardDescription>
+          <HandCardTitle className="text-4xl">{title}</HandCardTitle>
+          <HandCardDescription>{description}</HandCardDescription>
         </HandCardHeader>
         <HandCardContent>
           <form onSubmit={handleLogin}>

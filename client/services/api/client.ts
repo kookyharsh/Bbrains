@@ -176,6 +176,12 @@ export interface User {
   firstName?: string;
   lastName?: string;
   type: "student" | "teacher" | "admin" | "staff";
+  roles?: {
+    role?: {
+      name?: string;
+      description?: string;
+    };
+  }[];
   avatar?: string;
   bio?: string;
   phone?: string;
