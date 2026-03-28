@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, CalendarDays, IndianRupee, Loader2, Plus, Trash2, Users } from "lucide-react";
+import { BookOpen, CalendarDays, IndianRupee, Loader2, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardContent } from "@/components/dashboard-content";
 import { WeeklySchedulePanel } from "@/features/schedule/components/WeeklySchedulePanel";
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { courseApi, type ClassTimetableEntry, type Course } from "@/services/api/client";
+import { TimetableEditorDialog } from "./_components/TimetableEditorDialog";
 
 type ClassFormState = {
   name: string;
@@ -60,14 +61,6 @@ const standardOptions = [
   "TY BCA",
 ];
 
-const emptyTimetableEntry = (): ClassTimetableEntry => ({
-  day: "Monday",
-  subject: "",
-  startTime: "09:00",
-  endTime: "10:00",
-  room: "",
-});
-
 const emptyForm: ClassFormState = {
   name: "",
   description: "",
@@ -77,7 +70,7 @@ const emptyForm: ClassFormState = {
   durationValue: "",
   durationUnit: "months",
   studentCapacity: "",
-  timetable: [emptyTimetableEntry()],
+  timetable: [],
 };
 
 function parseSubjects(value: string) {
@@ -112,11 +105,20 @@ function toWeeklySchedule(course: Course | null) {
   }));
 }
 
+function summarizeTimetable(timetable: ClassTimetableEntry[]) {
+  const activeDays = new Set(timetable.map((entry) => entry.day)).size;
+  return {
+    totalSlots: timetable.length,
+    activeDays,
+  };
+}
+
 export default function ManagerClassesPage() {
   const [classes, setClasses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [timetableDialogOpen, setTimetableDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingClassId, setEditingClassId] = useState<Course["id"] | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<Course["id"] | null>(null);
@@ -168,14 +170,17 @@ export default function ManagerClassesPage() {
     filteredClasses.find((course) => course.id === selectedClassId) ||
     classes.find((course) => course.id === selectedClassId) ||
     null;
+  const subjectSuggestions = useMemo(() => parseSubjects(form.subjectsText), [form.subjectsText]);
+  const timetableSummary = useMemo(() => summarizeTimetable(form.timetable), [form.timetable]);
 
   function openCreateDialog() {
     setEditingClassId(null);
     setForm(emptyForm);
+    setTimetableDialogOpen(false);
     setDialogOpen(true);
   }
 
-  function openEditDialog(course: Course) {
+  function openEditDialog(course: Course, openTimetable = false) {
     setEditingClassId(course.id);
     setForm({
       name: course.name,
@@ -186,34 +191,18 @@ export default function ManagerClassesPage() {
       durationValue: course.durationValue ? String(course.durationValue) : "",
       durationUnit: course.durationUnit || "months",
       studentCapacity: course.studentCapacity ? String(course.studentCapacity) : "",
-      timetable: course.timetable?.length ? course.timetable : [emptyTimetableEntry()],
+      timetable: course.timetable?.length ? course.timetable : [],
     });
     setDialogOpen(true);
+    setTimetableDialogOpen(openTimetable);
   }
 
-  function updateTimetableEntry(index: number, key: keyof ClassTimetableEntry, value: string) {
+  function handleTimetableSave(timetable: ClassTimetableEntry[]) {
     setForm((current) => ({
       ...current,
-      timetable: current.timetable.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, [key]: value } : entry
-      ),
+      timetable,
     }));
-  }
-
-  function addTimetableEntry() {
-    setForm((current) => ({
-      ...current,
-      timetable: [...current.timetable, emptyTimetableEntry()],
-    }));
-  }
-
-  function removeTimetableEntry(index: number) {
-    setForm((current) => ({
-      ...current,
-      timetable: current.timetable.length === 1
-        ? current.timetable
-        : current.timetable.filter((_, entryIndex) => entryIndex !== index),
-    }));
+    toast.success("Timetable assigned to this class");
   }
 
   async function handleSubmit() {
@@ -274,6 +263,7 @@ export default function ManagerClassesPage() {
           : [savedClass, ...current]
       );
       setSelectedClassId(savedClass.id);
+      setTimetableDialogOpen(false);
       setDialogOpen(false);
       toast.success(editingClassId ? "Class updated" : "Class created");
     } catch (error) {
@@ -381,10 +371,17 @@ export default function ManagerClassesPage() {
               filteredClasses.map((course) => {
                 const enrolled = course._count?.enrollments ?? course.enrolledStudents ?? 0;
                 return (
-                  <button
+                  <div
                     key={course.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedClassId(course.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedClassId(course.id);
+                      }
+                    }}
                     className={`w-full rounded-2xl border p-4 text-left transition ${
                       selectedClass?.id === course.id
                         ? "border-primary bg-primary/5"
@@ -418,6 +415,17 @@ export default function ManagerClassesPage() {
                           }}
                         >
                           Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditDialog(course, true);
+                          }}
+                        >
+                          Timetable
                         </Button>
                         <Button
                           type="button"
@@ -467,7 +475,7 @@ export default function ManagerClassesPage() {
                         <p className="mt-2 text-lg font-semibold text-foreground">{course.timetable?.length || 0}</p>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             )}
@@ -516,7 +524,15 @@ export default function ManagerClassesPage() {
         </Card>
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setTimetableDialogOpen(false);
+          }
+        }}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{editingClassId ? "Edit class" : "Create class"}</DialogTitle>
@@ -627,60 +643,34 @@ export default function ManagerClassesPage() {
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Timetable</Label>
-                  <p className="text-xs text-muted-foreground">Create the timetable slots for this class.</p>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addTimetableEntry}>
-                  <Plus className="mr-1 size-3.5" />
-                  Add Slot
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {form.timetable.map((entry, index) => (
-                  <div key={`${entry.day}-${index}`} className="grid gap-3 rounded-xl border border-border/70 p-3 md:grid-cols-[1fr_1fr_0.9fr_0.9fr_1fr_auto]">
-                    <select
-                      value={entry.day}
-                      onChange={(event) => updateTimetableEntry(index, "day", event.target.value)}
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => (
-                        <option key={day} value={day}>{day}</option>
-                      ))}
-                    </select>
-                    <Input
-                      value={entry.subject}
-                      onChange={(event) => updateTimetableEntry(index, "subject", event.target.value)}
-                      placeholder="Subject"
-                    />
-                    <Input
-                      type="time"
-                      value={entry.startTime}
-                      onChange={(event) => updateTimetableEntry(index, "startTime", event.target.value)}
-                    />
-                    <Input
-                      type="time"
-                      value={entry.endTime}
-                      onChange={(event) => updateTimetableEntry(index, "endTime", event.target.value)}
-                    />
-                    <Input
-                      value={entry.room || ""}
-                      onChange={(event) => updateTimetableEntry(index, "room", event.target.value)}
-                      placeholder="Room / Lab"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeTimetableEntry(index)}
-                      disabled={form.timetable.length === 1}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+              <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <Label>Timetable</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Open the timetable popup to plan daily lectures, edit them later, and assign them to this class.
+                    </p>
                   </div>
-                ))}
+                  <Button type="button" variant="outline" onClick={() => setTimetableDialogOpen(true)}>
+                    <CalendarDays className="mr-2 size-4" />
+                    {form.timetable.length ? "Edit Timetable" : "Create Timetable"}
+                  </Button>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-border/60 bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Lecture Slots</p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{timetableSummary.totalSlots}</p>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Active Days</p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{timetableSummary.activeDays}</p>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-background p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Subject Suggestions</p>
+                    <p className="mt-2 text-lg font-semibold text-foreground">{subjectSuggestions.length}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -700,6 +690,15 @@ export default function ManagerClassesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <TimetableEditorDialog
+        open={timetableDialogOpen}
+        onOpenChange={setTimetableDialogOpen}
+        initialEntries={form.timetable}
+        subjectSuggestions={subjectSuggestions}
+        onSave={handleTimetableSave}
+        saving={submitting}
+      />
     </DashboardContent>
   );
 }
