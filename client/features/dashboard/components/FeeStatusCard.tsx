@@ -53,7 +53,7 @@ export function FeeStatusCard({ feeSummary }: FeeStatusCardProps) {
             Fees Remaining
           </p>
           <p className="mt-2 text-2xl font-bold text-foreground">
-            {remainingAmount === null
+            {remainingAmount == null
               ? "Not set"
               : formatCurrency(remainingAmount, currency)}
           </p>

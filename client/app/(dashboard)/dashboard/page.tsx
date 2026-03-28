@@ -96,9 +96,9 @@ export default async function DashboardOverview() {
 
   // Handle Leaderboard transformation if data exists
   const transformedLeaderboard = dashboardData?.leaderboard
-    ? (dashboardData.leaderboard as LeaderboardLikeEntry[]).map((entry) => ({
+    ? (dashboardData.leaderboard as LeaderboardLikeEntry[]).map((entry, index) => ({
         id: entry.userId || entry.id || "",
-        rank: entry.rank,
+        rank: entry.rank ?? index + 1,
         xp: entry.score ?? entry.xp ?? 0,
         username: entry.user?.username || entry.username || "Unknown",
         firstName: entry.user?.userDetails?.firstName || entry.firstName || "",
