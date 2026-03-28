@@ -10,7 +10,7 @@ import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
 import { StudentsTable } from "./_components/StudentsTable"
 import { StudentForm } from "./_components/StudentForm"
 import { fetchStudents } from "./data"
-import { emptyStudentForm, type ApiUser, type StudentForm as StudentFormType } from "./_types"
+import { emptyStudentForm, initStudentForm, type ApiUser, type StudentForm as StudentFormType } from "./_types"
 
 interface StudentsClientProps {
     initialStudents: ApiUser[]
@@ -21,6 +21,7 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
     const [courses, setCourses] = useState<Course[]>([])
     const [loading, setLoading] = useState(false)
     const [modalOpen, setModalOpen] = useState(false)
+    const [editing, setEditing] = useState<ApiUser | null>(null)
     const [form, setForm] = useState<StudentFormType>(emptyStudentForm)
     const [submitting, setSubmitting] = useState(false)
     const [deleteTarget, setDeleteTarget] = useState<ApiUser | null>(null)
@@ -54,7 +55,14 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
             toast.error("Create a class first so the student can be assigned to it")
             return
         }
+        setEditing(null)
         setForm(emptyStudentForm)
+        setModalOpen(true)
+    }
+
+    function openEdit(student: ApiUser) {
+        setEditing(student)
+        setForm(initStudentForm(student))
         setModalOpen(true)
     }
 
@@ -63,11 +71,11 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
             toast.error("Please fill in the required student details")
             return
         }
-        if (form.password.length < 8) {
+        if (!editing && form.password.length < 8) {
             toast.error("Temporary password must be at least 8 characters")
             return
         }
-        if (form.password !== form.confirmPassword) {
+        if (!editing && form.password !== form.confirmPassword) {
             toast.error("Passwords do not match")
             return
         }
@@ -78,10 +86,10 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
 
         try {
             setSubmitting(true)
-            const res = await api.post<ApiUser>("/user/students", {
+            const payload = {
                 username: form.username,
                 email: form.email,
-                password: form.password,
+                ...(!editing ? { password: form.password } : {}),
                 firstName: form.firstName,
                 lastName: form.lastName,
                 sex: form.sex,
@@ -89,18 +97,26 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
                 phone: form.phone || undefined,
                 classId: Number(form.classId),
                 ...(form.collegeId.trim() ? { collegeId: Number(form.collegeId) } : {}),
-            })
+            }
+
+            const res = editing
+                ? await api.put<ApiUser>(`/user/students/${editing.id}`, payload)
+                : await api.post<ApiUser>("/user/students", payload)
 
             if (res.success && res.data) {
-                toast.success("Student account created")
-                setStudents((prev) => [res.data as ApiUser, ...prev])
+                toast.success(editing ? "Student updated" : "Student account created")
+                setStudents((prev) =>
+                    editing
+                        ? prev.map((student) => (student.id === editing.id ? (res.data as ApiUser) : student))
+                        : [res.data as ApiUser, ...prev]
+                )
                 setModalOpen(false)
             } else {
-                toast.error(res.message || "Failed to create student")
+                toast.error(res.message || (editing ? "Failed to update student" : "Failed to create student"))
             }
         } catch (error) {
             console.error(error)
-            toast.error("An error occurred while creating the student")
+            toast.error(editing ? "An error occurred while updating the student" : "An error occurred while creating the student")
         } finally {
             setSubmitting(false)
         }
@@ -138,17 +154,17 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
                 }}
             />
 
-            <StudentsTable loading={loading} data={students} onDelete={setDeleteTarget} />
+            <StudentsTable loading={loading} data={students} onEdit={openEdit} onDelete={setDeleteTarget} />
 
             <CrudDrawer
                 open={modalOpen}
                 onClose={() => !submitting && setModalOpen(false)}
-                title="Add Student"
+                title={editing ? "Edit Student" : "Add Student"}
                 onSubmit={handleSubmit}
                 submitting={submitting}
-                submitLabel="Create Student"
+                submitLabel={editing ? "Save Changes" : "Create Student"}
             >
-                <StudentForm form={form} onChange={setForm} disabled={submitting} courses={courses} />
+                <StudentForm form={form} onChange={setForm} disabled={submitting} courses={courses} isEditing={!!editing} />
             </CrudDrawer>
 
             <ConfirmDialog

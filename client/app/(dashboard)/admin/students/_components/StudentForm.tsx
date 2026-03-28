@@ -10,9 +10,10 @@ interface StudentFormProps {
     onChange: (form: StudentFormType) => void
     disabled?: boolean
     courses: Course[]
+    isEditing?: boolean
 }
 
-export function StudentForm({ form, onChange, disabled, courses }: StudentFormProps) {
+export function StudentForm({ form, onChange, disabled, courses, isEditing }: StudentFormProps) {
     const classOptions = [
         { value: "", label: "Select class" },
         ...courses.map((course) => ({
@@ -29,7 +30,7 @@ export function StudentForm({ form, onChange, disabled, courses }: StudentFormPr
                 value={form.username}
                 onChange={(e) => onChange({ ...form, username: e.target.value })}
                 placeholder="student_username"
-                disabled={disabled}
+                disabled={disabled || isEditing}
             />
             <FormInput
                 label="Email"
@@ -38,26 +39,30 @@ export function StudentForm({ form, onChange, disabled, courses }: StudentFormPr
                 value={form.email}
                 onChange={(e) => onChange({ ...form, email: e.target.value })}
                 placeholder="student@school.edu"
-                disabled={disabled}
+                disabled={disabled || isEditing}
             />
-            <FormInput
-                label="Temporary Password"
-                required
-                type="password"
-                value={form.password}
-                onChange={(e) => onChange({ ...form, password: e.target.value })}
-                placeholder="Minimum 8 characters"
-                disabled={disabled}
-            />
-            <FormInput
-                label="Confirm Password"
-                required
-                type="password"
-                value={form.confirmPassword}
-                onChange={(e) => onChange({ ...form, confirmPassword: e.target.value })}
-                placeholder="Repeat password"
-                disabled={disabled}
-            />
+            {!isEditing && (
+                <>
+                    <FormInput
+                        label="Temporary Password"
+                        required
+                        type="password"
+                        value={form.password}
+                        onChange={(e) => onChange({ ...form, password: e.target.value })}
+                        placeholder="Minimum 8 characters"
+                        disabled={disabled}
+                    />
+                    <FormInput
+                        label="Confirm Password"
+                        required
+                        type="password"
+                        value={form.confirmPassword}
+                        onChange={(e) => onChange({ ...form, confirmPassword: e.target.value })}
+                        placeholder="Repeat password"
+                        disabled={disabled}
+                    />
+                </>
+            )}
             <FormInput
                 label="First Name"
                 required
@@ -113,9 +118,11 @@ export function StudentForm({ form, onChange, disabled, courses }: StudentFormPr
                 options={classOptions}
                 disabled={disabled}
             />
-            <p className="col-span-2 text-xs text-muted-foreground">
-                This creates a live student login immediately. Share the temporary password with the student or ask them to reset it after their first sign-in.
-            </p>
+            {!isEditing && (
+                <p className="col-span-2 text-xs text-muted-foreground">
+                    This creates a live student login immediately. Share the temporary password with the student or ask them to reset it after their first sign-in.
+                </p>
+            )}
         </div>
     )
 }

@@ -37,3 +37,20 @@ export const emptyStudentForm: StudentForm = {
     collegeId: "",
     classId: "",
 }
+
+export function initStudentForm(student?: ApiUser): StudentForm {
+    if (!student) return { ...emptyStudentForm }
+    return {
+        username: student.username,
+        email: student.email,
+        password: "",
+        confirmPassword: "",
+        firstName: student.userDetails?.firstName ?? "",
+        lastName: student.userDetails?.lastName ?? "",
+        sex: student.userDetails?.sex ?? "other",
+        dob: student.userDetails?.dob?.slice(0, 10) ?? "",
+        phone: student.userDetails?.phone ?? "",
+        collegeId: "",
+        classId: student.enrollments?.[0]?.courseId ? String(student.enrollments[0].courseId) : "",
+    }
+}

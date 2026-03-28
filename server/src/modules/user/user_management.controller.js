@@ -423,6 +423,86 @@ export const updateTeacher = async (req, res) => {
     }
 };
 
+// PUT /users/students/:id
+export const updateStudent = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user || user.type !== 'student') return sendError(res, 'Student not found', 404);
+
+        const {
+            firstName,
+            lastName,
+            sex,
+            dob,
+            phone,
+            bio,
+            collegeId,
+            classId,
+        } = req.body;
+
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id },
+                data: {
+                    ...(collegeId ? { collegeId: Number(collegeId) } : {}),
+                    userDetails: {
+                        upsert: {
+                            create: {
+                                firstName: firstName ?? '',
+                                lastName: lastName ?? '',
+                                sex: sex ?? 'other',
+                                dob: dob ? new Date(dob) : new Date('2008-01-01'),
+                                phone: phone ?? null,
+                                bio: bio ?? null,
+                            },
+                            update: {
+                                ...(firstName !== undefined ? { firstName } : {}),
+                                ...(lastName !== undefined ? { lastName } : {}),
+                                ...(sex !== undefined ? { sex } : {}),
+                                ...(dob !== undefined ? { dob: new Date(dob) } : {}),
+                                ...(phone !== undefined ? { phone } : {}),
+                                ...(bio !== undefined ? { bio } : {}),
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (classId !== undefined) {
+                const nextCourseId = Number(classId);
+                const course = await tx.course.findUnique({
+                    where: { id: nextCourseId },
+                    select: { id: true }
+                });
+
+                if (!course) {
+                    throw new Error('Selected class was not found');
+                }
+
+                await tx.enrollment.deleteMany({
+                    where: { userId: id }
+                });
+
+                await tx.enrollment.create({
+                    data: {
+                        userId: id,
+                        courseId: nextCourseId,
+                    }
+                });
+            }
+        });
+
+        await createAuditLog(req.user.id, 'USER', 'UPDATE', 'User', id, { after: req.body });
+        const updatedStudent = await getUserSummaryByID(id);
+        return sendSuccess(res, updatedStudent, 'Student updated successfully');
+    } catch (error) {
+        if (error.code === 'P2025') return sendError(res, 'Student not found', 404);
+        console.error(error);
+        return sendError(res, error?.message || 'Failed to update student', 500);
+    }
+};
+
 // DELETE /users/teachers/:id
 export const deleteTeacher = async (req, res) => {
     try {

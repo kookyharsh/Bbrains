@@ -6,10 +6,11 @@ import { fullName, fmtCurrency, type ApiUser } from "../_types"
 interface StudentsTableProps {
     loading: boolean
     data: ApiUser[]
+    onEdit?: (student: ApiUser) => void
     onDelete: (student: ApiUser) => void
 }
 
-export function StudentsTable({ loading, data, onDelete }: StudentsTableProps) {
+export function StudentsTable({ loading, data, onEdit, onDelete }: StudentsTableProps) {
     const columns = [
         { key: "username", label: "Username" },
         { key: "email", label: "Email" },
@@ -47,6 +48,7 @@ export function StudentsTable({ loading, data, onDelete }: StudentsTableProps) {
             data={data}
             searchKeys={["username", "email"]}
             columns={columns}
+            onEdit={onEdit}
             onDelete={onDelete}
         />
     )
