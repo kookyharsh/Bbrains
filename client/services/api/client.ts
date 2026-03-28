@@ -218,6 +218,15 @@ export interface DashboardData {
   announcements: Announcement[];
   events: Event[];
   streak: StreakData;
+  feeSummary?: FeeSummary;
+}
+
+export interface FeeSummary {
+  currency: string;
+  totalFee: number;
+  paidAmount: number;
+  remainingAmount: number | null;
+  configured: boolean;
 }
 
 export interface WalletData {

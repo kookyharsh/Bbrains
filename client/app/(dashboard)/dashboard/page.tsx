@@ -10,6 +10,7 @@ import { dashboardApi, type DashboardData } from "@/services/api/client";
 import { DashboardContent } from "@/components/dashboard-content";
 import { LevelWidget } from "@/features/dashboard/components/LevelWidget";
 import { CurrentDate } from "@/features/dashboard/components/CurrentDate";
+import { FeeStatusCard } from "@/features/dashboard/components/FeeStatusCard";
 import { getServerSupabase as createClient } from "@/services/supabase/server";
 
 type RoleRow = {
@@ -124,7 +125,7 @@ export default async function DashboardOverview() {
       </div>
 
       {/* Top row cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <LevelWidget 
           level={dashboardData?.stats?.level ?? 1} 
           xp={dashboardData?.stats?.xp ?? 0} 
@@ -132,6 +133,7 @@ export default async function DashboardOverview() {
         />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
+        <FeeStatusCard feeSummary={dashboardData?.feeSummary} />
         <AttendanceCard initialAttendance={dashboardData?.attendance} />
       </div>
 

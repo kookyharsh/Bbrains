@@ -164,4 +164,11 @@ export interface DashboardData {
     current: number;
     longest: number;
   };
+  feeSummary?: {
+    currency: string;
+    totalFee: number;
+    paidAmount: number;
+    remainingAmount: number | null;
+    configured: boolean;
+  };
 }

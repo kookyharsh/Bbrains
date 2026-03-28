@@ -44,6 +44,7 @@ const salaryPaidKeys = [
 ];
 
 const currencyKeys = ['CURRENCY', 'CURRENCY_CODE'];
+const feeNoteKeywords = ['fee', 'fees', 'tuition', 'admission'];
 const salaryNoteKeywords = ['salary', 'payroll', 'stipend', 'wage', 'wages'];
 const incomeNoteKeywords = ['salary', 'income', 'allowance', 'commission', 'payout', 'payment'];
 
@@ -212,12 +213,7 @@ export const getAdminOverview = async (req, res) => {
                 where: {
                     type: 'credit',
                     status: 'success',
-                    OR: [
-                        { note: { contains: 'fee', mode: 'insensitive' } },
-                        { note: { contains: 'fees', mode: 'insensitive' } },
-                        { note: { contains: 'tuition', mode: 'insensitive' } },
-                        { note: { contains: 'admission', mode: 'insensitive' } },
-                    ],
+                    OR: buildNoteFilters(feeNoteKeywords),
                 },
             }),
             prisma.transactionHistory.findMany({
@@ -420,12 +416,7 @@ export const getManagerOverview = async (req, res) => {
                 where: {
                     type: 'credit',
                     status: 'success',
-                    OR: [
-                        { note: { contains: 'fee', mode: 'insensitive' } },
-                        { note: { contains: 'fees', mode: 'insensitive' } },
-                        { note: { contains: 'tuition', mode: 'insensitive' } },
-                        { note: { contains: 'admission', mode: 'insensitive' } },
-                    ],
+                    OR: buildNoteFilters(feeNoteKeywords),
                 },
             }),
             prisma.transactionHistory.aggregate({
@@ -649,7 +640,20 @@ export const getManagerOverview = async (req, res) => {
 
 async function studentDashboard(userId, res) {
     try {
-        const [user, enrollments, xp, achievements, wallet, recentGrades, leaderboardPos, announcements, recentClaims] = await Promise.all([
+        const [
+            user,
+            enrollments,
+            xp,
+            achievements,
+            wallet,
+            recentGrades,
+            leaderboardPos,
+            announcements,
+            recentClaims,
+            configs,
+            feeDebits,
+            feeCredits,
+        ] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -710,7 +714,30 @@ async function studentDashboard(userId, res) {
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 30
-            })
+            }),
+            prisma.systemConfig.findMany(),
+            prisma.transactionHistory.aggregate({
+                _sum: {
+                    amount: true,
+                },
+                where: {
+                    userId,
+                    type: 'debit',
+                    status: 'success',
+                    OR: buildNoteFilters(feeNoteKeywords),
+                },
+            }),
+            prisma.transactionHistory.aggregate({
+                _sum: {
+                    amount: true,
+                },
+                where: {
+                    userId,
+                    type: 'credit',
+                    status: 'success',
+                    OR: buildNoteFilters(feeNoteKeywords),
+                },
+            }),
         ]);
 
         // Normalize user profile for frontend: flatten avatar and names
@@ -722,6 +749,16 @@ async function studentDashboard(userId, res) {
             collegeName: user?.college?.name
         };
         const streak = calculateStreak(recentClaims);
+        const configMap = new Map(configs.map((config) => [config.key, config]));
+        const currency = String(firstDefinedConfig(configMap, currencyKeys, 'INR') || 'INR');
+        const totalFee = Number(firstDefinedConfig(configMap, feePerStudentKeys, 0) || 0);
+        const debitFeePayments = Number(feeDebits._sum.amount || 0);
+        const creditFeePayments = Number(feeCredits._sum.amount || 0);
+        const paidAmount = debitFeePayments > 0 ? debitFeePayments : creditFeePayments;
+        const hasConfiguredFee = totalFee > 0;
+        const remainingAmount = hasConfiguredFee
+            ? Math.max(totalFee - paidAmount, 0)
+            : null;
 
         let nextLevel = null;
         if (xp) {
@@ -745,7 +782,14 @@ async function studentDashboard(userId, res) {
             enrollments: enrollments || [],
             recentGrades: recentGrades || [],
             recentAchievements: achievements || [],
-            announcements: announcements || []
+            announcements: announcements || [],
+            feeSummary: {
+                currency,
+                totalFee,
+                paidAmount,
+                remainingAmount,
+                configured: hasConfiguredFee,
+            }
         });
     } catch (error) {
         console.error('Student Dashboard error details:', error);
