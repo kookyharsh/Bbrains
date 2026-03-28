@@ -39,3 +39,31 @@ export const getUserRoles = async (userId) => {
         include: { role: true }
     });
 };
+
+export const getUsersWithRoles = async () => {
+    return await prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            type: true,
+            userDetails: {
+                select: {
+                    firstName: true,
+                    lastName: true,
+                    avatar: true,
+                    sex: true,
+                    dob: true,
+                    phone: true,
+                    bio: true,
+                }
+            },
+            roles: {
+                select: {
+                    role: true
+                }
+            }
+        }
+    });
+};

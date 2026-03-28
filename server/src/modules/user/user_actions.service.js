@@ -1,4 +1,5 @@
 import prisma from "../../utils/prisma.js";
+import { deleteSupabaseUser } from "../auth/supabase-user.service.js";
 
 const updateUser = async (id, data) => {
     return await prisma.user.update({
@@ -8,6 +9,13 @@ const updateUser = async (id, data) => {
 };
 
 const deleteUser = async (id) => {
+    try {
+        await deleteSupabaseUser(id);
+    } catch (error) {
+        console.error('Failed to delete Supabase user:', error);
+        throw error;
+    }
+
     return await prisma.user.delete({
         where: { id: id }
     });

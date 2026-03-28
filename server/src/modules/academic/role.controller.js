@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
     createRoleRecord, getAllRoles, updateRoleRecord,
-    deleteRoleRecord, assignRoleToUser, removeRoleFromUser, getUserRoles
+    deleteRoleRecord, assignRoleToUser, removeRoleFromUser, getUserRoles, getUsersWithRoles
 } from './role.service.js';
 import { sendSuccess, sendCreated, sendError } from '../../utils/response.js';
 import { createAuditLog } from '../../utils/auditLog.js';
@@ -32,6 +32,16 @@ export const getRoles = async (req, res) => {
         return sendSuccess(res, roles);
     } catch (error) {
         return sendError(res, 'Failed to fetch roles', 500);
+    }
+};
+
+// GET /roles/users
+export const listUsers = async (req, res) => {
+    try {
+        const users = await getUsersWithRoles();
+        return sendSuccess(res, users);
+    } catch (error) {
+        return sendError(res, 'Failed to fetch users', 500);
     }
 };
 

@@ -2,7 +2,7 @@ import express from 'express';
 import {
     getMe, getUserByUsername, getStudents, getTeachers,
     getStudentByUsername, getTeacherByUsername,
-    addTeacher, updateTeacher, deleteTeacher, searchUser
+    addTeacher, addStudent, addManager, getManagers, updateTeacher, deleteTeacher, searchUser
 } from './user_management.controller.js';
 import { editUser, removeUser, dailyClaim } from './user_actions.controller.js';
 import { createDetails, getMyDetails, updateMyDetails, getUserDetails } from './userDetails.controller.js';
@@ -24,6 +24,7 @@ router.get('/:id/details', verifyToken, authorize('teacher', 'admin'), getUserDe
 // Student endpoints
 router.get('/students', verifyToken, authorize('teacher', 'admin', 'staff'), getStudents);
 router.get('/students/:username', verifyToken, authorize('teacher', 'admin', 'staff'), getStudentByUsername);
+router.post('/students', verifyToken, authorize('admin'), addStudent);
 
 // Teacher endpoints
 router.get('/teachers', verifyToken, getTeachers);
@@ -31,6 +32,10 @@ router.get('/teachers/:username', verifyToken, getTeacherByUsername);
 router.post('/teachers', verifyToken, authorize('admin'), addTeacher);
 router.put('/teachers/:id', verifyToken, authorize('admin'), updateTeacher);
 router.delete('/teachers/:id', verifyToken, authorize('admin'), deleteTeacher);
+
+// Manager endpoints
+router.get('/managers', verifyToken, authorize('admin'), getManagers);
+router.post('/managers', verifyToken, authorize('admin'), addManager);
 
 // User actions
 router.put('/update/:id', verifyToken, editUser);

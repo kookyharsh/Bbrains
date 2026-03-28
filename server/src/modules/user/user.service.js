@@ -1,10 +1,20 @@
 import prisma from "../../utils/prisma.js";
-import jwt from 'jsonwebtoken'
-import { deleteSupabaseUser } from '../auth/supabase-user.service.js';
+import jwt from 'jsonwebtoken';
+import {
+    createSupabaseUser,
+    deleteSupabaseUser,
+} from '../auth/supabase-user.service.js';
+import { getRandomAvatar } from "../../utils/randomavatar.js";
 
 const findUserByEmail = async (email) => {
     return await prisma.user.findUnique({
         where: { email },
+    });
+};
+
+const findUserByUsername = async (username) => {
+    return await prisma.user.findUnique({
+        where: { username },
     });
 };
 
@@ -34,6 +44,47 @@ const createUser = async (userId, username, email, collegeId, password, avatar, 
             }
         },
     });
+};
+
+const userSummarySelect = {
+    id: true,
+    username: true,
+    email: true,
+    type: true,
+    userDetails: {
+        select: {
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            sex: true,
+            dob: true,
+            phone: true,
+            bio: true
+        }
+    },
+    wallet: {
+        select: {
+            id: true,
+            balance: true,
+        },
+    },
+    xp: {
+        select: {
+            xp: true,
+            level: true,
+        },
+    },
+    roles: {
+        select: {
+            role: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                }
+            }
+        }
+    }
 };
 
 const getUserDetailsByID = async (id) => {
@@ -129,6 +180,13 @@ const getUserDetailsByID = async (id) => {
     };
 };
 
+const getUserSummaryByID = async (id) => {
+    return await prisma.user.findUnique({
+        where: { id },
+        select: userSummarySelect,
+    });
+};
+
 const getUserDataHandler = async (req, res) => {
     try {
         const token = req.cookies?.token;
@@ -163,37 +221,21 @@ const getUsersByRole = async (roleName) => {
         where: {
             type: roleName // 'student' or 'teacher' from enum
         },
-        select: {
-            id: true,
-            username: true,
-            email: true,
-            type: true,
-            userDetails: {
-                select: {
-                    firstName: true,
-                    lastName: true,
-                    avatar: true,
-                    sex: true,
-                    dob: true,
-                    phone: true,
-                    bio: true
-                }
-            },
-            wallet: {
-                select: {
-                    id: true,
-                    balance: true,
-                },
-            },
-            xp: {
-                select: {
-                    xp: true,
-                    level: true,
-                },
-            }
+        select: userSummarySelect,
+        orderBy: {
+            createdAt: 'desc'
         }
     });
 
+};
+
+const getAllUsersWithRoles = async () => {
+    return await prisma.user.findMany({
+        select: userSummarySelect,
+        orderBy: {
+            createdAt: 'desc'
+        }
+    });
 };
 
 const getUserByName = async (name) => {
@@ -214,28 +256,156 @@ const getUserByName = async (name) => {
     });
 };
 
-// Assuming 'createTeacher' creates a user with type 'teacher'
-// We can reuse 'createUser' but might need to enforce the role.
-// For now, let's just use the existing createUser but exposed specifically or allow type override
-const createTeacher = async (data) => {
-    return await prisma.user.create({
-        data: {
-            id: data.id,
-            username: data.username,
-            email: data.email,
-            ...(data.password != null && { password: data.password }),
-            collegeId: data.collegeId,
-            type: 'teacher',
-            userDetails: {
-                create: {
-                    firstName: data.firstName,
-                    lastName: data.lastName,
-                    sex: data.sex,
-                    dob: new Date(data.dob),
-                    phone: data.phone ?? null
-                }
-            }
+const ensureRoleByName = async (tx, roleName, description) => {
+    const roles = await tx.role.findMany({
+        select: {
+            id: true,
+            name: true,
+            description: true,
         }
+    });
+
+    const existing = roles.find((role) => role.name.toLowerCase() === roleName.toLowerCase());
+
+    if (existing) return existing;
+
+    return await tx.role.create({
+        data: {
+            name: roleName,
+            description
+        }
+    });
+};
+
+const createManagedUser = async (data) => {
+    const {
+        username,
+        email,
+        password,
+        collegeId,
+        type,
+        firstName,
+        lastName,
+        sex,
+        dob,
+        phone,
+        bio,
+        assignRoleNames = [],
+    } = data;
+
+    const supabaseUser = await createSupabaseUser(email, password, {
+        username,
+        type,
+    });
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            await tx.user.create({
+                data: {
+                    id: supabaseUser.id,
+                    username,
+                    email,
+                    collegeId,
+                    type,
+                    userDetails: {
+                        create: {
+                            avatar: getRandomAvatar(),
+                            firstName,
+                            lastName,
+                            sex,
+                            dob: new Date(dob),
+                            phone: phone ?? null,
+                            bio: bio ?? null,
+                        }
+                    },
+                    ...(type === 'student'
+                        ? {
+                            streak: {
+                                create: {
+                                    currentStreak: 0,
+                                }
+                            }
+                        }
+                        : {})
+                }
+            });
+
+            await tx.xp.upsert({
+                where: { userId: supabaseUser.id },
+                update: {},
+                create: {
+                    userId: supabaseUser.id,
+                    xp: 0,
+                    level: 1,
+                }
+            });
+
+            await tx.wallet.upsert({
+                where: { userId: supabaseUser.id },
+                update: {},
+                create: {
+                    id: `wallet_${supabaseUser.id}`,
+                    userId: supabaseUser.id,
+                    balance: 500,
+                    pin: "000000",
+                }
+            });
+
+            for (const roleName of assignRoleNames) {
+                const role = await ensureRoleByName(
+                    tx,
+                    roleName,
+                    `${roleName} access`
+                );
+
+                await tx.userRoles.upsert({
+                    where: {
+                        userId_roleId: {
+                            userId: supabaseUser.id,
+                            roleId: role.id,
+                        }
+                    },
+                    create: {
+                        userId: supabaseUser.id,
+                        roleId: role.id,
+                    },
+                    update: {},
+                });
+            }
+        });
+
+        return await getUserSummaryByID(supabaseUser.id);
+    } catch (error) {
+        try {
+            await deleteSupabaseUser(supabaseUser.id);
+        } catch (cleanupError) {
+            console.error('Failed to rollback Supabase user creation:', cleanupError);
+        }
+        throw error;
+    }
+};
+
+const createTeacher = async (data) => {
+    return await createManagedUser({
+        ...data,
+        type: 'teacher',
+        assignRoleNames: [],
+    });
+};
+
+const createStudent = async (data) => {
+    return await createManagedUser({
+        ...data,
+        type: 'student',
+        assignRoleNames: [],
+    });
+};
+
+const createManager = async (data) => {
+    return await createManagedUser({
+        ...data,
+        type: 'staff',
+        assignRoleNames: ['Manager'],
     });
 };
 
@@ -253,4 +423,19 @@ const deleteUser = async (userId) => {
     }
 };
 
-export { findUserByEmail, findUserBySupabaseId, createUser, getUserDetailsByID, getUserDataHandler, getUsersByRole, getUserByName, createTeacher, deleteUser };
+export {
+    findUserByEmail,
+    findUserBySupabaseId,
+    findUserByUsername,
+    createUser,
+    getUserDetailsByID,
+    getUserSummaryByID,
+    getUserDataHandler,
+    getUsersByRole,
+    getAllUsersWithRoles,
+    getUserByName,
+    createTeacher,
+    createStudent,
+    createManager,
+    deleteUser
+};

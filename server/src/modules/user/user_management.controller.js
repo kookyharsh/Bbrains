@@ -1,4 +1,15 @@
-import { getUsersByRole, getUserByName, createTeacher, getUserDetailsByID, findUserByEmail } from "./user.service.js";
+import {
+    getUsersByRole,
+    getUserByName,
+    createTeacher,
+    createStudent,
+    createManager,
+    deleteUser as deleteManagedUser,
+    getUserDetailsByID,
+    getUserSummaryByID,
+    findUserByEmail,
+    findUserByUsername
+} from "./user.service.js";
 import { sendSuccess, sendPaginated, sendError, sendCreated } from "../../utils/response.js";
 import { createAuditLog } from "../../utils/auditLog.js";
 import prisma from "../../utils/prisma.js";
@@ -8,14 +19,49 @@ import { z } from "zod";
 const addTeacherSchema = z.object({
     username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
     email: z.string().email().max(50),
-    password: z.string().min(8).optional(), // optional depending on future auth flow
-    collegeId: z.number().int().positive(),
+    password: z.string().min(8),
+    collegeId: z.number().int().positive().optional(),
     firstName: z.string().min(2).max(25),
     lastName: z.string().min(2).max(25),
     sex: z.enum(['male', 'female', 'other']),
     dob: z.string(),
     phone: z.string().max(15).optional()
 });
+
+const createStudentSchema = z.object({
+    username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/),
+    email: z.string().email().max(50),
+    password: z.string().min(8),
+    collegeId: z.number().int().positive().optional(),
+    firstName: z.string().min(2).max(25),
+    lastName: z.string().min(2).max(25),
+    sex: z.enum(['male', 'female', 'other']),
+    dob: z.string(),
+    phone: z.string().max(15).optional()
+});
+
+const createManagerSchema = createStudentSchema.extend({
+    bio: z.string().max(500).optional()
+});
+
+const resolveCollegeId = async (requestedCollegeId, fallbackCollegeId) => {
+    const collegeId = requestedCollegeId ?? fallbackCollegeId;
+
+    if (!collegeId) {
+        throw new Error('No college is associated with the current admin account');
+    }
+
+    const college = await prisma.college.findUnique({
+        where: { id: Number(collegeId) },
+        select: { id: true }
+    });
+
+    if (!college) {
+        throw new Error(`College ${collegeId} does not exist`);
+    }
+
+    return college.id;
+};
 
 // GET /users/me - Get own profile
 export const getMe = async (req, res) => {
@@ -82,6 +128,74 @@ export const getTeachers = async (req, res) => {
     }
 };
 
+// GET /users/managers
+export const getManagers = async (req, res) => {
+    try {
+        const managers = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: {
+                                contains: 'manager',
+                                mode: 'insensitive'
+                            }
+                        }
+                    }
+                }
+            },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                type: true,
+                userDetails: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        avatar: true,
+                        sex: true,
+                        dob: true,
+                        phone: true,
+                        bio: true
+                    }
+                },
+                wallet: {
+                    select: {
+                        id: true,
+                        balance: true,
+                    },
+                },
+                xp: {
+                    select: {
+                        xp: true,
+                        level: true,
+                    },
+                },
+                roles: {
+                    select: {
+                        role: {
+                            select: {
+                                id: true,
+                                name: true,
+                                description: true,
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        return sendSuccess(res, managers);
+    } catch (error) {
+        console.error(error);
+        return sendError(res, 'Failed to fetch managers', 500);
+    }
+};
+
 // GET /users/students/:username
 export const getStudentByUsername = async (req, res) => {
     try {
@@ -133,19 +247,19 @@ export const getTeacherByUsername = async (req, res) => {
 export const addTeacher = async (req, res) => {
     try {
         const validated = addTeacherSchema.parse(req.body);
-        const existing = await findUserByEmail(validated.email);
-        if (existing) return sendError(res, 'Username or email already exists', 409);
-
-        // Without Clerk, generate a standard ID logic
-        const newTeacherId = `usr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const collegeId = await resolveCollegeId(validated.collegeId, req.user.collegeId);
+        const [existingEmail, existingUsername] = await Promise.all([
+            findUserByEmail(validated.email),
+            findUserByUsername(validated.username),
+        ]);
+        if (existingEmail || existingUsername) return sendError(res, 'Username or email already exists', 409);
 
         const result = await createTeacher({
             ...validated,
-            id: newTeacherId,
-            password: validated.password,
+            collegeId,
         });
         await createAuditLog(req.user.id, 'USER', 'CREATE', 'User', result.id, null, 'Teacher added');
-        return sendCreated(res, result, 'Teacher added successfully.');
+        return sendCreated(res, result, 'Teacher account created successfully.');
     } catch (error) {
         if (error.name === 'ZodError') {
             return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
@@ -156,6 +270,60 @@ export const addTeacher = async (req, res) => {
     }
 };
 
+// POST /users/students
+export const addStudent = async (req, res) => {
+    try {
+        const validated = createStudentSchema.parse(req.body);
+        const collegeId = await resolveCollegeId(validated.collegeId, req.user.collegeId);
+        const [existingEmail, existingUsername] = await Promise.all([
+            findUserByEmail(validated.email),
+            findUserByUsername(validated.username),
+        ]);
+        if (existingEmail || existingUsername) return sendError(res, 'Username or email already exists', 409);
+
+        const result = await createStudent({
+            ...validated,
+            collegeId,
+        });
+        await createAuditLog(req.user.id, 'USER', 'CREATE', 'User', result.id, null, 'Student added');
+        return sendCreated(res, result, 'Student account created successfully.');
+    } catch (error) {
+        if (error.name === 'ZodError') {
+            return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+        }
+        if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
+        console.error("Add Student Error:", error);
+        return sendError(res, 'Failed to add student', 500);
+    }
+};
+
+// POST /users/managers
+export const addManager = async (req, res) => {
+    try {
+        const validated = createManagerSchema.parse(req.body);
+        const collegeId = await resolveCollegeId(validated.collegeId, req.user.collegeId);
+        const [existingEmail, existingUsername] = await Promise.all([
+            findUserByEmail(validated.email),
+            findUserByUsername(validated.username),
+        ]);
+        if (existingEmail || existingUsername) return sendError(res, 'Username or email already exists', 409);
+
+        const result = await createManager({
+            ...validated,
+            collegeId,
+        });
+        await createAuditLog(req.user.id, 'USER', 'CREATE', 'User', result.id, null, 'Manager added');
+        return sendCreated(res, result, 'Manager account created successfully.');
+    } catch (error) {
+        if (error.name === 'ZodError') {
+            return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+        }
+        if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
+        console.error("Add Manager Error:", error);
+        return sendError(res, error?.message || 'Failed to add manager', 500);
+    }
+};
+
 // PUT /users/teachers/:id
 export const updateTeacher = async (req, res) => {
     try {
@@ -163,13 +331,46 @@ export const updateTeacher = async (req, res) => {
         const user = await prisma.user.findUnique({ where: { id } });
         if (!user || user.type !== 'teacher') return sendError(res, 'Teacher not found', 404);
 
-        const updated = await prisma.user.update({
+        const {
+            firstName,
+            lastName,
+            sex,
+            dob,
+            phone,
+            bio,
+            collegeId,
+        } = req.body;
+
+        await prisma.user.update({
             where: { id },
-            data: req.body
+            data: {
+                ...(collegeId ? { collegeId: Number(collegeId) } : {}),
+                userDetails: {
+                    upsert: {
+                        create: {
+                            firstName: firstName ?? '',
+                            lastName: lastName ?? '',
+                            sex: sex ?? 'other',
+                            dob: dob ? new Date(dob) : new Date('2000-01-01'),
+                            phone: phone ?? null,
+                            bio: bio ?? null,
+                        },
+                        update: {
+                            ...(firstName !== undefined ? { firstName } : {}),
+                            ...(lastName !== undefined ? { lastName } : {}),
+                            ...(sex !== undefined ? { sex } : {}),
+                            ...(dob !== undefined ? { dob: new Date(dob) } : {}),
+                            ...(phone !== undefined ? { phone } : {}),
+                            ...(bio !== undefined ? { bio } : {}),
+                        }
+                    }
+                }
+            }
         });
 
         await createAuditLog(req.user.id, 'USER', 'UPDATE', 'User', id, { after: req.body });
-        return sendSuccess(res, updated, 'Teacher updated successfully');
+        const updatedTeacher = await getUserSummaryByID(id);
+        return sendSuccess(res, updatedTeacher, 'Teacher updated successfully');
     } catch (error) {
         if (error.code === 'P2025') return sendError(res, 'Teacher not found', 404);
         console.error(error);
@@ -184,7 +385,7 @@ export const deleteTeacher = async (req, res) => {
         const user = await prisma.user.findUnique({ where: { id } });
         if (!user || user.type !== 'teacher') return sendError(res, 'Teacher not found', 404);
 
-        await prisma.user.delete({ where: { id } });
+        await deleteManagedUser(id);
         await createAuditLog(req.user.id, 'USER', 'DELETE', 'User', id, null, 'Teacher removed');
         return sendSuccess(res, null, 'Teacher deleted successfully');
     } catch (error) {

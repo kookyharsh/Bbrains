@@ -7,6 +7,9 @@ export interface ApiUser {
     username: string
     email: string
     type: "student" | "teacher" | "admin" | "staff"
+    roles?: {
+        role?: ApiRole
+    }[]
     userDetails?: {
         firstName: string
         lastName: string
