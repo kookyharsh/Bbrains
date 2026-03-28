@@ -21,6 +21,13 @@ const findUserByUsername = async (username) => {
 const findUserBySupabaseId = async (supabaseId) => {
     return await prisma.user.findUnique({
         where: { id: supabaseId },
+        include: {
+            roles: {
+                include: {
+                    role: true
+                }
+            }
+        }
     });
 };
 

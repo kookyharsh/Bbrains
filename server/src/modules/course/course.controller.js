@@ -6,12 +6,49 @@ import {
 import { sendSuccess, sendCreated, sendPaginated, sendError } from '../../utils/response.js';
 import { createAuditLog } from '../../utils/auditLog.js';
 
+const timetableEntrySchema = z.object({
+    day: z.string().min(1).max(20),
+    subject: z.string().min(1).max(100),
+    startTime: z.string().min(1).max(10),
+    endTime: z.string().min(1).max(10),
+    room: z.string().max(50).optional().nullable(),
+});
+
 const createCourseSchema = z.object({
     name: z.string().min(1).max(100),
-    description: z.string().max(255).optional()
+    description: z.string().max(255).optional(),
+    standard: z.string().min(1).max(50),
+    subjects: z.array(z.string().min(1).max(100)).min(1),
+    feePerStudent: z.coerce.number().min(0),
+    durationValue: z.coerce.number().int().positive(),
+    durationUnit: z.enum(['months', 'years']),
+    studentCapacity: z.coerce.number().int().min(1),
+    timetable: z.array(timetableEntrySchema).min(1),
 });
 
 const updateCourseSchema = createCourseSchema.partial();
+
+const getCourseOperationErrorMessage = (error, fallbackMessage) => {
+    if (!error) return fallbackMessage;
+
+    if (error.code === 'P2022') {
+        return 'Course schema is outdated. Apply the latest database migration and try again.';
+    }
+
+    if (typeof error.message === 'string' && error.message.trim()) {
+        const compactMessage = error.message
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .join(' ');
+
+        return compactMessage.length > 220
+            ? `${compactMessage.slice(0, 217)}...`
+            : compactMessage;
+    }
+
+    return fallbackMessage;
+};
 
 // POST /courses
 export const createCourse = async (req, res) => {
@@ -23,7 +60,7 @@ export const createCourse = async (req, res) => {
     } catch (error) {
         if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
         console.error(error);
-        return sendError(res, 'Failed to create course', 500);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to create course'), 500);
     }
 };
 
@@ -32,7 +69,8 @@ export const getCourses = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const { courses, total } = await getAllCourses((page - 1) * limit, limit);
+        const search = typeof req.query.search === 'string' ? req.query.search : '';
+        const { courses, total } = await getAllCourses((page - 1) * limit, limit, search);
         return sendPaginated(res, courses, { page, limit, total });
     } catch (error) {
         return sendError(res, 'Failed to fetch courses', 500);
@@ -64,7 +102,8 @@ export const updateCourse = async (req, res) => {
     } catch (error) {
         if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
         if (error.code === 'P2025') return sendError(res, 'Course not found', 404);
-        return sendError(res, 'Failed to update course', 500);
+        console.error(error);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to update course'), 500);
     }
 };
 

@@ -4,13 +4,24 @@ export const createCourseRecord = async (data) => {
     return await prisma.course.create({ data });
 };
 
-export const getAllCourses = async (skip = 0, take = 20) => {
+export const getAllCourses = async (skip = 0, take = 20, search = '') => {
+    const where = search
+        ? {
+            OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { standard: { contains: search, mode: 'insensitive' } },
+            ]
+        }
+        : undefined;
+
     const [courses, total] = await prisma.$transaction([
         prisma.course.findMany({
             skip, take,
-            include: { _count: { select: { enrollments: true, assignments: true } } }
+            where,
+            include: { _count: { select: { enrollments: true, assignments: true } } },
+            orderBy: { createdAt: 'desc' }
         }),
-        prisma.course.count()
+        prisma.course.count({ where })
     ]);
     return { courses, total };
 };

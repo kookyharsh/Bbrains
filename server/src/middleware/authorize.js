@@ -12,7 +12,14 @@ const authorize = (...allowedRoles) => {
             return res.status(401).json({ success: false, message: 'Not authenticated' });
         }
 
-        if (!allowedRoles.includes(req.user.type)) {
+        const hasManagerRole = (req.user.roles || []).some((entry) =>
+            entry?.role?.name?.toLowerCase().includes('manager')
+        );
+
+        const authorizedByType = allowedRoles.includes(req.user.type);
+        const authorizedByManagerRole = allowedRoles.includes('manager') && hasManagerRole;
+
+        if (!authorizedByType && !authorizedByManagerRole) {
             return res.status(403).json({
                 success: false,
                 message: 'You do not have permission to perform this action'

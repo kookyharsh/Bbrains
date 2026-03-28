@@ -1,0 +1,16 @@
+DO $$ BEGIN
+    CREATE TYPE "CourseDurationUnit" AS ENUM ('months', 'years');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE "course"
+    ADD COLUMN IF NOT EXISTS "standard" VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS "fee_per_student" DECIMAL(10, 2),
+    ADD COLUMN IF NOT EXISTS "duration_value" INTEGER,
+    ADD COLUMN IF NOT EXISTS "duration_unit" "CourseDurationUnit",
+    ADD COLUMN IF NOT EXISTS "student_capacity" INTEGER,
+    ADD COLUMN IF NOT EXISTS "subjects" JSONB,
+    ADD COLUMN IF NOT EXISTS "timetable" JSONB,
+    ADD COLUMN IF NOT EXISTS "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

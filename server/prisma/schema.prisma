@@ -96,11 +96,20 @@ model Address {
 }
 
 model Course {
-  id          Int          @id @default(autoincrement()) @map("course_id")
-  name        String       @db.VarChar(100)
-  description String?      @db.VarChar(255)
-  assignments Assignment[]
-  enrollments Enrollment[]
+  id             Int                @id @default(autoincrement()) @map("course_id")
+  name           String             @db.VarChar(100)
+  description    String?            @db.VarChar(255)
+  standard       String?            @db.VarChar(50)
+  feePerStudent  Decimal?           @map("fee_per_student") @db.Decimal(10, 2)
+  durationValue  Int?               @map("duration_value")
+  durationUnit   CourseDurationUnit? @map("duration_unit")
+  studentCapacity Int?              @map("student_capacity")
+  subjects       Json?
+  timetable      Json?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  assignments    Assignment[]
+  enrollments    Enrollment[]
 
   @@map("course")
 }
@@ -377,6 +386,11 @@ enum UserRole {
   teacher
   admin
   staff
+}
+
+enum CourseDurationUnit {
+  months
+  years
 }
 
 enum TransactionType {
