@@ -58,17 +58,28 @@ export function TeachersClient({ initialTeachers }: TeachersClientProps) {
 
     async function handleSubmit() {
         if (!form.username.trim() || !form.email.trim() || !form.firstName.trim()) return
+        if (!editing) {
+            if (form.password.length < 8) {
+                toast.error("Temporary password must be at least 8 characters")
+                return
+            }
+            if (form.password !== form.confirmPassword) {
+                toast.error("Passwords do not match")
+                return
+            }
+        }
         try {
             setSubmitting(true)
             const payload = {
                 username: form.username,
                 email: form.email,
+                ...(!editing ? { password: form.password } : {}),
                 firstName: form.firstName,
                 lastName: form.lastName,
                 sex: form.sex,
                 dob: form.dob || "2000-01-01",
                 phone: form.phone || undefined,
-                collegeId: Number(form.collegeId),
+                ...(form.collegeId.trim() ? { collegeId: Number(form.collegeId) } : {}),
             }
             if (editing) {
                 const r = await api.put<ApiUser>(`/user/teachers/${editing.id}`, payload)

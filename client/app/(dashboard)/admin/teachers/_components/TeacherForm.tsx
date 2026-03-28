@@ -8,9 +8,10 @@ interface TeacherFormFieldsProps {
     form: TeacherForm
     onChange: (form: TeacherForm) => void
     disabled?: boolean
+    showPasswordFields?: boolean
 }
 
-export function TeacherFormFields({ form, onChange, disabled }: TeacherFormFieldsProps) {
+export function TeacherFormFields({ form, onChange, disabled, showPasswordFields }: TeacherFormFieldsProps) {
     return (
         <>
             <div className="grid grid-cols-2 gap-3">
@@ -31,6 +32,28 @@ export function TeacherFormFields({ form, onChange, disabled }: TeacherFormField
                     placeholder="email@domain.com"
                     disabled={disabled}
                 />
+                {showPasswordFields && (
+                    <>
+                        <FormInput
+                            label="Temporary Password"
+                            required
+                            type="password"
+                            value={form.password}
+                            onChange={(e) => onChange({ ...form, password: e.target.value })}
+                            placeholder="Minimum 8 characters"
+                            disabled={disabled}
+                        />
+                        <FormInput
+                            label="Confirm Password"
+                            required
+                            type="password"
+                            value={form.confirmPassword}
+                            onChange={(e) => onChange({ ...form, confirmPassword: e.target.value })}
+                            placeholder="Repeat password"
+                            disabled={disabled}
+                        />
+                    </>
+                )}
                 <FormInput
                     label="First Name"
                     required
@@ -97,10 +120,11 @@ export function TeacherForm({ form, onChange, submitting, isEditing }: TeacherFo
                 form={form}
                 onChange={onChange}
                 disabled={submitting || isEditing}
+                showPasswordFields={!isEditing}
             />
             {!isEditing && (
                 <p className="text-xs text-muted-foreground mt-4">
-                    An invite email will be sent to the teacher so they can set their password.
+                    This creates a live login account immediately. Share the temporary password with the teacher or have them reset it after first sign-in.
                 </p>
             )}
         </>

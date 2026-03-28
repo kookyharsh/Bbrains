@@ -9,6 +9,8 @@ export function fullName(u?: { firstName?: string; lastName?: string } | null): 
 export interface TeacherForm {
     username: string
     email: string
+    password: string
+    confirmPassword: string
     firstName: string
     lastName: string
     sex: string
@@ -20,12 +22,14 @@ export interface TeacherForm {
 export const emptyTeacherForm: TeacherForm = {
     username: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     firstName: "",
     lastName: "",
     sex: "other",
     dob: "",
     phone: "",
-    collegeId: "45",
+    collegeId: "",
 }
 
 export function initForm(teacher?: ApiUser): TeacherForm {
@@ -33,11 +37,13 @@ export function initForm(teacher?: ApiUser): TeacherForm {
     return {
         username: teacher.username,
         email: teacher.email,
+        password: "",
+        confirmPassword: "",
         firstName: teacher.userDetails?.firstName ?? "",
         lastName: teacher.userDetails?.lastName ?? "",
         sex: teacher.userDetails?.sex ?? "other",
         dob: teacher.userDetails?.dob?.slice(0, 10) ?? "",
         phone: teacher.userDetails?.phone ?? "",
-        collegeId: "45",
+        collegeId: "",
     }
 }
