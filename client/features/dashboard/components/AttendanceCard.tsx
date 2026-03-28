@@ -17,7 +17,6 @@ export const AttendanceCard = memo(function AttendanceCard({ initialAttendance }
   const [attendance, setAttendance] = useState<AttendanceData | null>(initialAttendance || null);
   const [loading, setLoading] = useState(!initialAttendance);
   const [error, setError] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -59,17 +58,6 @@ export const AttendanceCard = memo(function AttendanceCard({ initialAttendance }
             <Calendar className="h-5 w-5 text-brand-orange" />
             Attendance
           </CardTitle>
-          {attendance?.records && attendance.records.length > 0 && (
-            <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 gap-1 text-xs" 
-                onClick={() => setShowHistory(!showHistory)}
-            >
-              {showHistory ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {showHistory ? "Hide History" : "View History"}
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
@@ -114,28 +102,6 @@ export const AttendanceCard = memo(function AttendanceCard({ initialAttendance }
                 <span className="font-medium">{attendance.absent} Absent</span>
               </div>
             </div>
-
-            {showHistory && attendance.records && (
-              <div className="mt-4 border-t pt-4 overflow-y-auto max-h-[200px] space-y-2 pr-2 custom-scrollbar">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Recent Records</p>
-                {attendance.records.map((record) => (
-                  <div key={record.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/50 border border-border/50">
-                    <div className="flex flex-col">
-                        <span className="font-medium">{format(new Date(record.date), "MMM d, yyyy")}</span>
-                        {record.notes && <span className="text-[10px] text-muted-foreground italic">&quot;{record.notes}&quot;</span>}
-                    </div>
-                    <span className={cn(
-                        "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border",
-                        record.status === 'present' ? "bg-green-500/10 text-green-500 border-green-500/20" :
-                        record.status === 'absent' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                        "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                    )}>
-                        {record.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </CardContent>

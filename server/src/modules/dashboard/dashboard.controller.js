@@ -645,15 +645,16 @@ async function studentDashboard(userId, res) {
             enrollments,
             xp,
             achievements,
-            wallet,
             recentGrades,
             leaderboardPos,
+            leaderboard,
+            xpLeaderboard,
             announcements,
             recentClaims,
             configs,
             feeDebits,
             feeCredits,
-        ] = await Promise.all([
+            ] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -686,6 +687,31 @@ async function studentDashboard(userId, res) {
             prisma.leaderboard.findFirst({
                 where: { userId, category: 'allTime' },
                 select: { rank: true, score: true }
+            }),
+            prisma.leaderboard.findMany({
+                where: { category: 'allTime' },
+                orderBy: { score: 'desc' },
+                take: 5,
+                include: {
+                    user: {
+                        select: {
+                            username: true,
+                            userDetails: { select: { avatar: true, firstName: true, lastName: true } }
+                        }
+                    }
+                }
+            }),
+            prisma.xp.findMany({
+                orderBy: { xp: 'desc' },
+                take: 5,
+                include: {
+                    user: {
+                        select: {
+                            username: true,
+                            userDetails: { select: { avatar: true, firstName: true, lastName: true } }
+                        }
+                    }
+                }
             }),
             prisma.announcement.findMany({
                 take: 5,
@@ -767,6 +793,17 @@ async function studentDashboard(userId, res) {
             });
         }
 
+        // Fallback leaderboard if needed
+        const finalLeaderboard = leaderboard && leaderboard.length > 0 
+            ? leaderboard 
+            : (xpLeaderboard || []).map((entry, index) => ({
+                id: entry.id,
+                userId: entry.userId,
+                score: entry.xp,
+                rank: index + 1,
+                user: entry.user
+            }));
+
         return sendSuccess(res, {
             user: userProfile,
             stats: {
@@ -782,6 +819,7 @@ async function studentDashboard(userId, res) {
             enrollments: enrollments || [],
             recentGrades: recentGrades || [],
             recentAchievements: achievements || [],
+            leaderboard: finalLeaderboard,
             announcements: announcements || [],
             feeSummary: {
                 currency,
