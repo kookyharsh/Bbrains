@@ -55,11 +55,42 @@ export const defaultWeeklySchedule: WeeklyScheduleDay[] = [
 const timeSlots = ["8:30 - 10:00", "10:30 - 12:00"];
 
 export function buildWeeklyScheduleFromCourses(
-  courses: Array<{ id: string | number; name: string }>,
+  courses: Array<{
+    id: string | number;
+    name: string;
+    timetable?: {
+      day: string;
+      subject: string;
+      startTime: string;
+      endTime: string;
+      room?: string | null;
+    }[];
+  }>,
   teacherName?: string
 ): WeeklyScheduleDay[] {
   if (courses.length === 0) {
     return weekDays.map((day) => ({ day, classes: [] }));
+  }
+
+  const scheduleFromTimetable = weekDays.map((day) => {
+    const classes = courses
+      .flatMap((course) =>
+        (course.timetable || [])
+          .filter((entry) => entry.day === day)
+          .map((entry) => ({
+            time: `${entry.startTime} - ${entry.endTime}`,
+            subject: entry.subject || course.name,
+            room: entry.room || "Room TBA",
+            teacher: teacherName,
+          }))
+      )
+      .sort((left, right) => left.time.localeCompare(right.time));
+
+    return { day, classes };
+  });
+
+  if (scheduleFromTimetable.some((day) => day.classes.length > 0)) {
+    return scheduleFromTimetable;
   }
 
   return weekDays.map((day, dayIndex) => {

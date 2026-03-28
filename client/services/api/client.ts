@@ -331,14 +331,32 @@ export interface Achievement {
 }
 
 export interface Course {
-  id: string;
+  id: string | number;
   name: string;
-  code: string;
   description?: string;
+  standard?: string;
+  subjects?: string[];
+  feePerStudent?: number | string;
+  durationValue?: number;
+  durationUnit?: "months" | "years";
+  studentCapacity?: number;
+  timetable?: ClassTimetableEntry[];
   teacherId?: string;
   teacher?: User;
   enrolledStudents?: number;
   isEnrolled?: boolean;
+  _count?: {
+    enrollments?: number;
+    assignments?: number;
+  };
+}
+
+export interface ClassTimetableEntry {
+  day: string;
+  subject: string;
+  startTime: string;
+  endTime: string;
+  room?: string | null;
 }
 
 export interface Grade {
@@ -514,27 +532,39 @@ export const courseApi = {
   getCourses: async (): Promise<ApiResponse<Course[]>> => {
     return api.get<Course[]>('/courses');
   },
-  getCourse: async (id: string): Promise<ApiResponse<Course>> => {
+  getCourse: async (id: string | number): Promise<ApiResponse<Course>> => {
     return api.get<Course>(`/courses/${id}`);
   },
   createCourse: async (data: {
     name: string;
-    code: string;
     description?: string;
+    standard: string;
+    subjects: string[];
+    feePerStudent: number;
+    durationValue: number;
+    durationUnit: "months" | "years";
+    studentCapacity: number;
+    timetable: ClassTimetableEntry[];
   }): Promise<ApiResponse<Course>> => {
     return api.post<Course>('/courses', data);
   },
-  updateCourse: async (id: string, data: {
+  updateCourse: async (id: string | number, data: {
     name?: string;
-    code?: string;
     description?: string;
+    standard?: string;
+    subjects?: string[];
+    feePerStudent?: number;
+    durationValue?: number;
+    durationUnit?: "months" | "years";
+    studentCapacity?: number;
+    timetable?: ClassTimetableEntry[];
   }): Promise<ApiResponse<Course>> => {
     return api.put<Course>(`/courses/${id}`, data);
   },
-  deleteCourse: async (id: string): Promise<ApiResponse<void>> => {
+  deleteCourse: async (id: string | number): Promise<ApiResponse<void>> => {
     return api.delete<void>(`/courses/${id}`);
   },
-  getCourseStudents: async (id: string): Promise<ApiResponse<User[]>> => {
+  getCourseStudents: async (id: string | number): Promise<ApiResponse<User[]>> => {
     return api.get<User[]>(`/courses/${id}/students`);
   },
 };
@@ -566,13 +596,13 @@ export const enrollmentApi = {
   getMyEnrollments: async (): Promise<ApiResponse<Course[]>> => {
     return api.get<Course[]>('/enrollments/me');
   },
-  enroll: async (courseId: string): Promise<ApiResponse<void>> => {
+  enroll: async (courseId: string | number): Promise<ApiResponse<void>> => {
     return api.post<void>('/enrollments', { courseId });
   },
-  unenroll: async (courseId: string): Promise<ApiResponse<void>> => {
+  unenroll: async (courseId: string | number): Promise<ApiResponse<void>> => {
     return api.delete<void>(`/enrollments/me/${courseId}`);
   },
-  getCourseEnrollments: async (courseId: string): Promise<ApiResponse<User[]>> => {
+  getCourseEnrollments: async (courseId: string | number): Promise<ApiResponse<User[]>> => {
     return api.get<User[]>(`/enrollments/course/${courseId}`);
   },
 };

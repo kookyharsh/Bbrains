@@ -108,6 +108,19 @@ export interface ApiCourse {
     id: number
     name: string
     description?: string
+    standard?: string
+    subjects?: string[]
+    feePerStudent?: number | string
+    durationValue?: number
+    durationUnit?: "months" | "years"
+    studentCapacity?: number
+    timetable?: {
+        day: string
+        subject: string
+        startTime: string
+        endTime: string
+        room?: string | null
+    }[]
 }
 
 export interface ApiSubmission {
