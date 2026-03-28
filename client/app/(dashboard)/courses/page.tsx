@@ -15,7 +15,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState<string | number | null>(null);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -49,7 +49,7 @@ export default function CoursesPage() {
     fetchCourses();
   }, []);
 
-  const handleEnroll = async (courseId: string) => {
+  const handleEnroll = async (courseId: string | number) => {
     setEnrolling(courseId);
     try {
       const response = await enrollmentApi.enroll(courseId);
@@ -131,7 +131,7 @@ export default function CoursesPage() {
                   )}
                 </div>
                 <h3 className="font-semibold text-foreground mb-1">{course.name}</h3>
-                <p className="text-xs text-muted-foreground mb-3">{course.code}</p>
+                <p className="text-xs text-muted-foreground mb-3">{course.standard || "Standard not set"}</p>
                 {course.description && (
                   <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{course.description}</p>
                 )}

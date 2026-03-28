@@ -111,9 +111,9 @@ export function AcademicsDialog({ open, onOpenChange, type, courses }: Academics
           )}
           {type === "course" && (
             <>
-              <div><Label>Course Name</Label><Input placeholder="Course name" /></div>
-              <div><Label>Course Code</Label><Input placeholder="CS101" /></div>
-              <div><Label>Description</Label><Textarea placeholder="Course description" /></div>
+              <div><Label>Class Name</Label><Input placeholder="Class A / BSc Computer Science" /></div>
+              <div><Label>Standard / Batch</Label><Input placeholder="8th Standard / FY BCom" /></div>
+              <div><Label>Description</Label><Textarea placeholder="Class description" /></div>
               <div><Label>Teacher ID</Label><Input placeholder="Teacher user ID" /></div>
             </>
           )}
@@ -124,7 +124,7 @@ export function AcademicsDialog({ open, onOpenChange, type, courses }: Academics
                 <Select>
                   <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
                   <SelectContent>
-                    {courses.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {courses.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
