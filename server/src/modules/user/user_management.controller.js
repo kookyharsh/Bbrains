@@ -25,7 +25,9 @@ const addTeacherSchema = z.object({
     lastName: z.string().min(2).max(25),
     sex: z.enum(['male', 'female', 'other']),
     dob: z.string(),
-    phone: z.string().max(15).optional()
+    phone: z.string().max(15).optional(),
+    teacherSubjects: z.array(z.string().min(1).max(100)).min(1),
+    classTeacherCourseId: z.number().int().positive().optional().nullable(),
 });
 
 const createStudentSchema = z.object({
@@ -37,7 +39,8 @@ const createStudentSchema = z.object({
     lastName: z.string().min(2).max(25),
     sex: z.enum(['male', 'female', 'other']),
     dob: z.string(),
-    phone: z.string().max(15).optional()
+    phone: z.string().max(15).optional(),
+    classId: z.number().int().positive(),
 });
 
 const createManagerSchema = createStudentSchema.extend({
@@ -61,6 +64,38 @@ const resolveCollegeId = async (requestedCollegeId, fallbackCollegeId) => {
     }
 
     return college.id;
+};
+
+const syncTeacherClassTeacherAssignment = async (tx, teacherId, nextCourseId) => {
+    await tx.course.updateMany({
+        where: { classTeacherId: teacherId },
+        data: { classTeacherId: null }
+    });
+
+    if (!nextCourseId) return;
+
+    const course = await tx.course.findUnique({
+        where: { id: Number(nextCourseId) },
+        select: {
+            id: true,
+            classTeacherId: true,
+        }
+    });
+
+    if (!course) {
+        throw new Error('Selected class was not found');
+    }
+
+    if (course.classTeacherId && course.classTeacherId !== teacherId) {
+        throw new Error('This class already has a class teacher assigned');
+    }
+
+    await tx.course.update({
+        where: { id: course.id },
+        data: {
+            classTeacherId: teacherId,
+        }
+    });
 };
 
 // GET /users/me - Get own profile
@@ -266,7 +301,7 @@ export const addTeacher = async (req, res) => {
         }
         if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
         console.error("Add Teacher Error:", error);
-        return sendError(res, 'Failed to add teacher', 500);
+        return sendError(res, error?.message || 'Failed to add teacher', 500);
     }
 };
 
@@ -293,7 +328,7 @@ export const addStudent = async (req, res) => {
         }
         if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
         console.error("Add Student Error:", error);
-        return sendError(res, 'Failed to add student', 500);
+        return sendError(res, error?.message || 'Failed to add student', 500);
     }
 };
 
@@ -339,32 +374,42 @@ export const updateTeacher = async (req, res) => {
             phone,
             bio,
             collegeId,
+            teacherSubjects,
+            classTeacherCourseId,
         } = req.body;
 
-        await prisma.user.update({
-            where: { id },
-            data: {
-                ...(collegeId ? { collegeId: Number(collegeId) } : {}),
-                userDetails: {
-                    upsert: {
-                        create: {
-                            firstName: firstName ?? '',
-                            lastName: lastName ?? '',
-                            sex: sex ?? 'other',
-                            dob: dob ? new Date(dob) : new Date('2000-01-01'),
-                            phone: phone ?? null,
-                            bio: bio ?? null,
-                        },
-                        update: {
-                            ...(firstName !== undefined ? { firstName } : {}),
-                            ...(lastName !== undefined ? { lastName } : {}),
-                            ...(sex !== undefined ? { sex } : {}),
-                            ...(dob !== undefined ? { dob: new Date(dob) } : {}),
-                            ...(phone !== undefined ? { phone } : {}),
-                            ...(bio !== undefined ? { bio } : {}),
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id },
+                data: {
+                    ...(collegeId ? { collegeId: Number(collegeId) } : {}),
+                    userDetails: {
+                        upsert: {
+                            create: {
+                                firstName: firstName ?? '',
+                                lastName: lastName ?? '',
+                                sex: sex ?? 'other',
+                                dob: dob ? new Date(dob) : new Date('2000-01-01'),
+                                phone: phone ?? null,
+                                bio: bio ?? null,
+                                ...(teacherSubjects !== undefined ? { teacherSubjects } : {}),
+                            },
+                            update: {
+                                ...(firstName !== undefined ? { firstName } : {}),
+                                ...(lastName !== undefined ? { lastName } : {}),
+                                ...(sex !== undefined ? { sex } : {}),
+                                ...(dob !== undefined ? { dob: new Date(dob) } : {}),
+                                ...(phone !== undefined ? { phone } : {}),
+                                ...(bio !== undefined ? { bio } : {}),
+                                ...(teacherSubjects !== undefined ? { teacherSubjects } : {}),
+                            }
                         }
                     }
                 }
+            });
+
+            if (classTeacherCourseId !== undefined) {
+                await syncTeacherClassTeacherAssignment(tx, id, classTeacherCourseId || null);
             }
         });
 
@@ -374,7 +419,7 @@ export const updateTeacher = async (req, res) => {
     } catch (error) {
         if (error.code === 'P2025') return sendError(res, 'Teacher not found', 404);
         console.error(error);
-        return sendError(res, 'Failed to update teacher', 500);
+        return sendError(res, error?.message || 'Failed to update teacher', 500);
     }
 };
 

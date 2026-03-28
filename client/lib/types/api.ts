@@ -18,10 +18,12 @@ export interface ApiUser {
         dob?: string
         phone?: string
         bio?: string
+        teacherSubjects?: string[]
     }
     wallet?: { id: string; balance: number }
     xp?: { xp: number; level: number }
-    enrollments?: { courseId: number; course: { name: string; id: number } }[]
+    enrollments?: { courseId: number; course: { name: string; id: number; standard?: string } }[]
+    classTeacherCourse?: { id: number; name: string; standard?: string } | null
 }
 
 export interface ApiAssignment {
@@ -121,6 +123,15 @@ export interface ApiCourse {
         endTime: string
         room?: string | null
     }[]
+    classTeacherId?: string | null
+    classTeacher?: {
+        id: string
+        username: string
+        userDetails?: {
+            firstName?: string
+            lastName?: string
+        }
+    } | null
 }
 
 export interface ApiSubmission {

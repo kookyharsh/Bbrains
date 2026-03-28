@@ -19,6 +19,16 @@ export function StudentsTable({ loading, data, onDelete }: StudentsTableProps) {
             render: (r: ApiUser) => fullName(r.userDetails),
         },
         {
+            key: "class",
+            label: "Class",
+            render: (r: ApiUser) => {
+                const enrolledClass = r.enrollments?.[0]?.course
+                return enrolledClass
+                    ? `${enrolledClass.name}${enrolledClass.standard ? ` (${enrolledClass.standard})` : ""}`
+                    : "—"
+            },
+        },
+        {
             key: "xp",
             label: "Level",
             render: (r: ApiUser) =>

@@ -19,19 +19,19 @@ router.get('/search', verifyToken, searchUser);
 router.post('/me/details', verifyToken, createDetails);
 router.get('/me/details', verifyToken, getMyDetails);
 router.put('/me/details', verifyToken, updateMyDetails);
-router.get('/:id/details', verifyToken, authorize('teacher', 'admin'), getUserDetails);
+router.get('/:id/details', verifyToken, authorize('teacher', 'admin', 'manager'), getUserDetails);
 
 // Student endpoints
-router.get('/students', verifyToken, authorize('teacher', 'admin', 'staff'), getStudents);
-router.get('/students/:username', verifyToken, authorize('teacher', 'admin', 'staff'), getStudentByUsername);
-router.post('/students', verifyToken, authorize('admin'), addStudent);
+router.get('/students', verifyToken, authorize('teacher', 'admin', 'staff', 'manager'), getStudents);
+router.get('/students/:username', verifyToken, authorize('teacher', 'admin', 'staff', 'manager'), getStudentByUsername);
+router.post('/students', verifyToken, authorize('admin', 'manager'), addStudent);
 
 // Teacher endpoints
 router.get('/teachers', verifyToken, getTeachers);
 router.get('/teachers/:username', verifyToken, getTeacherByUsername);
-router.post('/teachers', verifyToken, authorize('admin'), addTeacher);
-router.put('/teachers/:id', verifyToken, authorize('admin'), updateTeacher);
-router.delete('/teachers/:id', verifyToken, authorize('admin'), deleteTeacher);
+router.post('/teachers', verifyToken, authorize('admin', 'manager'), addTeacher);
+router.put('/teachers/:id', verifyToken, authorize('admin', 'manager'), updateTeacher);
+router.delete('/teachers/:id', verifyToken, authorize('admin', 'manager'), deleteTeacher);
 
 // Manager endpoints
 router.get('/managers', verifyToken, authorize('admin'), getManagers);
@@ -39,7 +39,7 @@ router.post('/managers', verifyToken, authorize('admin'), addManager);
 
 // User actions
 router.put('/update/:id', verifyToken, editUser);
-router.delete('/delete/:id', verifyToken, authorize('admin'), removeUser);
+router.delete('/delete/:id', verifyToken, authorize('admin', 'manager'), removeUser);
 router.post('/claim-daily', verifyToken, dailyClaim);
 
 // Get user by username (must be LAST due to :username param matching)

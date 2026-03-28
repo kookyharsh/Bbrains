@@ -198,6 +198,19 @@ export interface User {
     achievement: Achievement;
   }[];
   grades?: Grade[];
+  enrollments?: {
+    courseId: number;
+    course: {
+      id: number;
+      name: string;
+      standard?: string;
+    };
+  }[];
+  classTeacherCourse?: {
+    id: number;
+    name: string;
+    standard?: string;
+  } | null;
 }
 
 export interface DashboardData {
@@ -341,6 +354,15 @@ export interface Course {
   durationUnit?: "months" | "years";
   studentCapacity?: number;
   timetable?: ClassTimetableEntry[];
+  classTeacherId?: string | null;
+  classTeacher?: {
+    id: string;
+    username: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  } | null;
   teacherId?: string;
   teacher?: User;
   enrolledStudents?: number;

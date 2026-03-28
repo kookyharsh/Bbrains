@@ -17,6 +17,8 @@ export interface TeacherForm {
     dob: string
     phone: string
     collegeId: string
+    teacherSubjectsText: string
+    classTeacherCourseId: string
 }
 
 export const emptyTeacherForm: TeacherForm = {
@@ -30,6 +32,8 @@ export const emptyTeacherForm: TeacherForm = {
     dob: "",
     phone: "",
     collegeId: "",
+    teacherSubjectsText: "",
+    classTeacherCourseId: "",
 }
 
 export function initForm(teacher?: ApiUser): TeacherForm {
@@ -45,5 +49,7 @@ export function initForm(teacher?: ApiUser): TeacherForm {
         dob: teacher.userDetails?.dob?.slice(0, 10) ?? "",
         phone: teacher.userDetails?.phone ?? "",
         collegeId: "",
+        teacherSubjectsText: (teacher.userDetails?.teacherSubjects ?? []).join("\n"),
+        classTeacherCourseId: teacher.classTeacherCourse?.id ? String(teacher.classTeacherCourse.id) : "",
     }
 }

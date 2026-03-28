@@ -55,6 +55,7 @@ model User {
   streak           Streak?
   preference        UserPreference?
   chatMessages     ChatMessage[]
+  classTeacherCourse Course?      @relation("CourseClassTeacher")
 
   @@map("user")
 }
@@ -70,6 +71,7 @@ model UserDetails {
   dob         DateTime @db.Date
   phone       String?  @db.VarChar(15)
   bio         String?  @db.Text
+  teacherSubjects Json? @map("teacher_subjects")
   addressId   Int?     @map("address_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -104,12 +106,14 @@ model Course {
   durationValue  Int?               @map("duration_value")
   durationUnit   CourseDurationUnit? @map("duration_unit")
   studentCapacity Int?              @map("student_capacity")
+  classTeacherId String?            @unique @map("class_teacher_id")
   subjects       Json?
   timetable      Json?
   createdAt      DateTime           @default(now()) @map("created_at")
   updatedAt      DateTime           @updatedAt @map("updated_at")
   assignments    Assignment[]
   enrollments    Enrollment[]
+  classTeacher   User?              @relation("CourseClassTeacher", fields: [classTeacherId], references: [id], onDelete: SetNull)
 
   @@map("course")
 }

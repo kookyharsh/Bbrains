@@ -1,17 +1,28 @@
 "use client"
 
 import React from "react"
-import { FormInput, FormSelect } from "@/features/admin/components/form"
+import { FormInput, FormSelect, FormTextarea } from "@/features/admin/components/form"
 import type { TeacherForm } from "../_types"
+import type { Course } from "@/services/api/client"
 
 interface TeacherFormFieldsProps {
     form: TeacherForm
     onChange: (form: TeacherForm) => void
     disabled?: boolean
     showPasswordFields?: boolean
+    courses: Course[]
+    isEditing?: boolean
 }
 
-export function TeacherFormFields({ form, onChange, disabled, showPasswordFields }: TeacherFormFieldsProps) {
+export function TeacherFormFields({ form, onChange, disabled, showPasswordFields, courses, isEditing }: TeacherFormFieldsProps) {
+    const classTeacherOptions = [
+        { value: "", label: "No class teacher assignment" },
+        ...courses.map((course) => ({
+            value: String(course.id),
+            label: `${course.name}${course.standard ? ` (${course.standard})` : ""}${course.classTeacherId && String(course.id) !== form.classTeacherCourseId ? " — already assigned" : ""}`,
+        })),
+    ]
+
     return (
         <>
             <div className="grid grid-cols-2 gap-3">
@@ -21,7 +32,7 @@ export function TeacherFormFields({ form, onChange, disabled, showPasswordFields
                     value={form.username}
                     onChange={(e) => onChange({ ...form, username: e.target.value })}
                     placeholder="username"
-                    disabled={disabled}
+                    disabled={disabled || isEditing}
                 />
                 <FormInput
                     label="Email"
@@ -30,7 +41,7 @@ export function TeacherFormFields({ form, onChange, disabled, showPasswordFields
                     value={form.email}
                     onChange={(e) => onChange({ ...form, email: e.target.value })}
                     placeholder="email@domain.com"
-                    disabled={disabled}
+                    disabled={disabled || isEditing}
                 />
                 {showPasswordFields && (
                     <>
@@ -101,6 +112,24 @@ export function TeacherFormFields({ form, onChange, disabled, showPasswordFields
                     onChange={(e) => onChange({ ...form, collegeId: e.target.value })}
                     disabled={disabled}
                 />
+                <FormSelect
+                    label="Class Teacher Of"
+                    value={form.classTeacherCourseId}
+                    onChange={(v) => onChange({ ...form, classTeacherCourseId: v })}
+                    options={classTeacherOptions}
+                    disabled={disabled}
+                />
+                <div className="col-span-2">
+                    <FormTextarea
+                        label="Subjects"
+                        required
+                        value={form.teacherSubjectsText}
+                        onChange={(value) => onChange({ ...form, teacherSubjectsText: value })}
+                        placeholder={`Add one subject per line\nMathematics\nPhysics\nChemistry`}
+                        rows={4}
+                        disabled={disabled}
+                    />
+                </div>
             </div>
         </>
     )
@@ -111,16 +140,19 @@ interface TeacherFormProps {
     onChange: (form: TeacherForm) => void
     submitting: boolean
     isEditing: boolean
+    courses: Course[]
 }
 
-export function TeacherForm({ form, onChange, submitting, isEditing }: TeacherFormProps) {
+export function TeacherForm({ form, onChange, submitting, isEditing, courses }: TeacherFormProps) {
     return (
         <>
             <TeacherFormFields
                 form={form}
                 onChange={onChange}
-                disabled={submitting || isEditing}
+                disabled={submitting}
                 showPasswordFields={!isEditing}
+                courses={courses}
+                isEditing={isEditing}
             />
             {!isEditing && (
                 <p className="text-xs text-muted-foreground mt-4">

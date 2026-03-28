@@ -1,4 +1,5 @@
-export { type ApiUser } from "@/lib/types/api"
+import type { ApiUser } from "@/lib/types/api"
+export type { ApiUser }
 
 export function fullName(u?: { firstName?: string; lastName?: string } | null): string {
     if (!u) return "—"
@@ -20,6 +21,7 @@ export interface StudentForm {
     dob: string
     phone: string
     collegeId: string
+    classId: string
 }
 
 export const emptyStudentForm: StudentForm = {
@@ -33,4 +35,5 @@ export const emptyStudentForm: StudentForm = {
     dob: "",
     phone: "",
     collegeId: "",
+    classId: "",
 }

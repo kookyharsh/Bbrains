@@ -53,6 +53,13 @@ const createUser = async (userId, username, email, collegeId, password, avatar, 
     });
 };
 
+const normalizeStringArray = (values = []) => {
+    if (!Array.isArray(values)) return [];
+    return values
+        .map((value) => String(value ?? '').trim())
+        .filter(Boolean);
+};
+
 const userSummarySelect = {
     id: true,
     username: true,
@@ -66,7 +73,8 @@ const userSummarySelect = {
             sex: true,
             dob: true,
             phone: true,
-            bio: true
+            bio: true,
+            teacherSubjects: true,
         }
     },
     wallet: {
@@ -90,6 +98,25 @@ const userSummarySelect = {
                     description: true,
                 }
             }
+        }
+    },
+    enrollments: {
+        select: {
+            courseId: true,
+            course: {
+                select: {
+                    id: true,
+                    name: true,
+                    standard: true,
+                }
+            }
+        }
+    },
+    classTeacherCourse: {
+        select: {
+            id: true,
+            name: true,
+            standard: true,
         }
     }
 };
@@ -117,6 +144,7 @@ const getUserDetailsByID = async (id) => {
                     dob: true,
                     phone: true,
                     bio: true,
+                    teacherSubjects: true,
                     address: {
                         select: {
                             addressLine1: true,
@@ -173,6 +201,25 @@ const getUserDetailsByID = async (id) => {
                     gradedAt: 'desc'
                 },
                 take: 10
+            },
+            enrollments: {
+                select: {
+                    courseId: true,
+                    course: {
+                        select: {
+                            id: true,
+                            name: true,
+                            standard: true,
+                        }
+                    }
+                }
+            },
+            classTeacherCourse: {
+                select: {
+                    id: true,
+                    name: true,
+                    standard: true,
+                }
             }
         },
     });
@@ -297,6 +344,9 @@ const createManagedUser = async (data) => {
         dob,
         phone,
         bio,
+        teacherSubjects = [],
+        classTeacherCourseId,
+        classId,
         assignRoleNames = [],
     } = data;
 
@@ -323,6 +373,9 @@ const createManagedUser = async (data) => {
                             dob: new Date(dob),
                             phone: phone ?? null,
                             bio: bio ?? null,
+                            ...(type === 'teacher'
+                                ? { teacherSubjects: normalizeStringArray(teacherSubjects) }
+                                : {}),
                         }
                     },
                     ...(type === 'student'
@@ -377,6 +430,49 @@ const createManagedUser = async (data) => {
                         roleId: role.id,
                     },
                     update: {},
+                });
+            }
+
+            if (type === 'student' && classId) {
+                const course = await tx.course.findUnique({
+                    where: { id: Number(classId) },
+                    select: { id: true }
+                });
+
+                if (!course) {
+                    throw new Error('Selected class was not found');
+                }
+
+                await tx.enrollment.create({
+                    data: {
+                        userId: supabaseUser.id,
+                        courseId: course.id,
+                    }
+                });
+            }
+
+            if (type === 'teacher' && classTeacherCourseId) {
+                const course = await tx.course.findUnique({
+                    where: { id: Number(classTeacherCourseId) },
+                    select: {
+                        id: true,
+                        classTeacherId: true,
+                    }
+                });
+
+                if (!course) {
+                    throw new Error('Selected class teacher assignment was not found');
+                }
+
+                if (course.classTeacherId && course.classTeacherId !== supabaseUser.id) {
+                    throw new Error('This class already has a class teacher assigned');
+                }
+
+                await tx.course.update({
+                    where: { id: course.id },
+                    data: {
+                        classTeacherId: supabaseUser.id,
+                    }
                 });
             }
         });

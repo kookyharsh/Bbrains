@@ -18,7 +18,21 @@ export const getAllCourses = async (skip = 0, take = 20, search = '') => {
         prisma.course.findMany({
             skip, take,
             where,
-            include: { _count: { select: { enrollments: true, assignments: true } } },
+            include: {
+                _count: { select: { enrollments: true, assignments: true } },
+                classTeacher: {
+                    select: {
+                        id: true,
+                        username: true,
+                        userDetails: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            }
+                        }
+                    }
+                }
+            },
             orderBy: { createdAt: 'desc' }
         }),
         prisma.course.count({ where })
@@ -31,7 +45,19 @@ export const getCourseById = async (id) => {
         where: { id },
         include: {
             assignments: { orderBy: { createdAt: 'desc' } },
-            _count: { select: { enrollments: true } }
+            _count: { select: { enrollments: true } },
+            classTeacher: {
+                select: {
+                    id: true,
+                    username: true,
+                    userDetails: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                        }
+                    }
+                }
+            }
         }
     });
 };

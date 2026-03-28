@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { UserCheck } from "lucide-react"
-import { api } from "@/services/api/client"
+import { api, courseApi, type Course } from "@/services/api/client"
 import { toast } from "sonner"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
@@ -19,6 +19,7 @@ interface TeachersClientProps {
 
 export function TeachersClient({ initialTeachers }: TeachersClientProps) {
     const [teachers, setTeachers] = useState<ApiUser[]>(initialTeachers)
+    const [courses, setCourses] = useState<Course[]>([])
     const [loading, setLoading] = useState(false)
     const [modalOpen, setModalOpen] = useState(false)
     const [editing, setEditing] = useState<ApiUser | null>(null)
@@ -27,11 +28,24 @@ export function TeachersClient({ initialTeachers }: TeachersClientProps) {
     const [submitting, setSubmitting] = useState(false)
     const [deleting, setDeleting] = useState(false)
 
+    const parseTeacherSubjects = useCallback((value: string) => {
+        return value
+            .split(/\r?\n|,/)
+            .map((subject) => subject.trim())
+            .filter(Boolean)
+    }, [])
+
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const data = await fetchTeachers()
-            setTeachers(data)
+            const [teacherData, coursesResponse] = await Promise.all([
+                fetchTeachers(),
+                courseApi.getCourses(),
+            ])
+            setTeachers(teacherData)
+            if (coursesResponse.success) {
+                setCourses(coursesResponse.data || [])
+            }
         } catch (e) {
             console.error(e)
             toast.error("Failed to load teachers")
@@ -58,6 +72,11 @@ export function TeachersClient({ initialTeachers }: TeachersClientProps) {
 
     async function handleSubmit() {
         if (!form.username.trim() || !form.email.trim() || !form.firstName.trim()) return
+        const teacherSubjects = parseTeacherSubjects(form.teacherSubjectsText)
+        if (teacherSubjects.length === 0) {
+            toast.error("Add at least one subject for the teacher")
+            return
+        }
         if (!editing) {
             if (form.password.length < 8) {
                 toast.error("Temporary password must be at least 8 characters")
@@ -79,6 +98,8 @@ export function TeachersClient({ initialTeachers }: TeachersClientProps) {
                 sex: form.sex,
                 dob: form.dob || "2000-01-01",
                 phone: form.phone || undefined,
+                teacherSubjects,
+                ...(form.classTeacherCourseId ? { classTeacherCourseId: Number(form.classTeacherCourseId) } : {}),
                 ...(form.collegeId.trim() ? { collegeId: Number(form.collegeId) } : {}),
             }
             if (editing) {
@@ -159,6 +180,7 @@ export function TeachersClient({ initialTeachers }: TeachersClientProps) {
                     onChange={setForm}
                     submitting={submitting}
                     isEditing={!!editing}
+                    courses={courses}
                 />
             </CrudDrawer>
 

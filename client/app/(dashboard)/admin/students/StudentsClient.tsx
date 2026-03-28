@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { GraduationCap } from "lucide-react"
-import { api } from "@/services/api/client"
+import { api, courseApi, type Course } from "@/services/api/client"
 import { toast } from "sonner"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
@@ -18,6 +18,7 @@ interface StudentsClientProps {
 
 export function StudentsClient({ initialStudents }: StudentsClientProps) {
     const [students, setStudents] = useState<ApiUser[]>(initialStudents)
+    const [courses, setCourses] = useState<Course[]>([])
     const [loading, setLoading] = useState(false)
     const [modalOpen, setModalOpen] = useState(false)
     const [form, setForm] = useState<StudentFormType>(emptyStudentForm)
@@ -28,8 +29,14 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
     const load = useCallback(async () => {
         try {
             setLoading(true)
-            const data = await fetchStudents()
-            setStudents(data)
+            const [studentData, coursesResponse] = await Promise.all([
+                fetchStudents(),
+                courseApi.getCourses(),
+            ])
+            setStudents(studentData)
+            if (coursesResponse.success) {
+                setCourses(coursesResponse.data || [])
+            }
         } catch (e) {
             console.error(e)
             toast.error("Failed to load students")
@@ -43,6 +50,10 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
     }, [load])
 
     function openCreate() {
+        if (courses.length === 0) {
+            toast.error("Create a class first so the student can be assigned to it")
+            return
+        }
         setForm(emptyStudentForm)
         setModalOpen(true)
     }
@@ -60,6 +71,10 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
             toast.error("Passwords do not match")
             return
         }
+        if (!form.classId) {
+            toast.error("Select a class for the student")
+            return
+        }
 
         try {
             setSubmitting(true)
@@ -72,6 +87,7 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
                 sex: form.sex,
                 dob: form.dob || "2008-01-01",
                 phone: form.phone || undefined,
+                classId: Number(form.classId),
                 ...(form.collegeId.trim() ? { collegeId: Number(form.collegeId) } : {}),
             })
 
@@ -132,7 +148,7 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
                 submitting={submitting}
                 submitLabel="Create Student"
             >
-                <StudentForm form={form} onChange={setForm} disabled={submitting} />
+                <StudentForm form={form} onChange={setForm} disabled={submitting} courses={courses} />
             </CrudDrawer>
 
             <ConfirmDialog

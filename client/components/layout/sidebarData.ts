@@ -90,6 +90,8 @@ const teacherExtraItems: SidebarItem[] = [
 const managerExtraItems: SidebarItem[] = [
     { title: "Overview",      url: "/manager/overview",      icon: LayoutDashboard },
     { title: "Classes",       url: "/manager/classes",       icon: BookOpen },
+    { title: "Teachers",      url: "/manager/teachers",      icon: UserCheck },
+    { title: "Students",      url: "/manager/students",      icon: Users },
 ];
 
 // ─── Role → grouped sidebar ────────────────────────────────────────────────

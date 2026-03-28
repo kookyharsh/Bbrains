@@ -3,14 +3,24 @@
 import React from "react"
 import { FormInput, FormSelect } from "@/features/admin/components/form"
 import type { StudentForm as StudentFormType } from "../_types"
+import type { Course } from "@/services/api/client"
 
 interface StudentFormProps {
     form: StudentFormType
     onChange: (form: StudentFormType) => void
     disabled?: boolean
+    courses: Course[]
 }
 
-export function StudentForm({ form, onChange, disabled }: StudentFormProps) {
+export function StudentForm({ form, onChange, disabled, courses }: StudentFormProps) {
+    const classOptions = [
+        { value: "", label: "Select class" },
+        ...courses.map((course) => ({
+            value: String(course.id),
+            label: `${course.name}${course.standard ? ` (${course.standard})` : ""}`,
+        })),
+    ]
+
     return (
         <div className="grid grid-cols-2 gap-3">
             <FormInput
@@ -93,6 +103,14 @@ export function StudentForm({ form, onChange, disabled }: StudentFormProps) {
                 label="College ID"
                 value={form.collegeId}
                 onChange={(e) => onChange({ ...form, collegeId: e.target.value })}
+                disabled={disabled}
+            />
+            <FormSelect
+                label="Class"
+                required
+                value={form.classId}
+                onChange={(value) => onChange({ ...form, classId: value })}
+                options={classOptions}
                 disabled={disabled}
             />
             <p className="col-span-2 text-xs text-muted-foreground">
