@@ -40,6 +40,7 @@ export function UserFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Types</SelectItem>
+          <SelectItem value="manager">Managers</SelectItem>
           <SelectItem value="student">Student</SelectItem>
           <SelectItem value="teacher">Teacher</SelectItem>
           <SelectItem value="admin">Admin</SelectItem>

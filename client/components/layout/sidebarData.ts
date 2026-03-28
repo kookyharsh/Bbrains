@@ -56,10 +56,10 @@ const baseSidebarItems: SidebarItem[] = [
 // ─── Admin-only ────────────────────────────────────────────────────────────
 const adminExtraItems: SidebarItem[] = [
     { title: "Overview",      url: "/admin/overview",      icon: LayoutDashboard },
-    { title: "Manage Users",  url: "/admin/manageusers",   icon: UserCog },
+    { title: "Manage Users",  url: "/admin/users",         icon: UserCog },
     { title: "Teachers",      url: "/admin/teachers",      icon: UserCheck },
     { title: "Students",      url: "/admin/students",      icon: Users },
-    { title: "Roles & Access",url: "/admin/rolesaccess",   icon: Shield },
+    { title: "Roles & Access",url: "/admin/roles",         icon: Shield },
     { title: "Quick Roles",   url: "/admin/roles",         icon: Shield },
     { title: "Academics",     url: "/admin/academics",     icon: GraduationCap },
     { title: "Assignments",   url: "/admin/assignments",   icon: BookOpen },
@@ -68,7 +68,7 @@ const adminExtraItems: SidebarItem[] = [
     { title: "Achievements",  url: "/admin/achievements",  icon: Trophy },
     { title: "XP & Levels",   url: "/admin/xpconfig",     icon: Trophy },
     { title: "Statistics",    url: "/admin/stats",         icon: BarChart3 },
-    { title: "Audit Log",     url: "/admin/auditlog",      icon: FileText },
+    { title: "Audit Log",     url: "/admin/audit-log",     icon: FileText },
     { title: "Transactions",  url: "/admin/transactions",  icon: ArrowUpDown },
     { title: "System Config", url: "/admin/config",        icon: Settings2 },
     { title: "Suggestions",   url: "/admin/suggestions",   icon: MessageSquarePlus },
