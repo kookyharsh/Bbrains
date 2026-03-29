@@ -188,21 +188,14 @@ const checkout = async (userId, pin) => {
         });
 
         // 6.5 Add items to Library
-        for (const item of cartItems) {
-            await tx.library.upsert({
-                where: {
-                    userId_productId: {
-                        userId,
-                        productId: item.productId
-                    }
-                },
-                create: {
+        if (cartItems.length > 0) {
+            await tx.library.createMany({
+                data: cartItems.map(item => ({
                     userId,
-                    productId: item.productId
-                },
-                update: {
+                    productId: item.productId,
                     purchasedAt: new Date()
-                }
+                })),
+                skipDuplicates: true
             });
         }
 
@@ -302,7 +295,8 @@ const buyNow = async (userId, productId, quantity, pin) => {
             },
             create: {
                 userId,
-                productId: product.id
+                productId: product.id,
+                purchasedAt: new Date()
             },
             update: {
                 purchasedAt: new Date()
