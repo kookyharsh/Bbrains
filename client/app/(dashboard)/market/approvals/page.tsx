@@ -8,8 +8,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { Product } from "@/features/market/types"
-import { fetchPendingProducts, approveRejectProduct } from "@/features/market/data"
+import type { Product } from "@/app/(dashboard)/market/approvals/_features/market/types"
+import { fetchPendingProducts, approveRejectProduct } from "@/app/(dashboard)/market/approvals/_features/market/data"
 import { dashboardApi, type User as ApiUser } from "@/services/api/client"
 
 interface PendingProduct extends Product {

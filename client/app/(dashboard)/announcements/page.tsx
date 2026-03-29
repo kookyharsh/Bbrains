@@ -1,5 +1,5 @@
 import { announcementApi, dashboardApi } from "@/services/api/client";
-import { AnnouncementsContent } from "@/features/announcements/components/AnnouncementsContent";
+import { AnnouncementsContent } from "@/app/(dashboard)/announcements/_features/announcements/components/AnnouncementsContent";
 import { DashboardContent } from "@/components/dashboard-content";
 
 export default async function AnnouncementsPage() {
