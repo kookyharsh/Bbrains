@@ -1,9 +1,12 @@
 import { Server } from "socket.io";
 import prisma from "../../utils/prisma.js";
 import { insertChatMessage, getMessageById, updateChatMessage, deleteChatMessage } from '../../lib/supabase-chat.js';
+import { findUserBySupabaseId } from "../user/user.service.js";
+import supabase from "../../utils/supabase.js";
 
 let activeUsers = {};
 const mentionPattern = /@([a-zA-Z0-9_]+)/g;
+const DEFAULT_CHAT_ROOM = "default";
 const pronounBySex = {
     male: "he/him",
     female: "she/her",
@@ -19,8 +22,28 @@ const extractMentions = (content = "") => {
     return Array.from(mentions);
 };
 
-const loadChatIdentity = async (userId) => {
-    const user = await prisma.user.findUnique({
+const normalizeChatRoom = (value) => {
+    const room = String(value || DEFAULT_CHAT_ROOM).trim();
+    if (!room) return DEFAULT_CHAT_ROOM;
+    return room.slice(0, 120);
+};
+
+const extractSocketToken = (socket) => {
+    const handshakeToken = socket.handshake?.auth?.token;
+    if (typeof handshakeToken === "string" && handshakeToken.trim()) {
+        return handshakeToken.trim();
+    }
+
+    const authorizationHeader = socket.handshake?.headers?.authorization;
+    if (typeof authorizationHeader === "string" && authorizationHeader.startsWith("Bearer ")) {
+        return authorizationHeader.slice("Bearer ".length).trim();
+    }
+
+    return "";
+};
+
+const loadChatIdentity = async (userId, dbUser = null) => {
+    const user = dbUser || await prisma.user.findUnique({
         where: { id: userId },
         select: {
             id: true,
@@ -69,6 +92,35 @@ const loadChatIdentity = async (userId) => {
     };
 };
 
+const authenticateSocketUser = async (socket) => {
+    const token = extractSocketToken(socket);
+    if (!token) {
+        throw new Error("Missing authentication token");
+    }
+
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+        throw new Error("Invalid authentication token");
+    }
+
+    const dbUser = await findUserBySupabaseId(user.id);
+    if (!dbUser) {
+        throw new Error("Authenticated user was not found in the application database");
+    }
+
+    return await loadChatIdentity(dbUser.id, dbUser);
+};
+
+const getPresenceForRoom = (roomName) => {
+    return Object.values(activeUsers)
+        .filter((entry) => entry.roomName === roomName)
+        .map(({ roomName: _roomName, ...member }) => member);
+};
+
+const emitPresence = (io, roomName) => {
+    io.to(roomName).emit("chat:presence", getPresenceForRoom(roomName));
+};
+
 export const initChatSocket = (server) => {
     const io = new Server(server, {
         cors: {
@@ -78,30 +130,46 @@ export const initChatSocket = (server) => {
         }
     });
 
-    const emitPresence = () => {
-        io.emit("chat:presence", Object.values(activeUsers));
-    };
+    io.use(async (socket, next) => {
+        try {
+            const identity = await authenticateSocketUser(socket);
+            if (!identity) {
+                next(new Error("Unable to load chat identity"));
+                return;
+            }
+
+            socket.data.user = identity;
+            next();
+        } catch (error) {
+            console.error("chat socket authentication failed", error);
+            next(new Error(error instanceof Error ? error.message : "Authentication failed"));
+        }
+    });
 
     io.on("connection", (socket) => {
         console.log(`Socket connected: ${socket.id}`);
 
         socket.on("chat:join", async (payload = {}) => {
             try {
-                const userId = payload.userId;
-                if (!userId) {
-                    socket.emit("chat:error", { message: "Missing userId in chat:join" });
-                    return;
-                }
-
-                const identity = await loadChatIdentity(userId);
+                const identity = socket.data.user;
                 if (!identity) {
-                    socket.emit("chat:error", { message: "User not found for chat session" });
+                    socket.emit("chat:error", { message: "Authentication required before joining chat" });
                     return;
                 }
 
-                socket.data.user = identity;
-                activeUsers[socket.id] = { ...identity, socketId: socket.id };
-                emitPresence();
+                const roomName = normalizeChatRoom(payload.chatId);
+                const previousRoom = socket.data.roomName;
+
+                if (previousRoom && previousRoom !== roomName) {
+                    socket.leave(previousRoom);
+                    delete activeUsers[socket.id];
+                    emitPresence(io, previousRoom);
+                }
+
+                socket.join(roomName);
+                socket.data.roomName = roomName;
+                activeUsers[socket.id] = { ...identity, socketId: socket.id, roomName };
+                emitPresence(io, roomName);
             } catch (error) {
                 console.error("chat:join failed", error);
                 socket.emit("chat:error", { message: "Failed to join chat" });
@@ -111,15 +179,20 @@ export const initChatSocket = (server) => {
         socket.on("chat:send", async (payload = {}) => {
             try {
                 const identity = socket.data.user;
+                const roomName = socket.data.roomName;
                 const content = String(payload.content || "").trim();
                 if (!identity) {
-                    socket.emit("chat:error", { message: "Join chat before sending messages" });
+                    socket.emit("chat:error", { message: "Authentication required before sending messages" });
+                    return;
+                }
+                if (!roomName) {
+                    socket.emit("chat:error", { message: "Join a chat room before sending messages" });
                     return;
                 }
                 if (!content) return;
-                // Persist to Supabase-based chat storage
+
                 const payloadToStore = {
-                    chat_id: payload.chatId ?? 'default',
+                    chat_id: roomName,
                     user_id: identity.userId,
                     username: identity.username,
                     displayName: identity.displayName,
@@ -129,16 +202,22 @@ export const initChatSocket = (server) => {
                     mentions: extractMentions(content),
                 }
                 if (payload.replyToMessageId) {
-                    const original = await getMessageById(payload.replyToMessageId)
+                    const original = await getMessageById(payload.replyToMessageId);
                     if (original) {
-                        payloadToStore.replyTo = original.id
+                        if (original.chatId !== roomName) {
+                            socket.emit("chat:error", { message: "Replies must stay within the same chat room" });
+                            return;
+                        }
+
+                        payloadToStore.replyTo = original.id;
                     }
                 }
-                const message = await insertChatMessage(payloadToStore)
+
+                const message = await insertChatMessage(payloadToStore);
                 if (message) {
-                    io.emit("chat:new", message)
+                    io.to(roomName).emit("chat:new", message);
                 } else {
-                    socket.emit("chat:error", { message: "Failed to save message" })
+                    socket.emit("chat:error", { message: "Failed to save message" });
                 }
             } catch (error) {
                 console.error("chat:send failed", error);
@@ -149,18 +228,31 @@ export const initChatSocket = (server) => {
         socket.on("chat:edit", async (payload = {}) => {
             try {
                 const identity = socket.data.user;
+                const roomName = socket.data.roomName;
                 const messageId = String(payload.messageId || "");
                 const content = String(payload.content || "").trim();
 
-                if (!identity || !messageId || !content) return;
+                if (!identity || !roomName || !messageId || !content) return;
+
+                const existingMessage = await getMessageById(messageId);
+                if (!existingMessage || existingMessage.chatId !== roomName) {
+                    socket.emit("chat:error", { message: "Message not found in the active chat room" });
+                    return;
+                }
+
+                if (existingMessage.userId !== identity.userId) {
+                    socket.emit("chat:error", { message: "You can only edit your own messages" });
+                    return;
+                }
+
                 const updated = await updateChatMessage(messageId, {
                     content,
                     mentions: extractMentions(content),
-                })
+                });
                 if (updated) {
-                    io.emit("chat:edited", updated)
+                    io.to(roomName).emit("chat:edited", updated);
                 } else {
-                    socket.emit("chat:error", { message: "Failed to edit message" })
+                    socket.emit("chat:error", { message: "Failed to edit message" });
                 }
             } catch (error) {
                 console.error("chat:edit failed", error);
@@ -171,13 +263,26 @@ export const initChatSocket = (server) => {
         socket.on("chat:delete", async (payload = {}) => {
             try {
                 const identity = socket.data.user;
+                const roomName = socket.data.roomName;
                 const messageId = String(payload.messageId || "");
-                if (!identity || !messageId) return;
-                const ok = await deleteChatMessage(messageId)
+                if (!identity || !roomName || !messageId) return;
+
+                const existingMessage = await getMessageById(messageId);
+                if (!existingMessage || existingMessage.chatId !== roomName) {
+                    socket.emit("chat:error", { message: "Message not found in the active chat room" });
+                    return;
+                }
+
+                if (existingMessage.userId !== identity.userId) {
+                    socket.emit("chat:error", { message: "You can only delete your own messages" });
+                    return;
+                }
+
+                const ok = await deleteChatMessage(messageId);
                 if (ok) {
-                    io.emit("chat:deleted", { messageId })
+                    io.to(roomName).emit("chat:deleted", { messageId });
                 } else {
-                    socket.emit("chat:error", { message: "Failed to delete message" })
+                    socket.emit("chat:error", { message: "Failed to delete message" });
                 }
             } catch (error) {
                 console.error("chat:delete failed", error);
@@ -187,8 +292,11 @@ export const initChatSocket = (server) => {
 
         socket.on("disconnect", () => {
             console.log(`Socket disconnected: ${socket.id}`);
+            const roomName = activeUsers[socket.id]?.roomName;
             delete activeUsers[socket.id];
-            emitPresence();
+            if (roomName) {
+                emitPresence(io, roomName);
+            }
         });
     });
 

@@ -2,29 +2,58 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/services/supabase/client'
-import { chatApi } from '@/services/api/client'
+import { chatApi, type ChatAttachment, type ChatMessageRecord } from '@/services/api/client'
 import type { Message } from '@/features/chat/data'
 
 export type ChatMessageDisplay = Message;
 
-const formatMessage = (msg: any): ChatMessageDisplay => {
-    const date = new Date(msg.created_at || msg.createdAt);
+type ChatRealtimeMessage = {
+    id: string
+    user_id?: string
+    userId?: string
+    username?: string
+    display_name?: string
+    displayName?: string
+    avatar?: string
+    badge?: string
+    badge_color?: string
+    badgeColor?: string
+    content: string
+    created_at?: string
+    createdAt?: string
+    edited_at?: string | null
+    editedAt?: string | null
+    reply_to?: string | null
+    replyTo?: string | null
+    mentions?: string[]
+    attachments?: ChatAttachment[]
+}
+
+const formatMessage = (msg: ChatMessageRecord | ChatRealtimeMessage): ChatMessageDisplay => {
+    const createdAt = ('created_at' in msg ? msg.created_at : undefined) || msg.createdAt;
+    const userId = ('user_id' in msg ? msg.user_id : undefined) || msg.userId;
+    const displayName = ('display_name' in msg ? msg.display_name : undefined) || msg.displayName;
+    const editedAt = ('edited_at' in msg ? msg.edited_at : undefined) || msg.editedAt;
+    const replyTo = ('reply_to' in msg ? msg.reply_to : undefined) || msg.replyTo;
+    const badgeColor = ('badge_color' in msg ? msg.badge_color : undefined) || msg.badgeColor;
+    const date = new Date(createdAt);
+
     return {
         id: msg.id,
         user: {
-            id: msg.user_id || msg.userId,
-            username: msg.username,
-            name: msg.display_name || msg.displayName || msg.username,
+            id: userId || "",
+            username: msg.username || "",
+            name: displayName || msg.username || "",
             avatar: msg.avatar,
             badge: msg.badge,
-            badgeColor: msg.badge_color || msg.badgeColor
+            badgeColor
         },
         content: msg.content,
         timestamp: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: date.toLocaleDateString(),
         createdAt: date.toISOString(),
-        editedAt: msg.edited_at || msg.editedAt,
-        replyTo: msg.reply_to || msg.replyTo,
+        editedAt,
+        replyTo,
         mentions: msg.mentions || [],
         attachments: msg.attachments || []
     }
@@ -56,7 +85,7 @@ export function useChatMessages() {
         }
     }, [])
 
-    const sendMessage = async (content: string, attachments: any[] = [], mentions: string[] = [], replyToId?: string) => {
+    const sendMessage = async (content: string, attachments: ChatAttachment[] = [], mentions: string[] = [], replyToId?: string) => {
         try {
             const response = await chatApi.sendMessage(content, attachments, mentions, replyToId)
             if (response.success && response.data) {
@@ -109,7 +138,7 @@ export function useChatMessages() {
                     schema: 'public',
                     table: 'chat_messages'
                 },
-                (payload: any) => {
+                (payload: { eventType: "INSERT" | "UPDATE" | "DELETE"; new: ChatRealtimeMessage; old: { id: string } }) => {
                     if (payload.eventType === 'INSERT') {
                         setMessages(prev => [...prev, formatMessage(payload.new)])
                     } else if (payload.eventType === 'UPDATE') {

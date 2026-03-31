@@ -40,7 +40,7 @@ export interface Member {
 }
 
 export interface ApiMessage {
-    _id: string
+    id: string
     userId: string
     username: string
     displayName: string
@@ -48,17 +48,14 @@ export interface ApiMessage {
     role: string
     content: string
     mentions: string[]
+    attachments?: { url: string; type: string; name?: string }[]
+    replyToMessageId?: string | null
     editedAt?: string | null
-    replyTo?: {
-        messageId: string
-        username: string
-        content: string
-    } | null
     createdAt: string
 }
 
 export interface ApiMember {
-    userId: string
+    id: string
     username: string
     displayName: string
     avatar: string
