@@ -1,6 +1,6 @@
 import express from 'express';
-import { verifyToken } from '../../middleware/auth.js';
-import { authorize } from '../../middleware/authorize.js';
+import verifyToken from '../../middleware/auth.middleware.js';
+import authorize from '../../middleware/authorize.js';
 import * as controller from './superadmin.controller.js';
 
 const router = express.Router();

@@ -28,8 +28,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                 setNotifications(res.data.notifications)
                 setUnreadCount(res.data.unreadCount)
             }
-        } catch (error) {
-            console.error("Failed to fetch notifications:", error)
+        } catch {
+            // Silently handle network errors
         } finally {
             setLoading(false)
         }
@@ -67,8 +67,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             await notificationApi.markRead(id)
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
             setUnreadCount(prev => Math.max(0, prev - 1))
-        } catch (error) {
-            console.error("Failed to mark notification as read:", error)
+        } catch {
+            // Silently handle network errors
         }
     }, [])
 
@@ -77,8 +77,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             await notificationApi.markAllRead()
             setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })))
             setUnreadCount(0)
-        } catch (error) {
-            console.error("Failed to mark all as read:", error)
+        } catch {
+            // Silently handle network errors
         }
     }, [])
 

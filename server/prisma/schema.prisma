@@ -57,6 +57,8 @@ model User {
   preference         UserPreference?
   chatMessages       ChatMessage[]
   classTeacherCourse Course?              @relation("CourseClassTeacher")
+  assessments        Assessment[]         @relation("AssessmentCreator")
+  assessmentResults  AssessmentResult[]   @relation("AssessmentStudent")
 
   @@map("user")
 }
@@ -115,6 +117,7 @@ model Course {
   assignments     Assignment[]
   enrollments     Enrollment[]
   classTeacher    User?               @relation("CourseClassTeacher", fields: [classTeacherId], references: [id], onDelete: SetNull)
+  assessments     Assessment[]
 
   @@map("course")
 }

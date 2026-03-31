@@ -33,7 +33,8 @@ export function NotificationsBell() {
                 setUnreadCount(res.data.unreadCount)
             }
         } catch (error) {
-            console.error("Failed to fetch notifications:", error)
+            // Silently handle network errors - don't log to console
+            // The UI will show empty notifications
         }
     }, [])
 
