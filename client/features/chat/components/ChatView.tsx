@@ -69,11 +69,13 @@ function getDateLabel(date: Date) {
 // ── Component ──
 
 export default function ChatView() {
-  const { messages, loading, isConnected, sendMessage, deleteMessage, editMessage, currentUserId } = useChatMessages();
+  const { messages, loading, loadingMore, hasMore, loadMore, isConnected, sendMessage, deleteMessage, editMessage, currentUserId } = useChatMessages();
   const { markAllRead } = useNotifications();
   const { uploadFile, isUploading } = useCloudinaryUpload();
   const [pendingAttachments, setPendingAttachments] = useState<{ file: File; previewUrl: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const previousScrollHeight = useRef<number>(0);
   
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -144,16 +146,56 @@ export default function ChatView() {
 
   const currentUsername = useMemo(() => membersList.find(m => m.id === currentUserId)?.username, [membersList, currentUserId]);
 
-  // Auto-scroll on new messages or when sending
+  const isInitialLoad = useRef(true);
+
+  // Mark all read when messages change
   useEffect(() => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-    // Mark as read when messages change while on this page
     if (messages.length > 0) {
       markAllRead?.();
     }
   }, [messages.length, markAllRead]);
+
+  // Adjust scroll position when historical messages are loaded,
+  // or auto-scroll to bottom for new messages/initial load
+  useEffect(() => {
+    if (!scrollAreaRef.current) return;
+    const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+
+    if (previousScrollHeight.current > 0) {
+      // Historical messages were added at the top
+      const newScrollHeight = viewport.scrollHeight;
+      const heightDifference = newScrollHeight - previousScrollHeight.current;
+
+      // Keep scroll position relative to the elements that were previously there
+      viewport.scrollTop = viewport.scrollTop + heightDifference;
+      previousScrollHeight.current = 0; // Reset
+    } else if (messages.length > 0) {
+      // Normal new message or first load - scroll to bottom
+      if (isInitialLoad.current) {
+        // Skip smooth scroll animation on initial load to just "be" at the bottom
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        isInitialLoad.current = false;
+      } else {
+        // Smooth scroll for subsequent new messages sent or received
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [messages.length]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+
+    // Ensure we are only responding to the main scroll viewport
+    if (!target.hasAttribute('data-radix-scroll-area-viewport')) {
+      return;
+    }
+
+    if (target.scrollTop < 100 && hasMore && !loadingMore && !loading) {
+      previousScrollHeight.current = target.scrollHeight;
+      loadMore();
+    }
+  };
 
   const handleSend = async () => {
     if (!message.trim() && pendingAttachments.length === 0) return;
@@ -261,9 +303,9 @@ export default function ChatView() {
 
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 flex flex-col min-w-0">
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef} onScrollCapture={handleScroll}>
             <div className="space-y-1">
-              {loading ? (
+              {loading && messages.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   <span className="ml-2 text-muted-foreground text-sm">Loading messages...</span>
@@ -275,7 +317,13 @@ export default function ChatView() {
                   <p className="text-xs">Be the first to say something!</p>
                 </div>
               ) : (
-                grouped.map((group) => (
+                <>
+                  {loadingMore && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  {grouped.map((group) => (
                   <div key={group.label}>
                     <div className="flex items-center gap-3 my-4">
                       <Separator className="flex-1" />
@@ -397,7 +445,8 @@ export default function ChatView() {
                       );
                     })}
                   </div>
-                ))
+                ))}
+                </>
               )}
             </div>
             <div ref={messagesEndRef} className="h-px w-full" />

@@ -62,6 +62,8 @@ const formatMessage = (msg: ChatMessageRecord | ChatRealtimeMessage): ChatMessag
 export function useChatMessages() {
     const [messages, setMessages] = useState<ChatMessageDisplay[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
     const [isConnected, setIsConnected] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<string>('')
 
@@ -73,10 +75,11 @@ export function useChatMessages() {
                 setCurrentUserId(user.user.id)
             }
 
-            const response = await chatApi.getMessages()
+            const response = await chatApi.getMessages(undefined, 50)
             if (response.success && response.data) {
                 const formatted = response.data.map(formatMessage)
                 setMessages(formatted)
+                setHasMore(formatted.length === 50)
             }
         } catch (error) {
             console.error('Failed to fetch messages:', error)
@@ -85,7 +88,29 @@ export function useChatMessages() {
         }
     }, [])
 
-    const sendMessage = async (content: string, attachments: ChatAttachment[] = [], mentions: string[] = [], replyToId?: string) => {
+    const loadMore = useCallback(async () => {
+        if (loadingMore || !hasMore || messages.length === 0) return;
+
+        try {
+            setLoadingMore(true);
+            const oldestMessage = messages[0];
+            const response = await chatApi.getMessages(undefined, 50, oldestMessage.createdAt);
+
+            if (response.success && response.data) {
+                const formatted = response.data.map(formatMessage);
+                if (formatted.length > 0) {
+                    setMessages(prev => [...formatted, ...prev]);
+                }
+                setHasMore(formatted.length === 50);
+            }
+        } catch (error) {
+            console.error('Failed to load older messages:', error);
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [messages, loadingMore, hasMore]);
+
+    const sendMessage = async (content: string, attachments: any[] = [], mentions: string[] = [], replyToId?: string) => {
         try {
             const response = await chatApi.sendMessage(content, attachments, mentions, replyToId)
             if (response.success && response.data) {
@@ -160,11 +185,14 @@ export function useChatMessages() {
     return {
         messages,
         loading,
+        loadingMore,
+        hasMore,
         isConnected,
         currentUserId,
         sendMessage,
         deleteMessage,
         editMessage,
-        refresh: fetchMessages
+        refresh: fetchMessages,
+        loadMore
     }
 }

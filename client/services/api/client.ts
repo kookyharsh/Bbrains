@@ -1038,11 +1038,12 @@ export const themeApi = {
 };
 
 export const chatApi = {
-  getMessages: async (chatId?: string, limit = 200): Promise<ApiResponse<ChatMessageRecord[]>> => {
+  getMessages: async (chatId?: string, limit = 50, before?: string): Promise<ApiResponse<any[]>> => {
     const query = new URLSearchParams();
     if (chatId) query.append('chatId', chatId);
     query.append('limit', String(limit));
-    return api.get<ChatMessageRecord[]>(`/chat/messages?${query.toString()}`);
+    if (before) query.append('before', before);
+    return api.get<any[]>(`/chat/messages?${query.toString()}`);
   },
   getMembers: async (): Promise<ApiResponse<ChatMemberProfile[]>> => {
     return api.get<ChatMemberProfile[]>(`/chat/members`);
