@@ -77,6 +77,13 @@ const userSummarySelect = {
             teacherSubjects: true,
         }
     },
+    college: {
+        select: {
+            id: true,
+            name: true,
+            features: true
+        }
+    },
     wallet: {
         select: {
             id: true,

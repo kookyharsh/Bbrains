@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from "axios"
 import { supabase } from '../supabase/client';
 
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== "undefined") {
     return `http://${window.location.hostname}:5000`;
