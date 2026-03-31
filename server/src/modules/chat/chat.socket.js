@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import prisma from "../../utils/prisma.js";
 import { insertChatMessage, getMessageById, updateChatMessage, deleteChatMessage } from '../../lib/supabase-chat.js';
+import jwt from "jsonwebtoken";
+import supabase from "../../utils/supabase.js";
 
 let activeUsers = {};
 const mentionPattern = /@([a-zA-Z0-9_]+)/g;
@@ -87,9 +89,48 @@ export const initChatSocket = (server) => {
 
         socket.on("chat:join", async (payload = {}) => {
             try {
-                const userId = payload.userId;
+                // Determine token from payload, auth, cookies, or headers
+                let token = payload.token || socket.handshake.auth?.token;
+
+                if (!token && socket.handshake.headers?.cookie) {
+                    const cookies = socket.handshake.headers.cookie.split(';');
+                    for (const cookie of cookies) {
+                        const [name, val] = cookie.trim().split('=');
+                        if (name === 'token') {
+                            token = val;
+                            break;
+                        }
+                    }
+                }
+
+                if (!token && socket.handshake.headers?.authorization) {
+                    const authHeader = socket.handshake.headers.authorization;
+                    if (authHeader.startsWith('Bearer ')) {
+                        token = authHeader.split('Bearer ')[1];
+                    }
+                }
+
+                if (!token) {
+                    socket.emit("chat:error", { message: "Authentication required to join chat" });
+                    return;
+                }
+
+                let userId = null;
+
+                // Try verifying as JWT first
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    userId = decoded.id;
+                } catch (jwtError) {
+                    // Fallback to Supabase verification if JWT fails
+                    const { data: { user }, error } = await supabase.auth.getUser(token);
+                    if (!error && user) {
+                        userId = user.id;
+                    }
+                }
+
                 if (!userId) {
-                    socket.emit("chat:error", { message: "Missing userId in chat:join" });
+                    socket.emit("chat:error", { message: "Invalid or expired token" });
                     return;
                 }
 
