@@ -38,9 +38,6 @@ export async function getDashboardOverviewData() {
     name.toLowerCase().includes("manager")
   );
 
-  if (dbUser?.type === "superadmin") {
-    redirect("/superadmin/overview");
-  }
   if (dbUser?.type === "admin") {
     redirect("/admin/overview");
   }

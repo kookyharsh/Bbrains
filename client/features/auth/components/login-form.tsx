@@ -75,14 +75,12 @@ export function LoginForm({
         const userResp = await dashboardApi.getUser()
         
         if (userResp.success && userResp.data) {
-          const role = userResp.data.type as string
+          const role = userResp.data.type
           const isManager = (userResp.data.roles || []).some((entry) =>
             entry?.role?.name?.toLowerCase().includes('manager')
           )
 
-          if (role === 'superadmin') {
-            router.push('/superadmin/overview')
-          } else if (role === 'admin') {
+          if (role === 'admin') {
             router.push('/admin/overview')
           } else if (isManager) {
             router.push('/manager/overview')

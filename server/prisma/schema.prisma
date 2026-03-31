@@ -16,68 +16,69 @@ model College {
   createdAt DateTime @default(now())
   address   Address? @relation(fields: [addressId], references: [id])
   users     User[]
-  features  Json?    @default("{}")
 
   @@map("college")
 }
 
 model User {
   // Store Clerk's user id (e.g. "user_...") as the primary key.
-  id                 String               @id @map("user_id")
-  collegeId          Int                  @map("college_id")
-  email              String               @unique @db.VarChar(50)
-  username           String               @unique @db.VarChar(32)
-  password           String?              @db.VarChar(255)
-  type               UserRole             @default(student)
-  createdAt          DateTime             @default(now()) @map("created_at")
-  updatedAt          DateTime             @updatedAt @map("updated_at")
-  addresses          Address[]
-  announcements      Announcement[]
-  auditLogs          AuditLog[]
-  cartItems          Cart[]
-  enrollments        Enrollment[]
-  grades             Grade[]
-  leaderboards       Leaderboard[]
-  orders             Order[]
-  products           Product[]
-  submissions        Submission[]
-  transactions       TransactionHistory[]
-  library            Library[]
-  college            College              @relation(fields: [collegeId], references: [id])
-  userAchievements   UserAchievements[]
-  userDetails        UserDetails?
-  roles              UserRoles[]
-  wallet             Wallet?
-  xp                 Xp?
-  attendances        Attendance[]         @relation("userAttendance")
-  markedAttendances  Attendance[]         @relation("markerAttendance")
-  notifications      Notification[]
-  suggestions        Suggestion[]
-  streak             Streak?
-  preference         UserPreference?
-  chatMessages       ChatMessage[]
-  classTeacherCourse Course?              @relation("CourseClassTeacher")
+  id               String               @id @map("user_id")
+  collegeId        Int                  @map("college_id")
+  email            String               @unique @db.VarChar(50)
+  username         String               @unique @db.VarChar(32)
+  password         String?              @db.VarChar(255)
+  type             UserRole             @default(student)
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  addresses        Address[]
+  announcements    Announcement[]
+  auditLogs        AuditLog[]
+  cartItems        Cart[]
+  enrollments      Enrollment[]
+  grades           Grade[]
+  leaderboards     Leaderboard[]
+  orders           Order[]
+  products         Product[]
+  submissions      Submission[]
+  transactions     TransactionHistory[]
+  library          Library[]
+  college          College              @relation(fields: [collegeId], references: [id])
+  userAchievements UserAchievements[]
+  userDetails      UserDetails?
+  roles            UserRoles[]
+  wallet           Wallet?
+  xp               Xp?
+  attendances      Attendance[]         @relation("userAttendance")
+  markedAttendances Attendance[]        @relation("markerAttendance")
+  notifications    Notification[]
+  suggestions      Suggestion[]
+  streak           Streak?
+  preference        UserPreference?
+  chatMessages     ChatMessage[]
+  classTeacherCourse Course?      @relation("CourseClassTeacher")
+  createdAssessments Assessment[] @relation("AssessmentCreator")
+  assessmentResults AssessmentResult[] @relation("AssessmentStudent")
 
   @@map("user")
 }
 
 model UserDetails {
-  id              Int      @id @default(autoincrement())
-  userId          String   @unique @map("user_id")
-  avatar          String?
-  firstName       String   @map("first_name") @db.VarChar(25)
-  middlename      String?
-  lastName        String   @map("last_name") @db.VarChar(25)
-  sex             Sex
-  dob             DateTime @db.Date
-  phone           String?  @db.VarChar(15)
-  bio             String?  @db.Text
-  teacherSubjects Json?    @map("teacher_subjects")
-  addressId       Int?     @map("address_id")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  address         Address? @relation(fields: [addressId], references: [id])
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  userId      String   @unique @map("user_id")
+  avatar      String?
+  firstName   String   @map("first_name") @db.VarChar(25)
+  middlename  String?
+  lastName    String   @map("last_name") @db.VarChar(25)
+  sex         Sex
+  dob         DateTime @db.Date
+  phone       String?  @db.VarChar(15)
+  bio         String?  @db.Text
+  teacherSubjects Json? @map("teacher_subjects")
+  addressId   Int?     @map("address_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  address     Address? @relation(fields: [addressId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_details")
 }
@@ -99,22 +100,24 @@ model Address {
 }
 
 model Course {
-  id              Int                 @id @default(autoincrement()) @map("course_id")
-  name            String              @db.VarChar(100)
-  description     String?             @db.VarChar(255)
-  standard        String?             @db.VarChar(50)
-  feePerStudent   Decimal?            @map("fee_per_student") @db.Decimal(10, 2)
-  durationValue   Int?                @map("duration_value")
-  durationUnit    CourseDurationUnit? @map("duration_unit")
-  studentCapacity Int?                @map("student_capacity")
-  classTeacherId  String?             @unique @map("class_teacher_id")
-  subjects        Json?
-  timetable       Json?
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
-  assignments     Assignment[]
-  enrollments     Enrollment[]
-  classTeacher    User?               @relation("CourseClassTeacher", fields: [classTeacherId], references: [id], onDelete: SetNull)
+  id             Int                @id @default(autoincrement()) @map("course_id")
+  name           String             @db.VarChar(100)
+  description    String?            @db.VarChar(255)
+  standard       String?            @db.VarChar(50)
+  feePerStudent  Decimal?           @map("fee_per_student") @db.Decimal(10, 2)
+  durationValue  Int?               @map("duration_value")
+  durationUnit   CourseDurationUnit? @map("duration_unit")
+  studentCapacity Int?              @map("student_capacity")
+  classTeacherId String?            @unique @map("class_teacher_id")
+  subjects       Json?
+  subjectProgress Json?             @map("subject_progress")
+  timetable      Json?
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  assignments    Assignment[]
+  assessments    Assessment[]
+  enrollments    Enrollment[]
+  classTeacher   User?              @relation("CourseClassTeacher", fields: [classTeacherId], references: [id], onDelete: SetNull)
 
   @@map("course")
 }
@@ -246,8 +249,9 @@ model Xp {
 }
 
 model Level {
-  id          Int @id @default(autoincrement())
-  levelNumber Int @unique
+  id          Int     @id @default(autoincrement())
+  levelNumber Int     @unique
+  requiredXp  Decimal @db.Decimal(10, 2)
 
   @@map("level")
 }
@@ -277,7 +281,7 @@ model Achievement {
   rewardXP    Int
   rewardCoins Int
   icon        String?
-  category    String?            @db.VarChar(50)
+  createdAt   DateTime           @default(now()) @map("created_at")
   users       UserAchievements[]
 
   @@map("achievement")
@@ -305,20 +309,20 @@ model Wallet {
 }
 
 model Product {
-  id           Int             @id @default(autoincrement()) @map("product_id")
-  creatorId    String          @map("creator_id")
-  name         String          @db.VarChar(100)
-  description  String?         @db.VarChar(255)
-  image        String?         @db.VarChar(255)
-  price        Decimal         @db.Decimal(10, 2)
-  stock        Int
-  approval     ProductApproval @default(pending)
-  metadata     Json? // category, fileUrl, fileType, previewImages, themeConfig, version, downloads
-  createdAt    DateTime        @default(now()) @map("created_at")
-  cartItems    Cart[]
-  orderItems   OrderItem[]
+  id          Int         @id @default(autoincrement()) @map("product_id")
+  creatorId   String      @map("creator_id")
+  name        String      @db.VarChar(100)
+  description String?     @db.VarChar(255)
+  image       String?     @db.VarChar(255)
+  price       Decimal     @db.Decimal(10, 2)
+  stock       Int
+  approval    ProductApproval @default(pending)
+  metadata    Json?       // category, fileUrl, fileType, previewImages, themeConfig, version, downloads
+  createdAt   DateTime    @default(now()) @map("created_at")
+  cartItems   Cart[]
+  orderItems  OrderItem[]
   libraryItems Library[]
-  creator      User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator     User        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@index([name])
   @@map("product")
@@ -428,7 +432,6 @@ enum UserRole {
   teacher
   admin
   staff
-  superadmin
 }
 
 enum CourseDurationUnit {
@@ -491,28 +494,28 @@ model Event {
 }
 
 model Attendance {
-  id        Int      @id @default(autoincrement())
-  userId    String   @map("user_id")
-  markedBy  String?  @map("marked_by")
-  date      DateTime @db.Date
-  status    String   @db.VarChar(20)
-  notes     String?
-  createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation("userAttendance", fields: [userId], references: [id], onDelete: Cascade)
-  marker    User?    @relation("markerAttendance", fields: [markedBy], references: [id], onDelete: SetNull)
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  markedBy    String?  @map("marked_by")
+  date        DateTime @db.Date
+  status      String   @db.VarChar(20)
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation("userAttendance", fields: [userId], references: [id], onDelete: Cascade)
+  marker      User?    @relation("markerAttendance", fields: [markedBy], references: [id], onDelete: SetNull)
 
   @@index([userId, date])
   @@map("attendance")
 }
 
 model Streak {
-  id            Int       @id @default(autoincrement())
-  userId        String    @unique @map("user_id")
-  currentStreak Int       @default(0)
+  id            Int      @id @default(autoincrement())
+  userId        String   @unique @map("user_id")
+  currentStreak Int      @default(0)
   lastClaimedAt DateTime?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("streak")
 }
@@ -520,8 +523,8 @@ model Streak {
 model UserPreference {
   id        String   @id @default(cuid()) @map("preference_id")
   userId    String   @unique @map("user_id")
-  theme     String? // active theme ID or name
-  settings  Json? // other user settings (language, notifications, etc.)
+  theme     String?  // active theme ID or name
+  settings  Json?    // other user settings (language, notifications, etc.)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -530,15 +533,15 @@ model UserPreference {
 }
 
 model Notification {
-  id        Int       @id @default(autoincrement())
-  userId    String    @map("user_id")
-  title     String    @db.VarChar(100)
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  title     String   @db.VarChar(100)
   message   String?
-  type      String    @db.VarChar(50) // mention, system, chat, announcement, achievement, attendance, grade
-  relatedId String?   @map("related_id")
+  type      String   @db.VarChar(50) // mention, system, chat, announcement, achievement, attendance, grade
+  relatedId String?  @map("related_id")
   readAt    DateTime?
-  createdAt DateTime  @default(now()) @map("created_at")
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt])
   @@map("notification")
@@ -556,14 +559,14 @@ model SystemConfig {
 }
 
 model Suggestion {
-  id        Int      @id @default(autoincrement())
-  userId    String   @map("user_id")
-  title     String   @db.VarChar(100)
-  content   String   @db.Text
-  status    String   @default("pending") // pending, reviewed, implemented, rejected
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          Int      @id @default(autoincrement())
+  userId      String   @map("user_id")
+  title       String   @db.VarChar(100)
+  content     String   @db.Text
+  status      String   @default("pending") // pending, reviewed, implemented, rejected
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("suggestion")
 }

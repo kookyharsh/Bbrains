@@ -1,5 +1,4 @@
 import express from "express";
-import superadminRoutes from "./modules/superadmin/superadmin.routes.js";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import cors from "cors";
