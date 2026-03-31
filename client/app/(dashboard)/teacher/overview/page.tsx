@@ -1,12 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { DashboardContent } from "@/components/dashboard-content";
 import { AttendanceCard } from "@/features/dashboard/components/AttendanceCard";
 import { AnnouncementsCard } from "@/features/dashboard/components/AnnouncementsCard";
 import { SectionHeader } from "@/features/admin/components/SectionHeader";
 import { StatCard } from "@/features/admin/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -15,24 +18,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getAuthedClient, type Announcement, type AttendanceData, type AttendanceRecord, type Transaction } from "@/services/api/client";
+import { courseApi, getAuthedClient, type Announcement, type AttendanceData, type AttendanceRecord, type SubjectChapterProgress, type Transaction } from "@/services/api/client";
 import { WeeklySchedulePanel } from "@/features/schedule/components/WeeklySchedulePanel";
 import { buildWeeklyScheduleFromCourses, type WeeklyScheduleDay } from "@/features/schedule/data";
+import { canManageSubjectProgress, getSubjectProgressPercent, normalizeCourseSubjectProgress } from "@/lib/subject-progress";
 import {
   AlertCircle,
   BadgeIndianRupee,
   BookOpen,
   CalendarDays,
+  Check,
   GraduationCap,
   Loader2,
+  Minus,
+  Plus,
   School,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type TeacherDashboardUser = {
   firstName?: string;
   lastName?: string;
   username?: string;
+  teacherSubjects?: string[];
 };
 
 type TeacherDashboardResponse = {
@@ -43,6 +52,9 @@ type TeacherCourse = {
   id: number | string;
   name: string;
   description?: string;
+  standard?: string;
+  subjects?: string[];
+  subjectProgress?: SubjectChapterProgress[];
   _count?: {
     enrollments?: number;
     assignments?: number;
@@ -93,11 +105,42 @@ function normalizeAttendance(records: AttendanceRecord[]): AttendanceData {
   };
 }
 
+function clampChapterProgress(totalChapters: number, completedChapters: number) {
+  const safeTotal = Math.max(0, Math.floor(Number(totalChapters) || 0));
+  const safeCompleted = Math.max(0, Math.floor(Number(completedChapters) || 0));
+
+  return {
+    totalChapters: safeTotal,
+    completedChapters: safeTotal > 0 ? Math.min(safeCompleted, safeTotal) : 0,
+  };
+}
+
+function getRequestErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === "object" && error !== null) {
+    const maybeResponse = "response" in error ? error.response : null;
+
+    if (typeof maybeResponse === "object" && maybeResponse !== null && "data" in maybeResponse) {
+      const data = maybeResponse.data;
+      if (typeof data === "object" && data !== null && "message" in data && typeof data.message === "string") {
+        return data.message;
+      }
+    }
+
+    if ("message" in error && typeof error.message === "string" && error.message.trim()) {
+      return error.message;
+    }
+  }
+
+  return fallback;
+}
+
 export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [courseLoading, setCourseLoading] = useState(false);
+  const [savingChapterProgress, setSavingChapterProgress] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teacherName, setTeacherName] = useState("Teacher");
+  const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [selectedCourseStudents, setSelectedCourseStudents] = useState<CourseStudentEnrollment[]>([]);
@@ -106,6 +149,7 @@ export default function OverviewPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [incomeReceived, setIncomeReceived] = useState(0);
   const [teacherSchedule, setTeacherSchedule] = useState<WeeklyScheduleDay[]>([]);
+  const [chapterProgressDraft, setChapterProgressDraft] = useState<SubjectChapterProgress[]>([]);
 
   useEffect(() => {
     async function loadOverview() {
@@ -114,33 +158,83 @@ export default function OverviewPage() {
         setError(null);
 
         const client = await getAuthedClient();
-        const [dashboardRes, coursesRes, announcementsRes, transactionsRes, attendanceRes] = await Promise.all([
+        const [
+          dashboardResult,
+          userResult,
+          coursesResult,
+          announcementsResult,
+          transactionsResult,
+          attendanceResult,
+        ] = await Promise.allSettled([
           client.get<{ success: boolean; data: TeacherDashboardResponse }>("/dashboard"),
+          client.get<{ success: boolean; data: TeacherDashboardUser }>("/user/me"),
           client.get<{ success: boolean; data: TeacherCourse[] }>("/courses?limit=100"),
           client.get<{ success: boolean; data: Announcement[] }>("/announcements"),
           client.get<{ success: boolean; data: Transaction[] }>("/transactions/me?limit=100&type=credit&status=success"),
           client.get<{ success: boolean; data: AttendanceRecord[] }>("/attendance"),
         ]);
 
-        const dashboardUser = dashboardRes.data.data?.user;
-        const fullName = `${dashboardUser?.firstName || ""} ${dashboardUser?.lastName || ""}`.trim();
-        const nextCourses = coursesRes.data.data || [];
+        if (dashboardResult.status === "rejected" && userResult.status === "rejected") {
+          throw new Error("Unable to load your teacher profile right now.");
+        }
 
-        setTeacherName(fullName || dashboardUser?.username || "Teacher");
+        const dashboardUser =
+          dashboardResult.status === "fulfilled" ? dashboardResult.value.data.data?.user : undefined;
+        const profileUser = userResult.status === "fulfilled" ? userResult.value.data.data : undefined;
+        const teacherProfile = profileUser || dashboardUser;
+        const fullName = `${teacherProfile?.firstName || ""} ${teacherProfile?.lastName || ""}`.trim();
+        const nextCourses = coursesResult.status === "fulfilled" ? coursesResult.value.data.data || [] : [];
+        const partialFailures: string[] = [];
+
+        setTeacherName(fullName || teacherProfile?.username || "Teacher");
+        setTeacherSubjects(Array.isArray(profileUser?.teacherSubjects) ? profileUser.teacherSubjects : []);
         setCourses(nextCourses);
-        setAnnouncements((announcementsRes.data.data || []).slice(0, 5));
-        setIncomeReceived(
-          (transactionsRes.data.data || []).reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0)
+        setAnnouncements(
+          announcementsResult.status === "fulfilled" ? (announcementsResult.value.data.data || []).slice(0, 5) : []
         );
-        setAttendance(normalizeAttendance(attendanceRes.data.data || []));
-        setTeacherSchedule(buildWeeklyScheduleFromCourses(nextCourses, fullName || dashboardUser?.username || "Teacher"));
+        setIncomeReceived(
+          transactionsResult.status === "fulfilled"
+            ? (transactionsResult.value.data.data || []).reduce(
+                (sum, transaction) => sum + Number(transaction.amount || 0),
+                0
+              )
+            : 0
+        );
+        setAttendance(
+          attendanceResult.status === "fulfilled"
+            ? normalizeAttendance(attendanceResult.value.data.data || [])
+            : normalizeAttendance([])
+        );
+        setTeacherSchedule(buildWeeklyScheduleFromCourses(nextCourses, fullName || teacherProfile?.username || "Teacher"));
 
         if (nextCourses.length > 0) {
           setSelectedCourseId((current) => current || String(nextCourses[0].id));
+        } else {
+          setSelectedCourseId("");
         }
+
+        if (coursesResult.status === "rejected") {
+          partialFailures.push(
+            getRequestErrorMessage(coursesResult.reason, "Class data is unavailable right now.")
+          );
+        }
+
+        if (announcementsResult.status === "rejected") {
+          partialFailures.push("Announcements could not be loaded.");
+        }
+
+        if (transactionsResult.status === "rejected") {
+          partialFailures.push("Income totals are temporarily unavailable.");
+        }
+
+        if (attendanceResult.status === "rejected") {
+          partialFailures.push("Attendance data could not be loaded.");
+        }
+
+        setError(partialFailures.length > 0 ? partialFailures[0] : null);
       } catch (loadError) {
         console.error(loadError);
-        setError("Failed to load teacher dashboard data.");
+        setError(getRequestErrorMessage(loadError, "Failed to load teacher dashboard data."));
       } finally {
         setLoading(false);
       }
@@ -179,6 +273,69 @@ export default function OverviewPage() {
     loadSelectedCourse();
   }, [selectedCourseId]);
 
+  const selectedCourse = useMemo(
+    () => courses.find((course) => String(course.id) === selectedCourseId) || null,
+    [courses, selectedCourseId]
+  );
+
+  const selectedCourseSubjectProgress = useMemo(
+    () => normalizeCourseSubjectProgress(selectedCourse),
+    [selectedCourse]
+  );
+
+  useEffect(() => {
+    setChapterProgressDraft(selectedCourseSubjectProgress);
+  }, [selectedCourseSubjectProgress]);
+
+  const hasChapterDraftChanges = useMemo(() => {
+    return JSON.stringify(chapterProgressDraft) !== JSON.stringify(selectedCourseSubjectProgress);
+  }, [chapterProgressDraft, selectedCourseSubjectProgress]);
+
+  function handleChapterDraftChange(subject: string, patch: Partial<SubjectChapterProgress>) {
+    setChapterProgressDraft((current) =>
+      current.map((entry) => {
+        if (entry.subject !== subject) return entry;
+
+        const next = clampChapterProgress(
+          patch.totalChapters ?? entry.totalChapters,
+          patch.completedChapters ?? entry.completedChapters
+        );
+
+        return {
+          ...entry,
+          ...next,
+        };
+      })
+    );
+  }
+
+  async function handleSaveChapterProgress() {
+    if (!selectedCourse) return;
+
+    try {
+      setSavingChapterProgress(true);
+      const response = await courseApi.updateCourse(selectedCourse.id, {
+        subjectProgress: chapterProgressDraft,
+      });
+
+      if (!response.success || !response.data) {
+        throw new Error(response.message || "Failed to save chapter progress");
+      }
+
+      setCourses((current) =>
+        current.map((course) =>
+          String(course.id) === String(selectedCourse.id) ? { ...course, ...response.data } : course
+        )
+      );
+      toast.success("Chapter progress updated");
+    } catch (saveError) {
+      console.error(saveError);
+      toast.error(saveError instanceof Error ? saveError.message : "Failed to save chapter progress");
+    } finally {
+      setSavingChapterProgress(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -186,8 +343,6 @@ export default function OverviewPage() {
       </div>
     );
   }
-
-  const selectedCourse = courses.find((course) => String(course.id) === selectedCourseId) || null;
   const girlsCount = selectedCourseStudents.filter(
     (student) => student.user.userDetails?.sex?.toLowerCase() === "female"
   ).length;
@@ -295,16 +450,16 @@ export default function OverviewPage() {
                   </Badge>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border/60 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      Subject
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">{selectedCourse.name}</p>
-                  </div>
-                  <div className="rounded-xl border border-border/60 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                      Total Lessons
+	                <div className="grid gap-3 sm:grid-cols-3">
+	                  <div className="rounded-xl border border-border/60 p-3">
+	                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+	                      Class
+	                    </p>
+	                    <p className="mt-2 text-lg font-semibold text-foreground">{selectedCourse.standard || selectedCourse.name}</p>
+	                  </div>
+	                  <div className="rounded-xl border border-border/60 p-3">
+	                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+	                      Total Lessons
                     </p>
                     <p className="mt-2 text-lg font-semibold text-foreground">{selectedCourseLessons}</p>
                     <p className="mt-1 text-xs text-muted-foreground">Derived from current assignments</p>
@@ -316,27 +471,133 @@ export default function OverviewPage() {
                     <p className="mt-2 text-lg font-semibold text-foreground">
                       {girlsCount} girls / {boysCount} boys
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">For the selected class</p>
-                  </div>
-                </div>
+	                    <p className="mt-1 text-xs text-muted-foreground">For the selected class</p>
+	                  </div>
+	                </div>
+	
+	                <div className="rounded-2xl border border-border/60 bg-muted/15 p-4">
+	                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+	                    <div>
+	                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+	                        Chapter Progress Tracker
+	                      </p>
+	                      <p className="mt-1 text-sm text-muted-foreground">
+	                        Set the chapter count for each subject in this class, then update the completed count as you teach.
+	                      </p>
+	                    </div>
+	                    <Button
+	                      size="sm"
+	                      className="rounded-2xl"
+	                      onClick={handleSaveChapterProgress}
+	                      disabled={!hasChapterDraftChanges || savingChapterProgress || chapterProgressDraft.length === 0}
+	                    >
+	                      {savingChapterProgress ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Check className="mr-2 size-4" />}
+	                      Save Progress
+	                    </Button>
+	                  </div>
 
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    Subjects
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {courses.map((course) => (
-                      <Badge
-                        key={course.id}
-                        variant={String(course.id) === selectedCourseId ? "default" : "outline"}
-                      >
-                        {course.name}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
+	                  {chapterProgressDraft.length === 0 ? (
+	                    <div className="mt-4 rounded-xl border border-dashed border-border/70 bg-background px-3 py-4 text-sm text-muted-foreground">
+	                      Add subjects to this class first to start tracking chapter progress.
+	                    </div>
+	                  ) : (
+	                    <div className="mt-4 space-y-3">
+	                      {chapterProgressDraft.map((entry) => {
+	                        const canEdit = canManageSubjectProgress(teacherSubjects, entry.subject);
+	                        const progressValue = getSubjectProgressPercent(entry);
+
+	                        return (
+	                          <div key={`${selectedCourse.id}-${entry.subject}`} className="rounded-xl border border-border/60 bg-background p-3">
+	                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+	                              <div className="min-w-0 flex-1">
+	                                <div className="flex flex-wrap items-center gap-2">
+	                                  <Badge variant="secondary">{entry.subject}</Badge>
+	                                  {canEdit ? null : <Badge variant="outline">Read only</Badge>}
+	                                  <span className="text-xs text-muted-foreground">
+	                                    {entry.completedChapters} / {entry.totalChapters || "-"} chapters complete
+	                                  </span>
+	                                </div>
+	                                <Progress value={progressValue} className="mt-3 h-2" />
+	                                <p className="mt-2 text-xs text-muted-foreground">
+	                                  {entry.totalChapters > 0
+	                                    ? `${progressValue}% of this subject has been covered for the selected class.`
+	                                    : "Set the total chapter count to start measuring progress."}
+	                                </p>
+	                              </div>
+
+	                              <div className="grid gap-3 sm:grid-cols-[130px_190px]">
+	                                <div className="space-y-2">
+	                                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+	                                    Total Chapters
+	                                  </p>
+	                                  <Input
+	                                    type="number"
+	                                    min="0"
+	                                    value={entry.totalChapters}
+	                                    disabled={!canEdit}
+	                                    onChange={(event) =>
+	                                      handleChapterDraftChange(entry.subject, {
+	                                        totalChapters: Number(event.target.value),
+	                                      })
+	                                    }
+	                                  />
+	                                </div>
+	                                <div className="space-y-2">
+	                                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+	                                    Completed Chapters
+	                                  </p>
+	                                  <div className="flex items-center gap-2">
+	                                    <Button
+	                                      type="button"
+	                                      variant="outline"
+	                                      size="icon-xs"
+	                                      className="rounded-full"
+	                                      disabled={!canEdit || entry.completedChapters <= 0}
+	                                      onClick={() =>
+	                                        handleChapterDraftChange(entry.subject, {
+	                                          completedChapters: entry.completedChapters - 1,
+	                                        })
+	                                      }
+	                                    >
+	                                      <Minus className="size-3" />
+	                                    </Button>
+	                                    <Input
+	                                      type="number"
+	                                      min="0"
+	                                      value={entry.completedChapters}
+	                                      disabled={!canEdit || entry.totalChapters <= 0}
+	                                      onChange={(event) =>
+	                                        handleChapterDraftChange(entry.subject, {
+	                                          completedChapters: Number(event.target.value),
+	                                        })
+	                                      }
+	                                    />
+	                                    <Button
+	                                      type="button"
+	                                      variant="outline"
+	                                      size="icon-xs"
+	                                      className="rounded-full"
+	                                      disabled={!canEdit || entry.totalChapters <= 0 || entry.completedChapters >= entry.totalChapters}
+	                                      onClick={() =>
+	                                        handleChapterDraftChange(entry.subject, {
+	                                          completedChapters: entry.completedChapters + 1,
+	                                        })
+	                                      }
+	                                    >
+	                                      <Plus className="size-3" />
+	                                    </Button>
+	                                  </div>
+	                                </div>
+	                              </div>
+	                            </div>
+	                          </div>
+	                        );
+	                      })}
+	                    </div>
+	                  )}
+	                </div>
+	              </>
+	            ) : (
               <p className="text-sm text-muted-foreground">
                 No courses are available yet, so class and subject details cannot be shown.
               </p>

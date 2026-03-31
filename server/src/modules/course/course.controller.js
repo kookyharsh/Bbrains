@@ -14,11 +14,24 @@ const timetableEntrySchema = z.object({
     room: z.string().max(50).optional().nullable(),
 });
 
+const subjectProgressEntrySchema = z.object({
+    subject: z.string().min(1).max(100),
+    totalChapters: z.coerce.number().int().min(0),
+    completedChapters: z.coerce.number().int().min(0),
+}).refine(
+    (entry) => entry.completedChapters <= entry.totalChapters,
+    {
+        message: 'Completed chapters cannot exceed total chapters',
+        path: ['completedChapters'],
+    }
+);
+
 const createCourseSchema = z.object({
     name: z.string().min(1).max(100),
     description: z.string().max(255).optional(),
     standard: z.string().min(1).max(50),
     subjects: z.array(z.string().min(1).max(100)).min(1),
+    subjectProgress: z.array(subjectProgressEntrySchema).optional(),
     feePerStudent: z.coerce.number().min(0),
     durationValue: z.coerce.number().int().positive(),
     durationUnit: z.enum(['months', 'years']),
@@ -50,6 +63,18 @@ const getCourseOperationErrorMessage = (error, fallbackMessage) => {
     return fallbackMessage;
 };
 
+const getStatusCode = (error, fallbackStatus = 500) => {
+    if (typeof error?.statusCode === 'number') {
+        return error.statusCode;
+    }
+
+    if (typeof error?.code === 'string' && error.code === 'P2025') {
+        return 404;
+    }
+
+    return fallbackStatus;
+};
+
 // POST /courses
 export const createCourse = async (req, res) => {
     try {
@@ -70,10 +95,10 @@ export const getCourses = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const search = typeof req.query.search === 'string' ? req.query.search : '';
-        const { courses, total } = await getAllCourses((page - 1) * limit, limit, search);
+        const { courses, total } = await getAllCourses((page - 1) * limit, limit, search, req.user);
         return sendPaginated(res, courses, { page, limit, total });
     } catch (error) {
-        return sendError(res, 'Failed to fetch courses', 500);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to fetch courses'), getStatusCode(error));
     }
 };
 
@@ -82,11 +107,11 @@ export const getCourse = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid course ID', 400);
-        const course = await getCourseById(id);
+        const course = await getCourseById(id, req.user);
         if (!course) return sendError(res, 'Course not found', 404);
         return sendSuccess(res, course);
     } catch (error) {
-        return sendError(res, 'Failed to fetch course', 500);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to fetch course'), getStatusCode(error));
     }
 };
 
@@ -96,14 +121,13 @@ export const updateCourse = async (req, res) => {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid course ID', 400);
         const validated = updateCourseSchema.parse(req.body);
-        const course = await updateCourseRecord(id, validated);
+        const course = await updateCourseRecord(id, validated, req.user);
         await createAuditLog(req.user.id, 'ACADEMIC', 'UPDATE', 'Course', id, { after: validated });
         return sendSuccess(res, course, 'Course updated successfully');
     } catch (error) {
         if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
-        if (error.code === 'P2025') return sendError(res, 'Course not found', 404);
         console.error(error);
-        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to update course'), 500);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to update course'), getStatusCode(error));
     }
 };
 
@@ -126,10 +150,10 @@ export const listCourseStudents = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid course ID', 400);
-        const students = await getCourseStudents(id);
+        const students = await getCourseStudents(id, req.user);
         return sendSuccess(res, students);
     } catch (error) {
-        return sendError(res, 'Failed to fetch students', 500);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to fetch students'), getStatusCode(error));
     }
 };
 
