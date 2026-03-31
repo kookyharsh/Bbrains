@@ -70,7 +70,14 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
         const userXp = userXpData || { level: 1, xp: 0 };
         const roleEntries = Array.isArray(dbUser?.roles) ? (dbUser.roles as LayoutRoleEntry[]) : [];
         const hasManagerRole = roleEntries.some((entry) => entry.role?.name?.toLowerCase().includes('manager'));
-        const appRole = hasManagerRole && dbUser?.type !== 'admin' ? 'manager' : (dbUser?.type || 'student');
+        const hasBbrainsOfficialRole = roleEntries.some((entry) => entry.role?.name?.toLowerCase().includes('bbrains_official'));
+
+        let appRole = dbUser?.type || 'student';
+        if (hasBbrainsOfficialRole || dbUser?.type === 'admin') {
+            appRole = 'bbrains_official'; // Priority 1: bb_official / admin can manage
+        } else if (hasManagerRole) {
+            appRole = 'manager';
+        }
         
         // Get details from user_details table if they exist
         const rawDetails = dbUser?.userDetails;

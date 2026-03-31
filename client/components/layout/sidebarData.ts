@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
-export type Role = "student" | "teacher" | "admin" | "staff" | "manager";
+export type Role = "student" | "teacher" | "admin" | "staff" | "manager" | "bbrains_official";
 
 export type SubItem = {
     title: string;
@@ -30,6 +30,7 @@ export type SidebarGroup = {
 // ─── Shared by all roles ───────────────────────────────────────────────────
 const baseSidebarItems: SidebarItem[] = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
+    { title: "Achievements", url: "/achievements", icon: Trophy },
     { title: "Assignments", url: "/assignments", icon: Book },
     { title: "Chat", url: "/chat", icon: MessageSquare },
     {
@@ -54,6 +55,13 @@ const baseSidebarItems: SidebarItem[] = [
 ];
 
 // ─── Admin-only ────────────────────────────────────────────────────────────
+const bbrainsOfficialExtraItems: SidebarItem[] = [
+    { title: "Overview",      url: "/bbrains/overview",      icon: LayoutDashboard },
+    { title: "Achievements",  url: "/admin/achievements",  icon: Trophy },
+    { title: "XP & Levels",   url: "/admin/xpconfig",     icon: Trophy },
+    { title: "System Config", url: "/admin/config",        icon: Settings2 },
+];
+
 const adminExtraItems: SidebarItem[] = [
     { title: "Overview",      url: "/admin/overview",      icon: LayoutDashboard },
     { title: "Manage Users",  url: "/admin/users",         icon: UserCog },
@@ -64,8 +72,6 @@ const adminExtraItems: SidebarItem[] = [
     { title: "Assignments",   url: "/admin/assignments",   icon: BookOpen },
     { title: "Announcements", url: "/admin/announcements", icon: Megaphone },
     { title: "Products",      url: "/admin/products",      icon: ShoppingBag },
-    { title: "Achievements",  url: "/admin/achievements",  icon: Trophy },
-    { title: "XP & Levels",   url: "/admin/xpconfig",     icon: Trophy },
     { title: "Statistics",    url: "/admin/stats",         icon: BarChart3 },
     { title: "Audit Log",     url: "/admin/audit-log",     icon: FileText },
     { title: "Transactions",  url: "/admin/transactions",  icon: ArrowUpDown },
@@ -100,6 +106,7 @@ const extraItemsMap: Record<Role, { label: string; items: SidebarItem[] } | null
     admin:   { label: "Admin Panel",   items: adminExtraItems },
     staff: null,
     manager: { label: "Manager Panel", items: managerExtraItems },
+    bbrains_official: { label: "Bbrains Official", items: bbrainsOfficialExtraItems },
 };
 
 export function getSidebarGroups(role: Role): SidebarGroup[] {

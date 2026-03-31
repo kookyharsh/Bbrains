@@ -274,12 +274,14 @@ model Leaderboard {
 }
 
 model Achievement {
-  id          Int                @id @default(autoincrement()) @map("achivement_id")
+  id          String             @id @default(uuid()) @map("achievement_id")
   name        String             @db.VarChar(100)
   description String?            @db.VarChar(255)
+  tier        Int
+  rewardXP    Int
+  rewardCoins Int
   icon        String?
-  requiredXp  Decimal            @db.Decimal(10, 2)
-  category    String?            @db.VarChar(50)
+  createdAt   DateTime           @default(now()) @map("created_at")
   users       UserAchievements[]
 
   @@map("achievement")
@@ -287,7 +289,7 @@ model Achievement {
 
 model UserAchievements {
   userId        String      @map("user_id")
-  achievementId Int         @map("achievement_id")
+  achievementId String      @map("achievement_id")
   unlockedAt    DateTime    @default(now()) @map("unlocked_at")
   achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
