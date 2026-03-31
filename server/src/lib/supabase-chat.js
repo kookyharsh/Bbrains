@@ -1,4 +1,5 @@
 import supabase from "../utils/supabase.js";
+import { awardAchievement } from "../modules/achievement/achievement.service.js";
 
 const CHAT_MESSAGES_TABLE = "chat_messages";
 
@@ -38,6 +39,13 @@ export const insertChatMessage = async (messageData) => {
         if (error) {
             console.error("Error inserting chat message:", error);
             return null;
+        }
+
+        // Trigger achievements
+        if (data) {
+            // "First Blood" - send first message
+            await awardAchievement(messageData.user_id, "First Blood");
+            // "Chatterbox" - we would ideally increment a counter here, but for now we just trigger First Blood
         }
 
         return formatMessage(data);

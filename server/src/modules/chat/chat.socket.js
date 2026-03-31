@@ -119,14 +119,19 @@ const emitPresence = (io, roomName) => {
     io.to(roomName).emit("chat:presence", getPresenceForRoom(roomName));
 };
 
+let ioInstance = null;
+export const getChatSocket = () => ioInstance;
+
 export const initChatSocket = (server) => {
-    const io = new Server(server, {
+    ioInstance = new Server(server, {
         cors: {
-            origin: true, // Allow any origin in development
+            origin: true,
             methods: ["GET", "POST"],
             credentials: true
         }
     });
+    const io = ioInstance; // Keep local ref
+    //
 
     io.use(async (socket, next) => {
         try {

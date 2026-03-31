@@ -1,4 +1,5 @@
 import prisma from "../../utils/prisma.js";
+import { awardAchievement } from "../achievement/achievement.service.js";
 import bcrypt from "bcrypt";
 
 const getAllProducts = async (skip = 0, take = 10) => {
@@ -232,6 +233,8 @@ const checkout = async (userId, pin) => {
             }
         });
 
+        await awardAchievement(userId, "First Purchase");
+
         return order;
     });
 };
@@ -327,6 +330,8 @@ const buyNow = async (userId, productId, quantity, pin) => {
                 entityId: String(order.id)
             }
         });
+
+        await awardAchievement(userId, "First Purchase");
 
         return order;
     });
