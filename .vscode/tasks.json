@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Client",
+      "type": "npm",
+      "script": "dev",
+      "path": "client/",
+      "isBackground": true,
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": {
+        "owner": "next",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "starting|compiling",
+          "endsPattern": "ready|compiled"
+        }
+      }
+    },
+    {
+      "label": "Start Server",
+      "type": "npm",
+      "script": "start",
+      "path": "server/",
+      "isBackground": true,
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": {
+        "owner": "node",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "starting|listening",
+          "endsPattern": "running|started|listening on"
+        }
+      }
+    }
+  ]
+}

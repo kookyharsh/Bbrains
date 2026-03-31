@@ -452,8 +452,6 @@ export const getLibrary = async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Use the Library model directly
-    console.log(`[getLibrary] Fetching for user: ${req.user.id} (${req.user.username})`);
-    
     const libraryItems = await prisma.library.findMany({
       where: { userId: req.user.id },
       include: {
@@ -465,8 +463,6 @@ export const getLibrary = async (req, res) => {
       },
       orderBy: { purchasedAt: 'desc' },
     });
-
-    console.log(`[getLibrary] Found ${libraryItems.length} rows in database.`);
 
     let allItems = libraryItems.map(item => {
       const p = item.product;
@@ -487,11 +483,8 @@ export const getLibrary = async (req, res) => {
       };
     });
 
-    console.log(`[getLibrary] Categories present:`, [...new Set(allItems.map(a => a.category))]);
-
     // Filter by category if requested
     if (category && category !== 'all' && category !== 'undefined') {
-      console.log(`[getLibrary] Filtering for category: ${category}`);
       allItems = allItems.filter(item => item.category === category);
     }
 

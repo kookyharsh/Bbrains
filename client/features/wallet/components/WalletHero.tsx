@@ -13,7 +13,7 @@ interface WalletHeroProps {
 }
 
 export function WalletHero({ walletBalance, xp, level, nextLevel, progressPercent }: WalletHeroProps) {
-  const formatPoints = (amount: number) => Number(amount).toLocaleString();
+  const formatPoints = (amount: number) => Number(amount ?? 0).toLocaleString();
 
   return (
     <section className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-gradient-to-br from-[#fff7dd] via-white to-[#def2ff] p-6 shadow-sm">

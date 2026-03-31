@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Gift, Star, AlertCircle, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { dashboardApi, streakApi, StreakData } from "@/services/api/client";
+import { useRouter } from "next/navigation";
 
 interface DailyRewardCardProps {
   initialStreak?: StreakData | null;
 }
 
 export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
+  const router = useRouter();
   const [streak, setStreak] = useState<StreakData | null>(initialStreak || null);
   const [loading, setLoading] = useState(!initialStreak);
   const [claiming, setClaiming] = useState(false);
@@ -72,6 +74,7 @@ export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
               }
             : null
         );
+        router.refresh();
       } else {
         setError(response.message || "Failed to claim reward");
       }

@@ -2,7 +2,7 @@
 
 import React from "react"
 import { Loader2, Megaphone } from "lucide-react"
-import type { Announcement } from "@/features/announcements/data"
+import type { Announcement } from "@/app/(dashboard)/announcements/_features/announcements/data"
 import { AnnouncementItem, DateSeparator } from "./AnnouncementItem"
 
 interface AnnouncementsFeedProps {

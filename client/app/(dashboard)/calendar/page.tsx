@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { BigCalendar } from "@/config/BigCalendar"
-import { EventCalender } from "@/config/EventCalender"
+import { BigCalendar } from "@/app/(dashboard)/calendar/_components/BigCalendar"
+import { EventCalender } from "@/app/(dashboard)/calendar/_components/EventCalender"
 import { DashboardContent } from "@/components/dashboard-content"
 import { eventApi, Event as ApiEvent } from "@/services/api/client"
 import { 

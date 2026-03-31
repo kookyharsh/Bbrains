@@ -7,6 +7,17 @@ import { useTheme } from "@/context/theme"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, DollarSign, Sparkles } from "lucide-react"
+import { themeApi } from "@/services/api/client"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { toast } from "sonner"
 
 export default function ThemesPage() {
   const { user } = useUser()
@@ -14,40 +25,62 @@ export default function ThemesPage() {
   const { themes, userThemes, hasThemeAccess, addTheme, currentTheme, setTheme } = useTheme()
   
   const [loading, setLoading] = React.useState(false)
+  const [showBuyDialog, setShowBuyDialog] = React.useState(false)
+  const [selectedTheme, setSelectedTheme] = React.useState<{id: string, price: number, name: string} | null>(null)
+  const [pin, setPin] = React.useState("")
   
-  // Handle theme purchase
-  const handlePurchase = async (themeId: string, price: number) => {
+  // Prepare theme purchase
+  const handlePurchaseClick = (themeId: string, price: number, name: string) => {
     if (!user?.id) {
-      alert('Please log in to purchase themes')
+      toast.error('Please log in to purchase themes')
       return
     }
     
     if (!wallet) {
-      alert('Wallet not found')
+      toast.error('Wallet not found')
       return
     }
     
     if (wallet.balance < price) {
-      alert('Insufficient wallet balance')
+      toast.error('Insufficient wallet balance')
       return
     }
     
+    setSelectedTheme({ id: themeId, price, name })
+    setShowBuyDialog(true)
+  }
+
+  // Execute theme purchase
+  const handleBuyNow = async () => {
+    if (!selectedTheme) return;
+
     setLoading(true)
     try {
-      // TODO: Implement actual purchase using market/buy-now endpoint
-      // For now, simulate purchase by adding theme to user's collection
-      await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate API delay
+      // Find the corresponding product ID from the API to complete the purchase
+      const themesResponse = await themeApi.getThemes(1, 100);
+      const apiTheme = themesResponse.data?.find(
+        t => t.metadata?.themeConfig?.id === selectedTheme.id || t.name === selectedTheme.name
+      );
+
+      if (!apiTheme) {
+        toast.error('Theme product not found in marketplace.');
+        setLoading(false);
+        return;
+      }
+
+      const response = await themeApi.buyTheme(apiTheme.id, pin);
       
-      // Add theme to user's collection
-      addTheme(themeId)
-      
-      // Deduct from wallet (in real implementation, this would happen via market API)
-      // const newBalance = wallet.balance - price
-      // localStorage.setItem('wallet', JSON.stringify({...wallet, balance: newBalance}))
-      
-      alert(`Successfully purchased theme! Your new balance would be: $${wallet.balance - price}`)
-    } catch (error) {
-      alert('Purchase failed. Please try again.')
+      if (response.success || response.status === 200 || response.status === 201) {
+        // Add theme to user's collection
+        addTheme(selectedTheme.id)
+        toast.success(`Successfully purchased theme!`)
+        setShowBuyDialog(false)
+        setPin("")
+      } else {
+        toast.error(response.message || 'Purchase failed. Please try again.')
+      }
+    } catch (error: any) {
+      toast.error('Purchase failed. Please try again.')
       console.error('Purchase error:', error)
     } finally {
       setLoading(false)
@@ -181,7 +214,7 @@ export default function ThemesPage() {
                   
                   {!hasThemeAccess(theme.id) && (
                     <Button 
-                      onClick={() => handlePurchase(theme.id, theme.price)}
+                      onClick={() => handlePurchaseClick(theme.id, theme.price, theme.name)}
                       disabled={loading}
                       variant="default"
                       size="sm"
@@ -195,6 +228,46 @@ export default function ThemesPage() {
             </React.Fragment>
           ))}
       </div>
+
+      {/* Buy Dialog */}
+      <Dialog open={showBuyDialog} onOpenChange={setShowBuyDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Purchase Theme</DialogTitle>
+            <DialogDescription>
+              Enter your PIN to purchase {selectedTheme?.name} for {Number(selectedTheme?.price || 0)} B-Coins
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">Wallet PIN</label>
+            <InputOTP
+              value={pin}
+              onChange={(value) => setPin(value)}
+              maxLength={6}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBuyDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBuyNow}
+              disabled={pin.length < 6 || loading}
+            >
+              {loading ? "Processing..." : "Confirm Purchase"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <div className="border-t pt-6">
         <h2 className="text-lg font-semibold mb-4">Your Theme Collection</h2>

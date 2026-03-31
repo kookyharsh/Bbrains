@@ -2,8 +2,8 @@
 
 import React from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import type { Announcement } from "@/features/announcements/data"
-import { getAvatarColor, getInitials } from "@/features/announcements/utils"
+import type { Announcement } from "@/app/(dashboard)/announcements/_features/announcements/data"
+import { getAvatarColor, getInitials } from "@/app/(dashboard)/announcements/_features/announcements/utils"
 
 // ─── Date Separator ───────────────────────────────────────────────────────────
 

@@ -1,8 +1,6 @@
 import { Server } from "socket.io";
 import prisma from "../../utils/prisma.js";
 import { insertChatMessage, getMessageById, updateChatMessage, deleteChatMessage } from '../../lib/supabase-chat.js';
-import { findUserBySupabaseId } from "../user/user.service.js";
-import supabase from "../../utils/supabase.js";
 
 let activeUsers = {};
 const mentionPattern = /@([a-zA-Z0-9_]+)/g;
@@ -151,9 +149,9 @@ export const initChatSocket = (server) => {
 
         socket.on("chat:join", async (payload = {}) => {
             try {
-                const identity = socket.data.user;
-                if (!identity) {
-                    socket.emit("chat:error", { message: "Authentication required before joining chat" });
+                const userId = payload.userId;
+                if (!userId) {
+                    socket.emit("chat:error", { message: "Missing userId in chat:join" });
                     return;
                 }
 

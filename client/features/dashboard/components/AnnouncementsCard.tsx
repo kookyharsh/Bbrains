@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, ExternalLink, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { announcementApi, Announcement } from "@/services/api/client";
+import Link from "next/link";
 
 interface AnnouncementsCardProps {
   initialAnnouncements?: Announcement[];
@@ -82,8 +83,9 @@ export function AnnouncementsCard({ initialAnnouncements }: AnnouncementsCardPro
         ) : (
           <div className="space-y-3">
             {announcements.map((announcement) => (
-              <div
+              <Link
                 key={announcement.id}
+                href={`/announcements`}
                 className="flex items-start justify-between gap-2 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
               >
                 <div className="space-y-1">
@@ -98,7 +100,7 @@ export function AnnouncementsCard({ initialAnnouncements }: AnnouncementsCardPro
                   </div>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </div>
+              </Link>
             ))}
           </div>
         )}

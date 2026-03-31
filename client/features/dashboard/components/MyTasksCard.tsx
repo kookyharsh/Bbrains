@@ -102,27 +102,22 @@ export function MyTasksCard() {
         </CardTitle>
         <div className="flex items-center gap-2">
           {mounted && (
+            <Link href="/assignments">
+              <Button 
+                size="sm"
+                className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl h-8 px-3 shadow-lg shadow-brand-purple/20 transition-all font-bold text-[10px]"
+              >
+                VIEW ALL
+              </Button>
+            </Link>
+          )}
+          {mounted && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
               if (!open) {
                 setSelectedAssignment(null);
                 setDialogOpen(false);
               }
             }}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={() => {
-                    if (assignments.length > 0) {
-                      setSelectedAssignment(assignments[0]);
-                      setDialogOpen(true);
-                    }
-                  }}
-                  size="sm"
-                  className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl h-8 px-3 shadow-lg shadow-brand-purple/20 transition-all font-bold text-[10px]"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  UPLOAD ASSIGNMENT
-                </Button>
-              </DialogTrigger>
               <DialogContent className="sm:max-w-[425px] rounded-3xl border-border/40 bg-card/95 backdrop-blur-md">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-bold flex items-center gap-2">
