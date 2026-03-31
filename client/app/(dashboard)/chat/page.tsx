@@ -11,7 +11,7 @@ import { useChatMessages } from "@/features/chat/hooks/useChatMessages";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import { supabase } from "@/services/supabase/client";
-import { chatApi } from "@/services/api/client";
+import { chatApi, type ChatMemberProfile } from "@/services/api/client";
 
 // Components
 import { ChannelHeader } from "@/features/chat/components/ChannelHeader";
@@ -75,7 +75,7 @@ export default function ChatPage() {
       try {
         const response = await chatApi.getMembers();
         if (response.success && response.data) {
-          const members = response.data.map((m: any) => mapApiMember(m));
+          const members = response.data.map((m: ChatMemberProfile) => mapApiMember(m));
           setMembersList(members);
         }
       } catch (error) {

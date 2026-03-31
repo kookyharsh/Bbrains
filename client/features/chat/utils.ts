@@ -31,7 +31,7 @@ export function extractMentions(content: string): string[] {
 
 export function mapApiMessage(m: ApiMessage): Message {
     return {
-        id: m._id,
+        id: m.id,
         user: {
             id: m.userId,
             username: m.username,
@@ -45,14 +45,14 @@ export function mapApiMessage(m: ApiMessage): Message {
         date: new Date(m.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" }),
         createdAt: m.createdAt,
         editedAt: m.editedAt ?? null,
-        replyTo: m.replyTo ?? null,
+        replyTo: m.replyToMessageId ? { messageId: m.replyToMessageId, username: "", content: "" } : null,
         mentions: m.mentions || [],
+        attachments: m.attachments || [],
     }
 }
 
-export function mapApiMember(m: any, activeUserIds: string[] = []): Member {
-    const id = m.id || m.userId || String(m._id || "")
-    const memberId = String(id)
+export function mapApiMember(m: ApiMember, activeUserIds: string[] = []): Member {
+    const memberId = String(m.id)
     const isOnline = activeUserIds.includes(memberId)
     
     const roles = Array.isArray(m.roles) ? m.roles : []

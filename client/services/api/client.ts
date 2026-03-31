@@ -176,6 +176,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   type: "student" | "teacher" | "admin" | "staff";
+  teacherSubjects?: string[];
   roles?: {
     role?: {
       name?: string;
@@ -274,6 +275,7 @@ export interface AttendanceData {
 
 export interface AttendanceRecord {
   id: string;
+  userId?: string;
   date: string;
   status: 'present' | 'absent' | 'late';
   notes?: string;
@@ -349,6 +351,7 @@ export interface Course {
   description?: string;
   standard?: string;
   subjects?: string[];
+  subjectProgress?: SubjectChapterProgress[];
   feePerStudent?: number | string;
   durationValue?: number;
   durationUnit?: "months" | "years";
@@ -373,6 +376,12 @@ export interface Course {
   };
 }
 
+export interface SubjectChapterProgress {
+  subject: string;
+  totalChapters: number;
+  completedChapters: number;
+}
+
 export interface ClassTimetableEntry {
   day: string;
   subject: string;
@@ -389,6 +398,145 @@ export interface Grade {
   maxGrade: number;
   feedback?: string;
   submittedAt: string;
+}
+
+export interface AssessmentStudent {
+  id: string;
+  username: string;
+  email?: string;
+  userDetails?: {
+    firstName?: string;
+    lastName?: string;
+    avatar?: string | null;
+  };
+}
+
+export interface AssessmentCourseOption {
+  id: number;
+  name: string;
+  standard?: string | null;
+  subjects: string[];
+  availableSubjects: string[];
+  studentCount: number;
+}
+
+export interface AssessmentResult {
+  id?: number;
+  studentId: string;
+  marksObtained: number | string;
+  remark?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  student?: AssessmentStudent;
+}
+
+export interface Assessment {
+  id: number;
+  courseId: number;
+  createdById: string;
+  subject: string;
+  topic: string;
+  assessmentType: "test" | "exam";
+  assessmentDate: string;
+  totalMarks: number | string;
+  createdAt: string;
+  updatedAt: string;
+  course?: {
+    id: number;
+    name: string;
+    standard?: string | null;
+  };
+  createdBy?: {
+    id: string;
+    username: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  };
+  results: AssessmentResult[];
+}
+
+export interface AssessmentSetupData {
+  teacherSubjects: string[];
+  courses: AssessmentCourseOption[];
+  eligibleStudents: AssessmentStudent[];
+}
+
+export interface AssessmentSubmission {
+  courseId: number;
+  subject: string;
+  topic: string;
+  assessmentType: "test" | "exam";
+  assessmentDate: string;
+  totalMarks: number;
+  results: {
+    studentId: string;
+    marksObtained: number;
+    remark?: string;
+  }[];
+}
+
+export interface StudentAssessmentResult {
+  id: number;
+  assessmentId: number;
+  studentId: string;
+  marksObtained: number | string;
+  remark?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assessment: {
+    id: number;
+    subject: string;
+    topic: string;
+    assessmentType: "test" | "exam";
+    assessmentDate: string;
+    totalMarks: number | string;
+    course?: {
+      id: number;
+      name: string;
+      standard?: string | null;
+    };
+    createdBy?: {
+      username: string;
+      userDetails?: {
+        firstName?: string;
+        lastName?: string;
+      };
+    };
+  };
+}
+
+export interface ChatAttachment {
+  url: string;
+  type: string;
+  name?: string;
+}
+
+export interface ChatMessageRecord {
+  id: string;
+  userId: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+  role: string;
+  content: string;
+  mentions: string[];
+  replyToMessageId?: string | null;
+  attachments: ChatAttachment[];
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface ChatMemberProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar: string;
+  pronouns: string;
+  grade: string;
+  roles: string[];
+  type: string;
 }
 
 export interface Assignment {
@@ -488,6 +636,9 @@ export const attendanceApi = {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
     return api.get<AttendanceRecord[]>(`/attendance/student/${studentId}${query}`);
   },
+  getAttendanceByDate: async (date: string): Promise<ApiResponse<AttendanceRecord[]>> => {
+    return api.get<AttendanceRecord[]>(`/attendance/by-date?date=${encodeURIComponent(date)}`);
+  },
   markAttendance: async (data: {
     studentId: string;
     date: string;
@@ -495,6 +646,13 @@ export const attendanceApi = {
     notes?: string;
   }): Promise<ApiResponse<AttendanceRecord>> => {
     return api.post<AttendanceRecord>('/attendance/mark', data);
+  },
+  markAttendanceBulk: async (data: {
+    studentIds: string[];
+    date: string;
+    status: 'present' | 'absent' | 'late';
+  }): Promise<ApiResponse<AttendanceRecord[]>> => {
+    return api.post<AttendanceRecord[]>('/attendance/mark-bulk', data);
   },
 };
 
@@ -562,6 +720,7 @@ export const courseApi = {
     description?: string;
     standard: string;
     subjects: string[];
+    subjectProgress?: SubjectChapterProgress[];
     feePerStudent: number;
     durationValue: number;
     durationUnit: "months" | "years";
@@ -575,6 +734,7 @@ export const courseApi = {
     description?: string;
     standard?: string;
     subjects?: string[];
+    subjectProgress?: SubjectChapterProgress[];
     feePerStudent?: number;
     durationValue?: number;
     durationUnit?: "months" | "years";
@@ -626,6 +786,31 @@ export const enrollmentApi = {
   },
   getCourseEnrollments: async (courseId: string | number): Promise<ApiResponse<User[]>> => {
     return api.get<User[]>(`/enrollments/course/${courseId}`);
+  },
+};
+
+export const assessmentApi = {
+  getSetup: async (params?: { courseId?: number; date?: string }): Promise<ApiResponse<AssessmentSetupData>> => {
+    const query = new URLSearchParams();
+    if (params?.courseId) query.set('courseId', String(params.courseId));
+    if (params?.date) query.set('date', params.date);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return api.get<AssessmentSetupData>(`/assessments/setup${suffix}`);
+  },
+  getTeacherAssessments: async (): Promise<ApiResponse<Assessment[]>> => {
+    return api.get<Assessment[]>('/assessments');
+  },
+  getAssessment: async (id: number | string): Promise<ApiResponse<Assessment>> => {
+    return api.get<Assessment>(`/assessments/${id}`);
+  },
+  createAssessment: async (data: AssessmentSubmission): Promise<ApiResponse<Assessment>> => {
+    return api.post<Assessment>('/assessments', data);
+  },
+  updateAssessment: async (id: number | string, data: AssessmentSubmission): Promise<ApiResponse<Assessment>> => {
+    return api.put<Assessment>(`/assessments/${id}`, data);
+  },
+  getMyResults: async (): Promise<ApiResponse<StudentAssessmentResult[]>> => {
+    return api.get<StudentAssessmentResult[]>('/assessments/results/me');
   },
 };
 
@@ -860,14 +1045,19 @@ export const chatApi = {
     if (before) query.append('before', before);
     return api.get<any[]>(`/chat/messages?${query.toString()}`);
   },
-  getMembers: async (): Promise<ApiResponse<any[]>> => {
-    return api.get<any[]>(`/chat/members`);
+  getMembers: async (): Promise<ApiResponse<ChatMemberProfile[]>> => {
+    return api.get<ChatMemberProfile[]>(`/chat/members`);
   },
-  getMyProfile: async (): Promise<ApiResponse<any>> => {
-    return api.get<any>(`/chat/me`);
+  getMyProfile: async (): Promise<ApiResponse<ChatMemberProfile>> => {
+    return api.get<ChatMemberProfile>(`/chat/me`);
   },
-  sendMessage: async (content: string, attachments: any[] = [], mentions: string[] = [], replyTo?: string): Promise<ApiResponse<any>> => {
-    return api.post<any>('/chat/messages', {
+  sendMessage: async (
+    content: string,
+    attachments: ChatAttachment[] = [],
+    mentions: string[] = [],
+    replyTo?: string
+  ): Promise<ApiResponse<ChatMessageRecord>> => {
+    return api.post<ChatMessageRecord>('/chat/messages', {
       content,
       attachments,
       mentions,
@@ -877,7 +1067,7 @@ export const chatApi = {
   deleteMessage: async (id: string): Promise<ApiResponse<void>> => {
     return api.delete<void>(`/chat/messages/${id}`);
   },
-  editMessage: async (id: string, content: string, mentions: string[] = []): Promise<ApiResponse<any>> => {
-    return api.put<any>(`/chat/messages/${id}`, { content, mentions });
+  editMessage: async (id: string, content: string, mentions: string[] = []): Promise<ApiResponse<ChatMessageRecord>> => {
+    return api.put<ChatMessageRecord>(`/chat/messages/${id}`, { content, mentions });
   }
 };
