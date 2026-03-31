@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
     Table,
@@ -27,11 +28,15 @@ export function PermissionMatrix({ roles }: PermissionMatrixProps) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Permission</TableHead>
-                                {roles.map((role) => (
-                                    <TableHead key={role.id} className="text-center">
-                                        {role.name}
-                                    </TableHead>
-                                ))}
+                            {roles.map((role) => {
+                                    const roleId = typeof role === 'string' ? role : role.id
+                                    const roleName = typeof role === 'string' ? role : role.name
+                                    return (
+                                        <TableHead key={roleId} className="text-center">
+                                            {roleName}
+                                        </TableHead>
+                                    )
+                                })}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -40,15 +45,19 @@ export function PermissionMatrix({ roles }: PermissionMatrixProps) {
                                     <TableCell className="font-medium text-sm capitalize">
                                         {perm.replace(/_/g, " ")}
                                     </TableCell>
-                                    {roles.map((role) => (
-                                        <TableCell key={role.id} className="text-center">
-                                            {role.permissions.includes(perm) ? (
+                                {roles.map((role) => {
+                                    const roleId = typeof role === 'string' ? role : role.id
+                                    const rolePerms = typeof role === 'string' ? [] : (role.permissions || [])
+                                    return (
+                                        <TableCell key={roleId} className="text-center">
+                                            {rolePerms.includes(perm) ? (
                                                 <span className="text-green-600">✓</span>
                                             ) : (
                                                 <span className="text-muted-foreground">—</span>
                                             )}
                                         </TableCell>
-                                    ))}
+                                    )
+                                })}
                                 </TableRow>
                             ))}
                         </TableBody>

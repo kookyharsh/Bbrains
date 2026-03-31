@@ -60,7 +60,6 @@ const adminExtraItems: SidebarItem[] = [
     { title: "Teachers",      url: "/admin/teachers",      icon: UserCheck },
     { title: "Students",      url: "/admin/students",      icon: Users },
     { title: "Roles & Access",url: "/admin/roles",         icon: Shield },
-    { title: "Quick Roles",   url: "/admin/roles",         icon: Shield },
     { title: "Academics",     url: "/admin/academics",     icon: GraduationCap },
     { title: "Assignments",   url: "/admin/assignments",   icon: BookOpen },
     { title: "Announcements", url: "/admin/announcements", icon: Megaphone },

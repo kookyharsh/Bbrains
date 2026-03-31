@@ -14,8 +14,11 @@ interface RoleCardsProps {
 export function RoleCards({ roles, onEdit }: RoleCardsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {roles.map((role) => (
-                <Card key={role.id} className="hover:shadow-md transition-shadow">
+            {roles.map((role) => {
+                const roleId = typeof role === 'string' ? role : role.id
+                const permCount = typeof role === 'string' ? 0 : (role.permissions?.length ?? 0)
+                return (
+                <Card key={roleId} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-5">
                         <div className="flex items-center justify-between mb-3">
                             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -30,20 +33,20 @@ export function RoleCards({ roles, onEdit }: RoleCardsProps) {
                                 <Pencil className="w-3.5 h-3.5" />
                             </Button>
                         </div>
-                        <h3 className="font-semibold text-foreground">{role.name}</h3>
-                        <p className="text-xs text-muted-foreground mb-3">{role.description}</p>
+                        <h3 className="font-semibold text-foreground">{typeof role === 'string' ? role : role.name}</h3>
+                        <p className="text-xs text-muted-foreground mb-3">{typeof role === 'string' ? '' : role.description}</p>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Users className="w-3 h-3" />
-                                {role.users} users
+                                {typeof role === 'string' ? 0 : (role.users ?? 0)} users
                             </div>
                             <Badge variant="secondary" className="text-xs">
-                                {role.permissions.length} permissions
+                                {permCount} permissions
                             </Badge>
                         </div>
                     </CardContent>
                 </Card>
-            ))}
+            )})}
         </div>
     )
 }

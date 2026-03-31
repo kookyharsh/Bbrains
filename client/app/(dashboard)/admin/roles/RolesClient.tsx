@@ -27,7 +27,8 @@ export function RolesClient({ initialRoles, initialUsers }: RolesClientProps) {
 
     const handleEditRole = (role: Role) => {
         setEditRole(role)
-        setSelectedPerms(role.permissions)
+        const permNames = (role.permissions || []).map((p: string | {permission?: string}) => typeof p === 'string' ? p : p.permission || '')
+        setSelectedPerms(permNames)
         setShowRoleDialog(true)
     }
 
@@ -39,7 +40,8 @@ export function RolesClient({ initialRoles, initialUsers }: RolesClientProps) {
 
     const handleEditUser = (user: UserWithRoles) => {
         setEditUser(user)
-        setSelectedRoles(user.roles)
+        const userRoleNames = (user.roles || []).map((r: string | {role?: string}) => typeof r === 'string' ? r : r.role || '')
+        setSelectedRoles(userRoleNames)
         setShowUserDialog(true)
     }
 
