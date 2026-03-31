@@ -31,11 +31,20 @@ const normalizeProfile = (user) => {
 
 export const getChatMessages = async (req, res) => {
     try {
-        const limit = Math.min(Math.max(parseInt(String(req.query.limit || "200"), 10), 1), 500);
+        const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10), 1), 500);
         const chatId = req.query.chatId || 'default';
+        const before = req.query.before;
+
+        const whereClause = { chatId };
+
+        if (before) {
+            whereClause.createdAt = {
+                lt: new Date(before)
+            };
+        }
         
         const messages = await prisma.chatMessage.findMany({
-            where: { chatId },
+            where: whereClause,
             include: {
                 user: {
                     select: {
@@ -51,10 +60,13 @@ export const getChatMessages = async (req, res) => {
                     }
                 }
             },
-            orderBy: { createdAt: 'asc' },
-            take: -limit // Take the last 'limit' messages
+            orderBy: { createdAt: 'desc' },
+            take: limit
         });
         
+        // Reverse so they are in chronological order
+        messages.reverse();
+
         // Normalize for frontend - use live user data if available, fallback to denormalized
         const normalized = messages.map(msg => {
             const user = msg.user;
