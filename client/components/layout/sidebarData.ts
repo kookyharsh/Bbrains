@@ -30,7 +30,8 @@ export type SidebarGroup = {
 // ─── Shared by all roles ───────────────────────────────────────────────────
 const baseSidebarItems: SidebarItem[] = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    { title: "Exam/Assignments", url: "/assignments", icon: Book },
+    {title:"announcement",url:"/announcement",icon:Megaphone},
+    { title: "Assignments", url: "/assignments", icon: Book },
     { title: "Chat", url: "/chat", icon: MessageSquare },
     {
         title: "Wallet",
@@ -60,7 +61,6 @@ const adminExtraItems: SidebarItem[] = [
     { title: "Teachers",      url: "/admin/teachers",      icon: UserCheck },
     { title: "Students",      url: "/admin/students",      icon: Users },
     { title: "Roles & Access",url: "/admin/roles",         icon: Shield },
-    { title: "Quick Roles",   url: "/admin/roles",         icon: Shield },
     { title: "Academics",     url: "/admin/academics",     icon: GraduationCap },
     { title: "Assignments",   url: "/admin/assignments",   icon: BookOpen },
     { title: "Announcements", url: "/admin/announcements", icon: Megaphone },
@@ -77,7 +77,7 @@ const adminExtraItems: SidebarItem[] = [
 // ─── Teacher-only ──────────────────────────────────────────────────────────
 const teacherExtraItems: SidebarItem[] = [
     { title: "Overview",      url: "/teacher/overview",      icon: LayoutDashboard },
-    { title: "Assignments",   url: "/teacher/assignments",   icon: BookOpen },
+    { title: "Tests & Exams", url: "/teacher/assignments",   icon: BookOpen },
     { title: "Grading",       url: "/teacher/grading",       icon: CheckSquare },
     { title: "Attendance",    url: "/teacher/attendance",    icon: Calendar },
     { title: "Students",      url: "/teacher/students",      icon: Users },
@@ -104,8 +104,15 @@ const extraItemsMap: Record<Role, { label: string; items: SidebarItem[] } | null
 };
 
 export function getSidebarGroups(role: Role): SidebarGroup[] {
+    const sharedItems = [...baseSidebarItems];
+
+    if (role === "student") {
+        const assignmentsIndex = sharedItems.findIndex((item) => item.url === "/assignments");
+        sharedItems.splice(assignmentsIndex + 1, 0, { title: "Results", url: "/results", icon: Trophy });
+    }
+
     const groups: SidebarGroup[] = [
-        { items: baseSidebarItems },
+        { items: sharedItems },
     ];
 
     const extra = extraItemsMap[role];

@@ -1,6 +1,12 @@
 import prisma from '../../utils/prisma.js';
 import { createNotification } from '../notification/notification.service.js';
 
+const normalizeDate = (value) => {
+    const dt = new Date(value);
+    dt.setHours(0, 0, 0, 0);
+    return dt;
+};
+
 export const getAttendanceRecords = async (userId, startDate, endDate) => {
     return await prisma.attendance.findMany({
         where: {
@@ -56,9 +62,35 @@ export const getAttendanceByFilters = async (filters) => {
     });
 };
 
+export const getAttendanceForDate = async (date) => {
+    const normalizedDate = normalizeDate(date);
+
+    return await prisma.attendance.findMany({
+        where: {
+            date: normalizedDate,
+        },
+        include: {
+            marker: {
+                select: {
+                    id: true,
+                    username: true,
+                    userDetails: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                        },
+                    },
+                },
+            },
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+};
+
 export const markAttendanceForStudent = async (studentId, date, status, markedBy, notes) => {
-    const dt = new Date(date);
-    dt.setHours(0, 0, 0, 0);
+    const dt = normalizeDate(date);
 
     // Use upsert to simplify
     const existing = await prisma.attendance.findFirst({
@@ -91,4 +123,63 @@ export const markAttendanceForStudent = async (studentId, date, status, markedBy
     );
 
     return result;
+};
+
+export const markAttendanceForStudents = async (studentIds, date, status, markedBy) => {
+    const dt = normalizeDate(date);
+
+    const ids = Array.from(new Set((studentIds || []).map((id) => String(id).trim()).filter(Boolean)));
+    if (ids.length === 0) return [];
+
+    const existingRecords = await prisma.attendance.findMany({
+        where: {
+            userId: { in: ids },
+            date: dt,
+        },
+        select: {
+            id: true,
+            userId: true,
+        },
+    });
+
+    const existingByUserId = new Map(existingRecords.map((record) => [record.userId, record]));
+
+    const results = await prisma.$transaction(
+        ids.map((studentId) => {
+            const existing = existingByUserId.get(studentId);
+
+            if (existing) {
+                return prisma.attendance.update({
+                    where: { id: existing.id },
+                    data: {
+                        status,
+                        markedBy,
+                    },
+                });
+            }
+
+            return prisma.attendance.create({
+                data: {
+                    userId: studentId,
+                    date: dt,
+                    status,
+                    markedBy,
+                },
+            });
+        })
+    );
+
+    const dateStr = dt.toLocaleDateString();
+    await Promise.all(
+        ids.map((studentId) =>
+            createNotification(
+                studentId,
+                'Attendance Marked',
+                `Your attendance for ${dateStr} has been marked as ${status}.`,
+                'attendance'
+            )
+        )
+    );
+
+    return results;
 };

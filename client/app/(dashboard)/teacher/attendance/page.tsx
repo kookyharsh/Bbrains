@@ -51,24 +51,23 @@ export default function AttendancePage() {
             const studentsRes = await client.get<{ success: boolean; data: ApiUser[] }>("/user/students")
             const allStudents: StudentAttendance[] = studentsRes.data.data.map(s => ({ ...s }))
             
-            // 2. Fetch attendance for selected date
+            // 2. Fetch all attendance records for the selected date in one request
             const formattedDate = format(date, "yyyy-MM-dd")
-            const attendanceRes = await attendanceApi.getAttendance({ 
-                startDate: formattedDate, 
-                endDate: formattedDate 
+            const attendanceRes = await attendanceApi.getAttendanceByDate(formattedDate)
+            const attendanceMap = new Map(
+                (attendanceRes.success && attendanceRes.data ? attendanceRes.data : []).map((record) => [
+                    String((record as AttendanceRecord & { userId?: string }).userId ?? ""),
+                    record,
+                ])
+            )
+
+            allStudents.forEach(student => {
+                const record = attendanceMap.get(student.id)
+                if (record) {
+                    student.currentStatus = record.status
+                    student.currentNotes = record.notes
+                }
             })
-            
-            if (attendanceRes.success && attendanceRes.data) {
-                const records = attendanceRes.data
-                // Map status back to students
-                allStudents.forEach(student => {
-                    const record = records.find(r => r.id === student.id || (r as any).userId === student.id)
-                    if (record) {
-                        student.currentStatus = record.status
-                        student.currentNotes = record.notes
-                    }
-                })
-            }
             
             setStudents(allStudents)
         } catch (error) {
@@ -121,20 +120,32 @@ export default function AttendancePage() {
             return
         }
 
+        const request = attendanceApi.markAttendanceBulk({
+            studentIds: unmarked.map((student) => student.id),
+            date: format(date, "yyyy-MM-dd"),
+            status: "present",
+        }).then((response) => {
+            if (!response.success) {
+                throw new Error(response.message || "Failed to mark attendance")
+            }
+
+            setStudents((prev) =>
+                prev.map((student) =>
+                    student.currentStatus
+                        ? student
+                        : { ...student, currentStatus: "present" }
+                )
+            )
+
+            void fetchStudentsAndAttendance()
+            return response
+        })
+
         toast.promise(
-            Promise.all(unmarked.map(s => 
-                attendanceApi.markAttendance({
-                    studentId: s.id,
-                    date: format(date, "yyyy-MM-dd"),
-                    status: "present"
-                })
-            )),
+            request,
             {
                 loading: 'Marking all as present...',
-                success: () => {
-                    fetchStudentsAndAttendance()
-                    return 'All students marked as present'
-                },
+                success: 'All students marked as present',
                 error: 'Failed to mark some students',
             }
         )

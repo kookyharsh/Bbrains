@@ -51,8 +51,8 @@ export function EditUserRoleDialog({
                         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                             <Avatar className="w-10 h-10">
                                 <AvatarFallback className="bg-primary/10 text-primary">
-                                    {user.firstName.charAt(0)}
-                                    {user.lastName.charAt(0)}
+                                    {user.firstName?.charAt(0)}
+                                    {user.lastName?.charAt(0)}
                                 </AvatarFallback>
                             </Avatar>
                             <div>
@@ -67,25 +67,31 @@ export function EditUserRoleDialog({
                         <div>
                             <Label className="mb-2 block">Select Roles</Label>
                             <div className="space-y-2">
-                                {roles.map((role) => (
-                                    <div
-                                        key={role.id}
-                                        className="flex items-center justify-between p-2 rounded-lg border border-border"
-                                    >
-                                        <div>
-                                            <span className="text-sm font-medium text-foreground">
-                                                {role.name}
-                                            </span>
-                                            <p className="text-xs text-muted-foreground">
-                                                {role.description}
-                                            </p>
+                                {roles.map((role) => {
+                                    const roleName = typeof role === 'string' ? role : role.name
+                                    const roleDesc = typeof role === 'string' ? '' : role.description
+                                    return (
+                                        <div
+                                            key={typeof role === 'string' ? role : role.id}
+                                            className="flex items-center justify-between p-2 rounded-lg border border-border"
+                                        >
+                                            <div>
+                                                <span className="text-sm font-medium text-foreground">
+                                                    {roleName}
+                                                </span>
+                                                {roleDesc && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {roleDesc}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Switch
+                                                checked={selectedRoles.includes(roleName)}
+                                                onCheckedChange={() => toggleRole(roleName)}
+                                            />
                                         </div>
-                                        <Switch
-                                            checked={selectedRoles.includes(role.name)}
-                                            onCheckedChange={() => toggleRole(role.name)}
-                                        />
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
                     </div>

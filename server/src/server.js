@@ -32,6 +32,7 @@ import chatRouter from "./modules/chat/chat.routes.js";
 import notificationRouter from "./modules/notification/notification.routes.js";
 import configRouter from "./modules/config/config.routes.js";
 import suggestionRouter from "./modules/suggestion/suggestion.routes.js";
+import assessmentRouter from "./modules/assessment/assessment.routes.js";
 
 // Middleware imports
 import errorHandler from "./middleware/errorHandler.js";
@@ -99,6 +100,7 @@ app.use("/chat", chatRouter);
 app.use("/notifications", notificationRouter);
 app.use("/config", configRouter);
 app.use("/suggestions", suggestionRouter);
+app.use("/assessments", assessmentRouter);
 
 
 app.use((req, res) => {

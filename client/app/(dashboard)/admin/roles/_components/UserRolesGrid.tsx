@@ -18,12 +18,12 @@ export function UserRolesGrid({ users, onEdit }: UserRolesGridProps) {
     const [userSearch, setUserSearch] = useState("")
 
     const filteredUsers = users.filter((u) => {
-        const fullName = `${u.firstName} ${u.lastName}`.toLowerCase()
+        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase()
         const query = userSearch.toLowerCase()
         return (
-            u.username.toLowerCase().includes(query) ||
+            (u.username || '').toLowerCase().includes(query) ||
             fullName.includes(query) ||
-            u.email.toLowerCase().includes(query)
+            (u.email || '').toLowerCase().includes(query)
         )
     })
 
@@ -55,8 +55,8 @@ export function UserRolesGrid({ users, onEdit }: UserRolesGridProps) {
                         >
                             <Avatar className="w-10 h-10">
                                 <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                                    {user.firstName.charAt(0)}
-                                    {user.lastName.charAt(0)}
+                                    {user.firstName?.charAt(0)}
+                                    {user.lastName?.charAt(0)}
                                 </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
@@ -68,15 +68,18 @@ export function UserRolesGrid({ users, onEdit }: UserRolesGridProps) {
                                     {user.grade}
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                    {user.roles.map((role) => (
-                                        <Badge
-                                            key={role}
-                                            variant="outline"
-                                            className={`text-[10px] ${getRoleBadgeColor(role)}`}
-                                        >
-                                            {role}
-                                        </Badge>
-                                    ))}
+                                    {(user.roles || []).map((r) => {
+                                        const roleName = typeof r === 'string' ? r : r.role
+                                        return (
+                                            <Badge
+                                                key={roleName}
+                                                variant="outline"
+                                                className={`text-[10px] ${getRoleBadgeColor(roleName)}`}
+                                            >
+                                                {roleName}
+                                            </Badge>
+                                        )
+                                    })}
                                 </div>
                             </div>
                             <Button

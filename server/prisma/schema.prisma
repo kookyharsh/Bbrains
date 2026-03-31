@@ -178,6 +178,42 @@ model Grade {
   @@map("grade")
 }
 
+model Assessment {
+  id             Int                @id @default(autoincrement()) @map("assessment_id")
+  courseId       Int                @map("course_id")
+  createdById    String             @map("created_by_id")
+  subject        String             @db.VarChar(100)
+  topic          String             @db.VarChar(150)
+  assessmentType AssessmentType     @default(test) @map("assessment_type")
+  assessmentDate DateTime           @map("assessment_date") @db.Date
+  totalMarks     Decimal            @map("total_marks") @db.Decimal(8, 2)
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  course         Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdBy      User               @relation("AssessmentCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  results        AssessmentResult[]
+
+  @@index([courseId, assessmentDate])
+  @@index([createdById, assessmentDate])
+  @@map("assessment")
+}
+
+model AssessmentResult {
+  id            Int        @id @default(autoincrement()) @map("assessment_result_id")
+  assessmentId  Int        @map("assessment_id")
+  studentId     String     @map("student_id")
+  marksObtained Decimal    @map("marks_obtained") @db.Decimal(8, 2)
+  remark        String?    @db.VarChar(255)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  assessment    Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  student       User       @relation("AssessmentStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, studentId])
+  @@index([studentId, createdAt(sort: Desc)])
+  @@map("assessment_result")
+}
+
 model Role {
   id          Int         @id @default(autoincrement()) @map("role_id")
   name        String      @unique @db.VarChar(50)
@@ -428,6 +464,11 @@ enum LogCategory {
   FINANCE
   USER
   SYSTEM
+}
+
+enum AssessmentType {
+  test
+  exam
 }
 
 model Event {

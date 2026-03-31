@@ -1,11 +1,50 @@
 import prisma from "../../utils/prisma.js";
-import { getMessagesForChat, getMessageById, insertChatMessage, updateChatMessage, deleteChatMessage } from "../../lib/supabase-chat.js";
+import { getMessageById, insertChatMessage, updateChatMessage, deleteChatMessage } from "../../lib/supabase-chat.js";
 import { sendError, sendSuccess } from "../../utils/response.js";
+import { z } from "zod";
+
+const DEFAULT_CHAT_ROOM = "default";
+const MAX_CHAT_ID_LENGTH = 120;
+const MAX_MESSAGE_LENGTH = 4000;
 
 const pronounBySex = {
     male: "he/him",
     female: "she/her",
     other: "they/them"
+};
+
+const attachmentSchema = z.object({
+    url: z.string().url().max(2000),
+    type: z.string().min(1).max(120),
+    name: z.string().max(255).optional(),
+});
+
+const createMessageSchema = z.object({
+    content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+    chatId: z.string().trim().min(1).max(MAX_CHAT_ID_LENGTH).optional(),
+    mentions: z.array(z.string().trim().min(1).max(64)).max(50).optional(),
+    replyTo: z.string().trim().min(1).max(100).optional().nullable(),
+    attachments: z.array(attachmentSchema).max(10).optional(),
+});
+
+const updateMessageSchema = z.object({
+    content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+    mentions: z.array(z.string().trim().min(1).max(64)).max(50).optional(),
+});
+
+const normalizeChatId = (value) => {
+    const chatId = String(value || DEFAULT_CHAT_ROOM).trim();
+    return chatId ? chatId.slice(0, MAX_CHAT_ID_LENGTH) : DEFAULT_CHAT_ROOM;
+};
+
+const normalizeMentions = (mentions = []) => {
+    if (!Array.isArray(mentions)) return [];
+
+    return Array.from(new Set(
+        mentions
+            .map((entry) => String(entry ?? "").trim().replace(/^@/, "").toLowerCase())
+            .filter(Boolean)
+    ));
 };
 
 const normalizeProfile = (user) => {
@@ -31,11 +70,20 @@ const normalizeProfile = (user) => {
 
 export const getChatMessages = async (req, res) => {
     try {
-        const limit = Math.min(Math.max(parseInt(String(req.query.limit || "200"), 10), 1), 500);
+        const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10), 1), 500);
         const chatId = req.query.chatId || 'default';
+        const before = req.query.before;
+
+        const whereClause = { chatId };
+
+        if (before) {
+            whereClause.createdAt = {
+                lt: new Date(before)
+            };
+        }
         
         const messages = await prisma.chatMessage.findMany({
-            where: { chatId },
+            where: whereClause,
             include: {
                 user: {
                     select: {
@@ -51,10 +99,13 @@ export const getChatMessages = async (req, res) => {
                     }
                 }
             },
-            orderBy: { createdAt: 'asc' },
-            take: -limit // Take the last 'limit' messages
+            orderBy: { createdAt: 'desc' },
+            take: limit
         });
         
+        // Reverse so they are in chronological order
+        messages.reverse();
+
         // Normalize for frontend - use live user data if available, fallback to denormalized
         const normalized = messages.map(msg => {
             const user = msg.user;
@@ -88,9 +139,12 @@ export const getChatMessages = async (req, res) => {
 
 export const getChatMembers = async (req, res) => {
     try {
-        console.log("Fetching chat members for user:", req.user?.id);
-        
+        const where = req.user?.collegeId
+            ? { collegeId: req.user.collegeId }
+            : undefined;
+
         const users = await prisma.user.findMany({
+            where,
             select: {
                 id: true,
                 username: true,
@@ -117,8 +171,6 @@ export const getChatMembers = async (req, res) => {
             },
             orderBy: { username: "asc" }
         });
-
-        console.log(`Found ${users.length} users`);
         
         const members = users.map(normalizeProfile);
         return sendSuccess(res, members);
@@ -130,7 +182,11 @@ export const getChatMembers = async (req, res) => {
 
 export const createChatMessage = async (req, res) => {
     try {
-        const { content, chatId, mentions, replyTo, attachments } = req.body;
+        const validated = createMessageSchema.parse(req.body ?? {});
+        const chatId = normalizeChatId(validated.chatId);
+        const mentions = normalizeMentions(validated.mentions);
+        const replyTo = validated.replyTo ? String(validated.replyTo).trim() : null;
+        const attachments = validated.attachments || [];
         const userId = req.user.id;
 
         // Fetch user profile for denormalized storage
@@ -143,25 +199,94 @@ export const createChatMessage = async (req, res) => {
 
         const profile = normalizeProfile(user);
 
+        if (replyTo) {
+            const parentMessage = await getMessageById(replyTo);
+            if (!parentMessage) return sendError(res, "Reply target was not found", 404);
+            if (parentMessage.chatId !== chatId) {
+                return sendError(res, "Replies must stay within the same chat room", 400);
+            }
+        }
+
         const message = await prisma.chatMessage.create({
             data: {
-                content,
-                chatId: chatId || 'default',
+                content: validated.content,
+                chatId,
                 userId,
                 username: profile.username,
                 displayName: profile.displayName,
                 avatar: profile.avatar,
                 role: profile.type,
-                mentions: mentions || [],
-                replyTo: replyTo || null,
-                attachments: attachments || []
+                mentions,
+                replyTo,
+                attachments
             }
         });
 
         return sendSuccess(res, message, "Message sent", 201);
     } catch (error) {
+        if (error instanceof z.ZodError) {
+            return sendError(
+                res,
+                "Validation failed",
+                400,
+                error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message }))
+            );
+        }
         console.error("Failed to create chat message:", error);
         return sendError(res, "Failed to send message", 500);
+    }
+};
+
+export const updateChatMessageById = async (req, res) => {
+    try {
+        const messageId = String(req.params.id || "");
+        const validated = updateMessageSchema.parse(req.body ?? {});
+        const mentions = normalizeMentions(validated.mentions);
+
+        if (!messageId) return sendError(res, "Message ID is required", 400);
+
+        const existingMessage = await getMessageById(messageId);
+        if (!existingMessage) return sendError(res, "Message not found", 404);
+        if (existingMessage.userId !== req.user.id) {
+            return sendError(res, "You can only edit your own messages", 403);
+        }
+
+        const updated = await updateChatMessage(messageId, { content: validated.content, mentions });
+        if (!updated) return sendError(res, "Failed to update message", 500);
+
+        return sendSuccess(res, updated, "Message updated");
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            return sendError(
+                res,
+                "Validation failed",
+                400,
+                error.issues.map((issue) => ({ field: issue.path.join("."), message: issue.message }))
+            );
+        }
+        console.error("Failed to update chat message:", error);
+        return sendError(res, "Failed to update message", 500);
+    }
+};
+
+export const deleteChatMessageById = async (req, res) => {
+    try {
+        const messageId = String(req.params.id || "");
+        if (!messageId) return sendError(res, "Message ID is required", 400);
+
+        const existingMessage = await getMessageById(messageId);
+        if (!existingMessage) return sendError(res, "Message not found", 404);
+        if (existingMessage.userId !== req.user.id) {
+            return sendError(res, "You can only delete your own messages", 403);
+        }
+
+        const removed = await deleteChatMessage(messageId);
+        if (!removed) return sendError(res, "Failed to delete message", 500);
+
+        return sendSuccess(res, null, "Message deleted");
+    } catch (error) {
+        console.error("Failed to delete chat message:", error);
+        return sendError(res, "Failed to delete message", 500);
     }
 };
 

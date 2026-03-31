@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { BookOpen, Users, Clock, AlertCircle, Plus } from "lucide-react";
+import { BookOpen, Users, AlertCircle, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { courseApi, enrollmentApi, Course } from "@/services/api/client";
 import { DashboardContent } from "@/components/dashboard-content";
+import { getSubjectProgressPercent, normalizeCourseSubjectProgress } from "@/lib/subject-progress";
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -39,7 +40,7 @@ export default function CoursesPage() {
         } else {
           setError(coursesRes.message || "Failed to load courses");
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load courses");
       } finally {
         setLoading(false);
@@ -58,7 +59,7 @@ export default function CoursesPage() {
           prev.map((c) => (c.id === courseId ? { ...c, isEnrolled: true } : c))
         );
       }
-    } catch (err) {
+    } catch {
       // Handle error
     } finally {
       setEnrolling(null);
@@ -117,9 +118,12 @@ export default function CoursesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map((course) => (
-            <Card key={course.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-5">
+          {courses.map((course) => {
+            const progressEntries = normalizeCourseSubjectProgress(course);
+
+            return (
+              <Card key={course.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     <BookOpen className="w-5 h-5 text-primary" />
@@ -135,7 +139,34 @@ export default function CoursesPage() {
                 {course.description && (
                   <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{course.description}</p>
                 )}
-                {course.isEnrolled && <Progress value={50} className="h-1.5 mb-3" />}
+                  {course.isEnrolled ? (
+                    <div className="mb-3 space-y-2">
+                      {progressEntries.length > 0 ? (
+                        <>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          Subject Progress
+                        </p>
+                          <div className="space-y-2.5">
+                            {progressEntries.map((entry) => (
+                              <div key={`${course.id}-${entry.subject}`} className="space-y-1">
+                              <div className="flex items-center justify-between gap-2 text-xs">
+                                <span className="truncate font-medium text-foreground">{entry.subject}</span>
+                                <span className="shrink-0 text-muted-foreground">
+                                  {entry.completedChapters} / {entry.totalChapters || "-"} chapters
+                                </span>
+                              </div>
+                              <Progress value={getSubjectProgressPercent(entry)} className="h-1.5" />
+                            </div>
+                            ))}
+                        </div>
+                        </>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-border/70 px-3 py-2 text-xs text-muted-foreground">
+                          Chapter progress will appear here once your teacher sets it up.
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar className="w-6 h-6">
@@ -163,9 +194,10 @@ export default function CoursesPage() {
                     {enrolling === course.id ? "Enrolling..." : "Enroll"}
                   </Button>
                 )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </DashboardContent>

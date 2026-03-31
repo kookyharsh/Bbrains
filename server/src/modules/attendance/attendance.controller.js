@@ -1,4 +1,4 @@
-import { getAttendanceByFilters, markAttendanceForStudent } from './attendance.service.js';
+import { getAttendanceByFilters, getAttendanceForDate, markAttendanceForStudent, markAttendanceForStudents } from './attendance.service.js';
 import authorize from '../../middleware/authorize.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 
@@ -29,6 +29,21 @@ export const getStudentAttendance = async (req, res) => {
     }
 };
 
+export const getAttendanceByDate = async (req, res) => {
+    try {
+        const { date } = req.query;
+        if (!date) {
+            return sendError(res, 'Date is required', 400);
+        }
+
+        const records = await getAttendanceForDate(date);
+        return sendSuccess(res, records);
+    } catch (error) {
+        console.error(error);
+        return sendError(res, 'Failed to fetch attendance for the selected date', 500);
+    }
+};
+
 // Admin/Teacher: Mark attendance for a student on a given date
 export const markAttendance = async (req, res) => {
     try {
@@ -44,5 +59,22 @@ export const markAttendance = async (req, res) => {
     } catch (error) {
         console.error(error);
         return sendError(res, 'Failed to mark attendance', 500);
+    }
+};
+
+export const markAttendanceBulk = async (req, res) => {
+    try {
+        const { studentIds, date, status } = req.body;
+        const markedBy = req.user.id;
+
+        if (!Array.isArray(studentIds) || studentIds.length === 0 || !date || !status) {
+            return sendError(res, 'Missing required fields', 400);
+        }
+
+        const records = await markAttendanceForStudents(studentIds, date, status, markedBy);
+        return sendSuccess(res, records, 'Attendance updated');
+    } catch (error) {
+        console.error(error);
+        return sendError(res, 'Failed to mark attendance in bulk', 500);
     }
 };
