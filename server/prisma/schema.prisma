@@ -279,6 +279,7 @@ model Achievement {
   description String?            @db.VarChar(255)
   icon        String?
   requiredXp  Decimal            @db.Decimal(10, 2)
+  rewardCoins Decimal            @default(0) @db.Decimal(10, 2)
   category    String?            @db.VarChar(50)
   users       UserAchievements[]
 
