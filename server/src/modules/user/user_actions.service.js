@@ -1,6 +1,10 @@
 import prisma from "../../utils/prisma.js";
 import { deleteSupabaseUser } from "../auth/supabase-user.service.js";
 
+const DAILY_REWARD_XP = [50, 50, 75, 75, 100, 100, 200];
+const STREAK_RESET_HOURS = 48;
+const CLAIM_COOLDOWN_HOURS = 24;
+
 const updateUser = async (id, data) => {
     return await prisma.user.update({
         where: { id: id },
@@ -22,24 +26,27 @@ const deleteUser = async (id) => {
 };
 
 const claimDailyRewards = async (userId) => {
-    // Check if user has claimed in the last 24 hours
-    const lastClaim = await prisma.auditLog.findFirst({
-        where: {
-            userId: userId,
-            action: "DAILY_CLAIM",
-            createdAt: {
-                gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
-            }
-        },
-        orderBy: {
-            createdAt: 'desc'
-        }
+    const existingStreak = await prisma.streak.findUnique({
+        where: { userId }
     });
 
-    // Code block removed per request to allow claims/keep state persistent
+    const now = new Date();
+    let currentStreak = existingStreak?.currentStreak || 0;
 
-    // Define rewards
-    const rewardXP = 50;
+    if (existingStreak?.lastClaimedAt) {
+        const lastClaim = new Date(existingStreak.lastClaimedAt);
+        const hoursSinceLastClaim = (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60);
+
+        if (hoursSinceLastClaim < CLAIM_COOLDOWN_HOURS) {
+            throw new Error("Already claimed today. Please wait before claiming again.");
+        }
+
+        if (hoursSinceLastClaim > STREAK_RESET_HOURS) {
+            currentStreak = 0;
+        }
+    }
+
+    const rewardXP = DAILY_REWARD_XP[currentStreak % DAILY_REWARD_XP.length] ?? DAILY_REWARD_XP[0];
     const rewardCoins = 100;
 
     // Use a transaction to ensure all updates succeed or fail together
@@ -78,11 +85,40 @@ const claimDailyRewards = async (userId) => {
                 category: "SYSTEM",
                 action: "DAILY_CLAIM",
                 entity: "User",
-                entityId: userId
+                entityId: userId,
+                details: {
+                    xp: rewardXP,
+                    coins: rewardCoins,
+                    day: (currentStreak % DAILY_REWARD_XP.length) + 1
+                }
             }
         });
 
-        return { xp: rewardXP, coins: rewardCoins };
+        const updatedStreak = await tx.streak.upsert({
+            where: { userId },
+            update: {
+                currentStreak: currentStreak + 1,
+                lastClaimedAt: now
+            },
+            create: {
+                userId,
+                currentStreak: 1,
+                lastClaimedAt: now
+            }
+        });
+
+        return {
+            xp: rewardXP,
+            coins: rewardCoins,
+            streak: {
+                id: updatedStreak.id,
+                userId: updatedStreak.userId,
+                currentStreak: Number(updatedStreak.currentStreak || 0),
+                lastClaimedAt: updatedStreak.lastClaimedAt,
+                canClaim: false,
+                hoursUntilNextClaim: CLAIM_COOLDOWN_HOURS
+            }
+        };
     });
 };
 

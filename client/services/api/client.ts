@@ -565,8 +565,8 @@ export const dashboardApi = {
   searchUsers: async (query: string): Promise<ApiResponse<User[]>> => {
     return api.get<User[]>(`/user/search?q=${encodeURIComponent(query)}`);
   },
-  claimDaily: async (): Promise<ApiResponse<{ xp: number; streak: number }>> => {
-    return api.post<{ xp: number; streak: number }>('/user/claim-daily');
+  claimDaily: async (): Promise<ApiResponse<{ xp: number; coins: number; streak: StreakData }>> => {
+    return api.post<{ xp: number; coins: number; streak: StreakData }>('/user/claim-daily');
   },
 };
 

@@ -100,6 +100,7 @@ app.use("/chat", chatRouter);
 app.use("/notifications", notificationRouter);
 app.use("/config", configRouter);
 app.use("/suggestions", suggestionRouter);
+app.use("/superadmin", superadminRoutes);
 app.use("/assessments", assessmentRouter);
 
 

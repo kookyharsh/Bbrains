@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, Star, AlertCircle, CheckCircle } from "lucide-react";
+import { Gift, AlertCircle, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { dashboardApi, streakApi, StreakData } from "@/services/api/client";
 import { useRouter } from "next/navigation";
+import { TOTAL_DAYS, XP_REWARDS } from "@/features/dashboard/config/rewards";
 
 interface DailyRewardCardProps {
   initialStreak?: StreakData | null;
@@ -21,13 +22,27 @@ export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [claimedToday, setClaimedToday] = useState(false);
 
+  const syncClaimState = (streakData: StreakData | null) => {
+    if (!streakData) {
+      setClaimedToday(false);
+      return;
+    }
+
+    if (typeof streakData.canClaim === "boolean") {
+      setClaimedToday(!streakData.canClaim);
+      return;
+    }
+
+    const lastClaimed = streakData.lastClaimedAt
+      ? new Date(streakData.lastClaimedAt).toDateString()
+      : null;
+    setClaimedToday(lastClaimed === new Date().toDateString());
+  };
+
   useEffect(() => {
     if (initialStreak) {
-      const today = new Date().toDateString();
-      const lastActive = initialStreak.lastActiveDate
-        ? new Date(initialStreak.lastActiveDate).toDateString()
-        : null;
-      setClaimedToday(lastActive === today);
+      setStreak(initialStreak);
+      syncClaimState(initialStreak);
       setLoading(false);
       return;
     }
@@ -37,15 +52,11 @@ export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
         const response = await streakApi.getStreak();
         if (response.success && response.data) {
           setStreak(response.data);
-          const today = new Date().toDateString();
-          const lastActive = response.data.lastActiveDate
-            ? new Date(response.data.lastActiveDate).toDateString()
-            : null;
-          setClaimedToday(lastActive === today);
+          syncClaimState(response.data);
         } else {
           setError(response.message || "Failed to load streak data");
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load streak data");
       } finally {
         setLoading(false);
@@ -64,29 +75,35 @@ export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
       const response = await dashboardApi.claimDaily();
       if (response.success && response.data) {
         setSuccess(`+${response.data.xp} XP earned!`);
-        setClaimedToday(true);
-        setStreak((prev) =>
-          prev
-            ? {
-                ...prev,
-                current: response.data?.streak ?? prev.current + 1,
-                lastActiveDate: new Date().toISOString(),
-              }
-            : null
-        );
+        if (response.data.streak) {
+          setStreak(response.data.streak);
+          syncClaimState(response.data.streak);
+        } else {
+          setClaimedToday(true);
+        }
         router.refresh();
       } else {
         setError(response.message || "Failed to claim reward");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to claim reward");
     } finally {
       setClaiming(false);
     }
   };
 
-  const day = streak?.current ?? 0;
-  const xpReward = Math.min(50 + day * 10, 100);
+  const streakCount = Math.max(0, Number(streak?.currentStreak ?? 0));
+  const cycleProgress = streakCount % TOTAL_DAYS;
+  const currentRewardIndex = claimedToday
+    ? (streakCount + TOTAL_DAYS - 1) % TOTAL_DAYS
+    : cycleProgress;
+  const displayDay = currentRewardIndex + 1;
+  const xpReward = XP_REWARDS[currentRewardIndex] ?? XP_REWARDS[0];
+  const completedBars = claimedToday
+    ? cycleProgress === 0 && streakCount > 0
+      ? TOTAL_DAYS
+      : cycleProgress
+    : cycleProgress;
 
   return (
     <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white border-0">
@@ -97,7 +114,7 @@ export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
             Daily Rewards
           </CardTitle>
           <span className="text-amber-200 text-xs font-medium">
-            Day {Math.min(day + 1, 7)}/7
+            Day {displayDay}/{TOTAL_DAYS}
           </span>
         </div>
       </CardHeader>
@@ -143,11 +160,11 @@ export function DailyRewardCard({ initialStreak }: DailyRewardCardProps) {
               </Button>
             </div>
             <div className="flex gap-1 mt-4">
-              {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+              {Array.from({ length: TOTAL_DAYS }, (_, index) => index + 1).map((d) => (
                 <div
                   key={d}
                   className={`h-2 flex-1 rounded-full ${
-                    d <= day + 1 ? "bg-white" : "bg-white/30"
+                    d <= completedBars ? "bg-white" : "bg-white/30"
                   }`}
                 />
               ))}
