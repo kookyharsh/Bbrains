@@ -7,15 +7,30 @@ import { createSupabaseUser, listSupabaseUsers, deleteSupabaseUser } from '../sr
 declare const process: any;
 
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-const walletIdForUserId = (userId: string) => {
-  const suffix = userId.split('_')[1] ?? '';
-  return `wallet_${suffix || userId}`;
-};
+
+// FIX: Supabase user IDs are plain UUIDs (no underscores), so the old split('_')[1]
+// always returned undefined → every wallet got id "wallet_", causing PK conflicts.
+const walletIdForUserId = (userId: string) => `wallet_${userId}`;
+
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const getRandomItems = <T>(arr: T[], count: number): T[] => {
   const shuffled = [...arr].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, Math.min(count, arr.length));
 };
+
+// Silently skips if the table doesn't exist yet (P2021 = table not found).
+// This lets the seed run cleanly even when not all migrations have been applied.
+async function safeDeleteMany(model: { deleteMany: () => Promise<any> }, name: string) {
+  try {
+    await model.deleteMany();
+  } catch (e: any) {
+    if (e?.code === 'P2021') {
+      console.warn(`  ⚠️  Skipping ${name} — table does not exist yet.`);
+    } else {
+      throw e;
+    }
+  }
+}
 
 async function main() {
   console.log("🌱 Starting Seeding Process...");
@@ -23,33 +38,59 @@ async function main() {
   try {
     console.log("🧹 Cleaning database...");
 
-    await prisma.streak.deleteMany();
-    await prisma.attendance.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.auditLog.deleteMany();
-    await prisma.cart.deleteMany();
-    await prisma.orderItem.deleteMany();
-    await prisma.order.deleteMany();
-    await prisma.transactionHistory.deleteMany();
-    await prisma.userAchievements.deleteMany();
-    await prisma.achievement.deleteMany();
-    await prisma.leaderboard.deleteMany();
-    await prisma.submission.deleteMany();
-    await prisma.grade.deleteMany();
-    await prisma.enrollment.deleteMany();
-    await prisma.assignment.deleteMany();
-    await prisma.product.deleteMany();
-    await prisma.announcement.deleteMany();
-    await prisma.xp.deleteMany();
-    await prisma.wallet.deleteMany();
-    await prisma.userDetails.deleteMany();
-    await prisma.userRoles.deleteMany();
-    await prisma.role.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.college.deleteMany();
-    await prisma.level.deleteMany();
-    await prisma.course.deleteMany();
-    await prisma.address.deleteMany();
+    // Rule: children before parents; models referencing a table must be deleted first.
+
+    // Chat / social (reference user)
+    await safeDeleteMany(prisma.chatMessage,    'ChatMessage');
+    await safeDeleteMany(prisma.notification,   'Notification');
+    await safeDeleteMany(prisma.suggestion,     'Suggestion');
+    await safeDeleteMany(prisma.userPreference, 'UserPreference');
+
+    // Streaks / attendance (reference user)
+    await safeDeleteMany(prisma.streak,     'Streak');
+    await safeDeleteMany(prisma.attendance, 'Attendance');
+
+    // Assessment results → assessments (reference course + user)
+    await safeDeleteMany(prisma.assessmentResult, 'AssessmentResult');
+    await safeDeleteMany(prisma.assessment,       'Assessment');
+
+    // Academic
+    await safeDeleteMany(prisma.submission, 'Submission');
+    await safeDeleteMany(prisma.grade,      'Grade');
+    await safeDeleteMany(prisma.enrollment, 'Enrollment');
+    await safeDeleteMany(prisma.assignment, 'Assignment');
+
+    // Marketplace — library before product, cart/orderItem before order/product
+    await safeDeleteMany(prisma.library,   'Library');
+    await safeDeleteMany(prisma.cart,      'Cart');
+    await safeDeleteMany(prisma.orderItem, 'OrderItem');
+    await safeDeleteMany(prisma.order,     'Order');
+    await safeDeleteMany(prisma.product,   'Product');
+
+    // Misc
+    await safeDeleteMany(prisma.transactionHistory, 'TransactionHistory');
+    await safeDeleteMany(prisma.userAchievements,   'UserAchievements');
+    await safeDeleteMany(prisma.achievement,        'Achievement');
+    await safeDeleteMany(prisma.leaderboard,        'Leaderboard');
+    await safeDeleteMany(prisma.announcement,       'Announcement');
+    await safeDeleteMany(prisma.auditLog,           'AuditLog');
+    await safeDeleteMany(prisma.event,              'Event');
+
+    // User-level (xp, wallet, details, roles before user)
+    await safeDeleteMany(prisma.xp,          'Xp');
+    await safeDeleteMany(prisma.wallet,      'Wallet');
+    await safeDeleteMany(prisma.userDetails, 'UserDetails');
+    await safeDeleteMany(prisma.userRoles,   'UserRoles');
+    await safeDeleteMany(prisma.role,        'Role');
+
+    // Course after user (classTeacherId is SetNull so safe, but enrollment already gone)
+    await safeDeleteMany(prisma.course, 'Course');
+
+    // User + college + address last
+    await safeDeleteMany(prisma.user,    'User');
+    await safeDeleteMany(prisma.college, 'College');
+    await safeDeleteMany(prisma.level,   'Level');
+    await safeDeleteMany(prisma.address, 'Address');
 
     // Clean Supabase Users
     console.log("🧹 Cleaning Supabase auth users...");
@@ -117,11 +158,17 @@ async function main() {
       prisma.role.create({ data: { name: 'Student', description: 'Student role' } }),
       prisma.role.create({ data: { name: 'Teacher', description: 'Instructor role' } }),
       prisma.role.create({ data: { name: 'Admin', description: 'System Administrator' } }),
+      prisma.role.create({ data: { name: 'Super Admin', description: 'BBrains Super Administrator' } }),
     ]);
-    console.log("✅ 3 Roles created.");
+    console.log("✅ 4 Roles created.");
 
     console.log("👥 Seeding Users...");
 
+    const studentRole = roles[0];
+    const teacherRole = roles[1];
+    const adminRole = roles[2];
+    const superAdminRole = roles[3];
+    const superAdmins: any[] = [];
     const admins: any[] = [];
     const teachers: any[] = [];
     const students: any[] = [];
@@ -143,6 +190,7 @@ async function main() {
               dob: detailsData.dob,
               phone: detailsData.phone,
               addressId: detailsData.addressId || null,
+              teacherSubjects: detailsData.teacherSubjects,
             }
           },
           xp: {
@@ -160,6 +208,7 @@ async function main() {
         }
       });
 
+      // FIX: walletIdForUserId now correctly returns "wallet_<uuid>" for every user.
       await prisma.wallet.upsert({
         where: { userId: user.id },
         update: {
@@ -173,6 +222,38 @@ async function main() {
       });
 
       return user;
+    }
+
+    console.log("  Creating 1 super admin...");
+    {
+      const email = "superadmin@bbrains.com";
+      const supabaseUser = await createSupabaseUser(email, "superadmin123", {
+        username: "super_admin"
+      });
+      const superAdmin = await createUserComplete(
+        supabaseUser.id,
+        {
+          email,
+          username: "super_admin",
+          type: UserRole.superadmin,
+          collegeId: colleges[0].id
+        },
+        {
+          firstName: "BBrains",
+          lastName: "Super Admin",
+          sex: Sex.female,
+          dob: new Date('1988-01-01'),
+          phone: "9999999990"
+        },
+        'admin'
+      );
+      superAdmins.push(superAdmin);
+
+      await prisma.userRoles.create({
+        data: { userId: superAdmin.id, roleId: superAdminRole.id }
+      });
+
+      console.log(`    ✅ Super admin created with Supabase ID: ${superAdmin.id}`);
     }
 
     console.log("  Creating 2 admins...");
@@ -203,18 +284,60 @@ async function main() {
       admins.push(admin);
 
       await prisma.userRoles.create({
-        data: { userId: admin.id, roleId: roles[2].id }
+        data: { userId: admin.id, roleId: adminRole.id }
       });
 
       console.log(`    ✅ Admin ${i} created with Supabase ID: ${admin.id}`);
     }
 
     console.log("  Creating 5 teachers...");
-    const teacherNames = ["Snape", "McGonagall", "Flitwick", "Sprout", "Lupin"];
-    for (let i = 0; i < 5; i++) {
+    const teacherProfiles = [
+      {
+        firstName: "Aarav",
+        lastName: "Sharma",
+        username: "teacher_aarav",
+        sex: Sex.male,
+        collegeId: colleges[0].id,
+        teacherSubjects: ["English", "Physics", "Chemistry"],
+      },
+      {
+        firstName: "Meera",
+        lastName: "Iyer",
+        username: "teacher_meera",
+        sex: Sex.female,
+        collegeId: colleges[0].id,
+        teacherSubjects: ["Mathematics", "Biology", "Computer Science"],
+      },
+      {
+        firstName: "Rohan",
+        lastName: "Patel",
+        username: "teacher_rohan",
+        sex: Sex.male,
+        collegeId: colleges[0].id,
+        teacherSubjects: ["Accountancy", "Business Studies", "Economics"],
+      },
+      {
+        firstName: "Nisha",
+        lastName: "Kapoor",
+        username: "teacher_nisha",
+        sex: Sex.female,
+        collegeId: colleges[1].id,
+        teacherSubjects: ["History", "Political Science"],
+      },
+      {
+        firstName: "Vikram",
+        lastName: "Reddy",
+        username: "teacher_vikram",
+        sex: Sex.male,
+        collegeId: colleges[2].id,
+        teacherSubjects: ["Art", "Design Fundamentals"],
+      }
+    ];
+    for (let i = 0; i < teacherProfiles.length; i++) {
+      const teacherProfile = teacherProfiles[i];
       const email = `teacher${i + 1}@learnytics.com`;
       const supabaseUser = await createSupabaseUser(email, "teacher123", {
-        username: `prof_${teacherNames[i].toLowerCase()}`
+        username: teacherProfile.username
       });
       const supabaseUserId = supabaseUser.id;
 
@@ -222,23 +345,24 @@ async function main() {
         supabaseUserId,
         {
           email,
-          username: `prof_${teacherNames[i].toLowerCase()}`,
+          username: teacherProfile.username,
           type: UserRole.teacher,
-          collegeId: getRandomItem(colleges).id
+          collegeId: teacherProfile.collegeId
         },
         {
-          firstName: teacherNames[i],
-          lastName: "Professor",
-          sex: i % 2 === 0 ? Sex.male : Sex.female,
+          firstName: teacherProfile.firstName,
+          lastName: teacherProfile.lastName,
+          sex: teacherProfile.sex,
           dob: new Date('1980-05-20'),
-          phone: `888888888${i}`
+          phone: `888888888${i}`,
+          teacherSubjects: teacherProfile.teacherSubjects
         },
         'teacher'
       );
       teachers.push(teacher);
 
       await prisma.userRoles.create({
-        data: { userId: teacher.id, roleId: roles[1].id }
+        data: { userId: teacher.id, roleId: teacherRole.id }
       });
 
       console.log(`    ✅ Teacher ${i + 1} created with Supabase ID: ${teacher.id}`);
@@ -284,7 +408,7 @@ async function main() {
       students.push(student);
 
       await prisma.userRoles.create({
-        data: { userId: student.id, roleId: roles[0].id }
+        data: { userId: student.id, roleId: studentRole.id }
       });
 
       const attendanceDays = 15;
@@ -301,38 +425,63 @@ async function main() {
       console.log(`    ✅ Student ${i + 1} created with Supabase ID: ${student.id}`);
     }
 
-    console.log(`✅ All users created: ${admins.length} admins, ${teachers.length} teachers, ${students.length} students`);
+    console.log(`✅ All users created: ${superAdmins.length} super admins, ${admins.length} admins, ${teachers.length} teachers, ${students.length} students`);
 
     console.log("📚 Seeding Courses...");
+
     const courseData = [
-      { name: "Potions 101", desc: "Introduction to chemistry and potion making" },
-      { name: "Defense Against Dark Arts", desc: "Cybersecurity and ethical hacking basics" },
-      { name: "History of Magic", desc: "Database systems and their evolution" },
-      { name: "Transfiguration", desc: "Data transformation and ETL processes" },
-      { name: "Charms", desc: "Frontend magic with React and TypeScript" }
+      {
+        name: "11th",
+        desc: "Senior secondary science class for 11th standard.",
+        standard: "11th",
+        subjects: ["English", "Physics", "Chemistry"],
+        classTeacherId: teachers[0].id
+      },
+      {
+        name: "12th",
+        desc: "Senior secondary science class for 12th standard.",
+        standard: "12th",
+        subjects: ["Mathematics", "Biology", "Computer Science"],
+        classTeacherId: teachers[1].id
+      },
+      {
+        name: "Commerce",
+        desc: "Commerce stream class with core business subjects.",
+        standard: "Commerce",
+        subjects: ["Accountancy", "Business Studies", "Economics"],
+        classTeacherId: teachers[2].id
+      }
     ];
 
     const courses = [];
     for (const c of courseData) {
       const course = await prisma.course.create({
-        data: { name: c.name, description: c.desc }
+        data: {
+          name: c.name,
+          description: c.desc,
+          standard: c.standard,
+          feePerStudent: 25000,
+          durationValue: 12,
+          durationUnit: 'months',
+          studentCapacity: 40,
+          classTeacherId: c.classTeacherId,
+          subjects: c.subjects
+        }
       });
       courses.push(course);
+    }
 
-      const enrollCount = getRandomInt(3, Math.min(8, students.length));
-      const enrolledStudents = getRandomItems(students, enrollCount);
-
-      for (const s of enrolledStudents) {
-        try {
-          await prisma.enrollment.create({
-            data: {
-              userId: s.id,
-              courseId: course.id,
-              grade: getRandomItem(["A+", "A", "B+", "B", "C"]),
-            }
-          });
-        } catch (e: any) { }
-      }
+    for (let i = 0; i < students.length; i++) {
+      const assignedCourse = courses[i % courses.length];
+      try {
+        await prisma.enrollment.create({
+          data: {
+            userId: students[i].id,
+            courseId: assignedCourse.id,
+            grade: getRandomItem(["A+", "A", "B+", "B", "C"]),
+          }
+        });
+      } catch (e: any) { }
     }
     console.log(`✅ ${courses.length} Courses created.`);
 
@@ -419,11 +568,11 @@ async function main() {
 
     console.log("🎨 Seeding Theme Products...");
     const themeData = [
-      { 
-        name: "Hand-Drawn Theme", 
-        desc: "Creative hand-drawn aesthetic with paper texture and sketchy elements", 
-        price: 150, 
-        stock: 999, // Unlimited for digital products
+      {
+        name: "Hand-Drawn Theme",
+        desc: "Creative hand-drawn aesthetic with paper texture and sketchy elements",
+        price: 150,
+        stock: 999,
         metadata: {
           category: 'theme',
           themeConfig: {
@@ -457,10 +606,10 @@ async function main() {
           }
         }
       },
-      { 
-        name: "Vibrant Orange Theme", 
-        desc: "Energetic theme based on brand orange color", 
-        price: 200, 
+      {
+        name: "Vibrant Orange Theme",
+        desc: "Energetic theme based on brand orange color",
+        price: 200,
         stock: 999,
         metadata: {
           category: 'theme',
@@ -495,10 +644,10 @@ async function main() {
           }
         }
       },
-      { 
-        name: "Royal Purple Theme", 
-        desc: "Sophisticated theme based on brand purple color", 
-        price: 200, 
+      {
+        name: "Royal Purple Theme",
+        desc: "Sophisticated theme based on brand purple color",
+        price: 200,
         stock: 999,
         metadata: {
           category: 'theme',
@@ -533,10 +682,10 @@ async function main() {
           }
         }
       },
-      { 
-        name: "Fresh Mint Theme", 
-        desc: "Refreshing theme based on brand mint color", 
-        price: 180, 
+      {
+        name: "Fresh Mint Theme",
+        desc: "Refreshing theme based on brand mint color",
+        price: 180,
         stock: 999,
         metadata: {
           category: 'theme',
@@ -571,10 +720,10 @@ async function main() {
           }
         }
       },
-      { 
-        name: "Slate Professional Theme", 
-        desc: "Professional theme based on brand slate color", 
-        price: 180, 
+      {
+        name: "Slate Professional Theme",
+        desc: "Professional theme based on brand slate color",
+        price: 180,
         stock: 999,
         metadata: {
           category: 'theme',
@@ -620,7 +769,7 @@ async function main() {
           price: t.price,
           stock: t.stock,
           creatorId: getRandomItem(teachers).id,
-          image: `https://placehold.co/400/6C5CE7/FFFFFF?text=${encodeURIComponent(t.name.split(' ')[0])}`, // Simple placeholder
+          image: `https://placehold.co/400/6C5CE7/FFFFFF?text=${encodeURIComponent(t.name.split(' ')[0])}`,
           approval: ProductApproval.approved,
           metadata: t.metadata
         }
@@ -741,11 +890,11 @@ async function main() {
 
     console.log("🎖️ Seeding Achievements...");
     const achievementData = [
-      { name: "First Steps", description: "Joined the BBrains community.", requiredXp: 0, category: "Milestone" },
-      { name: "Quick Learner", description: "Reached Level 5 efficiently.", requiredXp: 2500, category: "Milestone" },
-      { name: "Scholar", description: "Completed 10 unique assignments.", requiredXp: 5000, category: "Academic" },
-      { name: "Market Guru", description: "Traded 5+ items in the marketplace.", requiredXp: 2000, category: "Market" },
-      { name: "Legendary", description: "Reached Level 20.", requiredXp: 10000, category: "Milestone" },
+      { name: "First Steps", description: "Joined the BBrains community.", tier: 1, rewardXP: 50, rewardCoins: 25, category: "Milestone" },
+      { name: "Quick Learner", description: "Reached Level 5 efficiently.", tier: 5, rewardXP: 150, rewardCoins: 75, category: "Milestone" },
+      { name: "Scholar", description: "Completed 10 unique assignments.", tier: 7, rewardXP: 250, rewardCoins: 100, category: "Academic" },
+      { name: "Market Guru", description: "Traded 5+ items in the marketplace.", tier: 4, rewardXP: 120, rewardCoins: 150, category: "Market" },
+      { name: "Legendary", description: "Reached Level 20.", tier: 20, rewardXP: 1000, rewardCoins: 500, category: "Milestone" },
     ];
 
     const achievements = [];
@@ -795,7 +944,7 @@ async function main() {
       try {
         await prisma.auditLog.create({
           data: {
-            userId: getRandomItem([...students, ...teachers, ...admins]).id,
+            userId: getRandomItem([...students, ...teachers, ...admins, ...superAdmins]).id,
             category: getRandomItem([LogCategory.AUTH, LogCategory.ACADEMIC, LogCategory.MARKET, LogCategory.FINANCE]),
             action: getRandomItem(logActions),
             entity: getRandomItem(logEntities),
@@ -813,12 +962,13 @@ async function main() {
     console.log("=".repeat(70));
     console.log("\n📊 Summary:");
     console.log(`  • ${colleges.length} Colleges`);
+    console.log(`  • ${superAdmins.length} Super Admins`);
     console.log(`  • ${admins.length} Admins (Supabase UID)`);
     console.log(`  • ${teachers.length} Teachers`);
     console.log(`  • ${students.length} Students (+ Attendance & Streaks)`);
     console.log(`  • ${courses.length} Courses`);
     console.log(`  • ${assignments.length} Assignments`);
-    console.log(`  • ${products.length} Products`);
+    console.log(`  • ${products.length} Products + ${themes.length} Themes`);
     console.log(`  • ${eventData.length} Events`);
     console.log(`  • ${orderCount} Orders`);
     (process as any).exit(0);

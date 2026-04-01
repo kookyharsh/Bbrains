@@ -20,4 +20,5 @@ prisma.$connect()
         console.error('Database connection error:', error);
     });
 
+export { prisma };
 export default prisma;

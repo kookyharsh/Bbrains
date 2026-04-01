@@ -31,13 +31,13 @@ export const autoAssignRoles = async (userId, level) => {
 };
 
 export const checkAchievements = async (userId, xpAmount, level) => {
-    // 1. XP Milestones
+    // Achievement unlocks now track level-based tiers instead of required XP thresholds.
     const achievements = await prisma.achievement.findMany();
     const userAchievements = await prisma.userAchievements.findMany({ where: { userId } });
     const unlockedIds = userAchievements.map(ua => ua.achievementId);
 
     for (const ach of achievements) {
-        if (!unlockedIds.includes(ach.id) && Number(xpAmount) >= Number(ach.requiredXp)) {
+        if (!unlockedIds.includes(ach.id) && Number(level) >= Number(ach.tier)) {
             await prisma.userAchievements.create({
                 data: { userId, achievementId: ach.id }
             });

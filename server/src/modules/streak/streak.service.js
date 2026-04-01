@@ -1,10 +1,19 @@
 import prisma from '../../utils/prisma.js';
 
 export const getStreak = async (userId) => {
-    let streak = await prisma.streak.findUnique({ where: { userId } });
+    let streak = await prisma.streak.findUnique({
+        where: { userId }
+    });
+
     if (!streak) {
-        streak = await prisma.streak.create({ data: { userId } });
+        streak = await prisma.streak.create({
+            data: {
+                userId,
+                currentStreak: 0
+            }
+        });
     }
+
     return streak;
 };
 
@@ -13,7 +22,8 @@ export const claimDailyPoints = async (userId) => {
     const now = new Date();
 
     if (streak.lastClaimedAt) {
-        const timeDiff = now.getTime() - streak.lastClaimedAt.getTime();
+        const lastClaim = new Date(streak.lastClaimedAt);
+        const timeDiff = now.getTime() - lastClaim.getTime();
         const hoursPassed = timeDiff / (1000 * 60 * 60);
 
         if (hoursPassed < 24) {
@@ -26,23 +36,33 @@ export const claimDailyPoints = async (userId) => {
         }
     }
 
-    return await prisma.$transaction(async (tx) => {
-        const currentXp = await tx.xp.findUnique({ where: { userId } });
-        if (currentXp) {
-            await tx.xp.update({
-                where: { userId },
-                data: { xp: { increment: 50 } }
-            });
-        } else {
-            await tx.xp.create({
-                data: { userId, xp: 50, level: 1 }
-            });
-        }
+    const XP_REWARDS = [50, 50, 75, 75, 100, 100, 200];
+    const dayIndex = (streak.currentStreak || 0) % 7;
+    const rewardXP = XP_REWARDS[dayIndex];
 
+    return await prisma.$transaction(async (tx) => {
+        // 1. Award XP
+        await tx.user.update({
+            where: { id: userId },
+            data: {
+                xp: { increment: rewardXP }
+            }
+        });
+
+        // 2. Log Action
+        await tx.auditLog.create({
+            data: {
+                userId,
+                action: 'DAILY_CLAIM',
+                details: { xp: rewardXP, day: dayIndex + 1 }
+            }
+        });
+
+        // 3. Update Streak
         return await tx.streak.update({
             where: { userId },
             data: {
-                currentStreak: streak.currentStreak + 1,
+                currentStreak: (streak.currentStreak || 0) + 1,
                 lastClaimedAt: now
             }
         });

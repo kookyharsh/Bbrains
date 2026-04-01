@@ -331,9 +331,12 @@ export interface Event {
 }
 
 export interface StreakData {
-  current: number;
-  longest: number;
-  lastActiveDate?: string;
+  id: number;
+  userId: string;
+  currentStreak: number;
+  lastClaimedAt: string | null;
+  canClaim: boolean;
+  hoursUntilNextClaim: number;
 }
 
 export interface Achievement {
@@ -826,6 +829,9 @@ export const transactionApi = {
 export const streakApi = {
   getStreak: async (): Promise<ApiResponse<StreakData>> => {
     return api.get<StreakData>('/streak');
+  },
+  claimStreak: async (): Promise<ApiResponse<StreakData>> => {
+    return api.post<StreakData>('/streak/claim');
   },
 };
 

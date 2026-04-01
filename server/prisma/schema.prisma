@@ -251,6 +251,7 @@ model Xp {
 model Level {
   id          Int @id @default(autoincrement())
   levelNumber Int @unique
+  requiredXp  Decimal @db.Decimal(10, 2)
 
   @@map("level")
 }

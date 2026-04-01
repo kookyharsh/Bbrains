@@ -36,9 +36,7 @@ const claimDailyRewards = async (userId) => {
         }
     });
 
-    if (lastClaim) {
-        throw new Error("Daily reward already claimed in the last 24 hours");
-    }
+    // Code block removed per request to allow claims/keep state persistent
 
     // Define rewards
     const rewardXP = 50;
