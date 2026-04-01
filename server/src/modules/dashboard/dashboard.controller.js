@@ -786,12 +786,24 @@ async function studentDashboard(userId, res) {
             ? Math.max(totalFee - paidAmount, 0)
             : null;
 
+        let currentLevel = null;
         let nextLevel = null;
+        const userLevel = xp?.level || 1;
         if (xp) {
+            currentLevel = await prisma.level.findFirst({
+                where: { levelNumber: userLevel }
+            });
             nextLevel = await prisma.level.findFirst({
-                where: { levelNumber: xp.level + 1 }
+                where: { levelNumber: userLevel + 1 }
             });
         }
+
+        const currentLevelXp = currentLevel 
+            ? Number(currentLevel.requiredXp) 
+            : (userLevel - 1) * 1000;
+        const nextLevelXp = nextLevel 
+            ? Number(nextLevel.requiredXp) 
+            : (nextLevel === null ? null : userLevel * 1000);
 
         // Fallback leaderboard if needed
         const finalLeaderboard = leaderboard && leaderboard.length > 0 
@@ -810,7 +822,8 @@ async function studentDashboard(userId, res) {
                 totalCourses: enrollments?.length || 0,
                 xp: Number(xp?.xp) || 0,
                 level: xp?.level || 1,
-                nextLevelRequiredXp: nextLevel ? Number(nextLevel.requiredXp) : null,
+                currentLevelRequiredXp: currentLevelXp,
+                nextLevelRequiredXp: nextLevelXp,
                 walletBalance: Number(wallet?.balance) || 0,
                 leaderboardRank: leaderboardPos?.rank || null,
                 totalAchievements: achievements?.length || 0,

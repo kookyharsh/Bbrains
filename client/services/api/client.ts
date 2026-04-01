@@ -220,6 +220,7 @@ export interface DashboardData {
     totalCourses: number;
     xp: number;
     level: number;
+    currentLevelRequiredXp?: number;
     nextLevelRequiredXp?: number;
     walletBalance: number;
     leaderboardRank: number | null;

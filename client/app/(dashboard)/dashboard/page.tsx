@@ -13,6 +13,8 @@ import { getDashboardOverviewData } from "@/features/dashboard/data";
 
 export default async function DashboardOverview() {
   const { dashboardData, transformedLeaderboard, username } = await getDashboardOverviewData();
+  const resolvedLevel = dashboardData?.stats?.level ?? dashboardData?.user?.xp?.level ?? 1;
+  const resolvedXp = dashboardData?.stats?.xp ?? dashboardData?.user?.xp?.xp ?? 0;
 
   return (
     <DashboardContent className="space-y-6">
@@ -32,9 +34,10 @@ export default async function DashboardOverview() {
       {/* Top row cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <LevelWidget 
-          level={dashboardData?.stats?.level ?? 1} 
-          xp={dashboardData?.stats?.xp ?? 0} 
-          nextLevelXp={dashboardData?.stats?.nextLevelRequiredXp} 
+          level={resolvedLevel} 
+          xp={resolvedXp} 
+          nextLevelXp={dashboardData?.stats?.nextLevelRequiredXp}
+          currentLevelXp={dashboardData?.stats?.currentLevelRequiredXp}
         />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
