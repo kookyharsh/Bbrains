@@ -60,21 +60,6 @@ model User {
   assessments        Assessment[]         @relation("AssessmentCreator")
   assessmentResults  AssessmentResult[]   @relation("AssessmentStudent")
 
-  conversationsAsStudent Conversation[]     @relation("ConversationStudent")
-  conversationsAsTeacher Conversation[]     @relation("ConversationTeacher")
-  messagesSent           Message[]          @relation("MessageSender")
-  messagesDeleted        Message[]          @relation("MessageDeletedBy")
-  chatNotifications      ChatNotification[] @relation("UserChatNotification")
-  pushSubscriptions      PushSubscription[] @relation("UserPushSubscription")
-
-
-  conversationsAsStudent Conversation[] @relation("ConversationStudent")
-  conversationsAsTeacher Conversation[] @relation("ConversationTeacher")
-  messagesSent          Message[] @relation("MessageSender")
-  messagesDeleted       Message[] @relation("MessageDeletedBy")
-  chatNotifications     ChatNotification[] @relation("UserChatNotification")
-  pushSubscriptions     PushSubscription[] @relation("UserPushSubscription")
-
   @@map("user")
 }
 
@@ -133,11 +118,6 @@ model Course {
   enrollments     Enrollment[]
   classTeacher    User?               @relation("CourseClassTeacher", fields: [classTeacherId], references: [id], onDelete: SetNull)
   assessments     Assessment[]
-
-  conversations Conversation[] @relation("ConversationCourse")
-
-
-  conversations         Conversation[] @relation("ConversationCourse")
 
   @@map("course")
 }
@@ -269,8 +249,8 @@ model Xp {
 }
 
 model Level {
-  id          Int     @id @default(autoincrement())
-  levelNumber Int     @unique
+  id          Int @id @default(autoincrement())
+  levelNumber Int @unique
   requiredXp  Decimal @db.Decimal(10, 2)
 
   @@map("level")
@@ -609,138 +589,4 @@ model ChatMessage {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
-}
-
-model Conversation {
-  id            String    @id @default(uuid())
-  studentId     String    @map("student_id")
-  teacherId     String    @map("teacher_id")
-  classId       Int       @map("class_id") // Course id is Int
-  createdAt     DateTime  @default(now()) @map("created_at")
-  lastMessageAt DateTime? @map("last_message_at")
-
-  student User   @relation("ConversationStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  teacher User   @relation("ConversationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
-  course  Course @relation("ConversationCourse", fields: [classId], references: [id], onDelete: Cascade)
-
-  messages      Message[]
-  notifications ChatNotification[] @relation("NotificationConversation")
-
-  @@unique([studentId, teacherId, classId])
-  @@map("conversations")
-}
-
-model Message {
-  id              String    @id @default(uuid())
-  conversationId  String?   @map("conversation_id")
-  senderId        String    @map("sender_id")
-  senderRole      String    @map("sender_role")
-  senderName      String    @map("sender_name")
-  senderAvatarUrl String?   @map("sender_avatar_url")
-  content         String    @db.Text
-  isDeleted       Boolean   @default(false) @map("is_deleted")
-  deletedBy       String?   @map("deleted_by")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  readAt          DateTime? @map("read_at")
-
-  conversation  Conversation?      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender        User               @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  deletedByUser User?              @relation("MessageDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
-  notifications ChatNotification[] @relation("NotificationMessage")
-
-  @@map("messages")
-}
-
-model ChatNotification {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  messageId      String   @map("message_id")
-  conversationId String?  @map("conversation_id")
-  type           String // 'dm' or 'global'
-  isRead         Boolean  @default(false) @map("is_read")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  user         User          @relation("UserChatNotification", fields: [userId], references: [id], onDelete: Cascade)
-  message      Message       @relation("NotificationMessage", fields: [messageId], references: [id], onDelete: Cascade)
-  conversation Conversation? @relation("NotificationConversation", fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@map("notifications") // Wait, existing is mapped to "notification". Plural is "notifications"
-}
-
-model PushSubscription {
-  id           String   @id @default(uuid())
-  userId       String   @map("user_id")
-  subscription Json     @map("subscription")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  user User @relation("UserPushSubscription", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("push_subscriptions")
-}
-
-model Conversation {
-  id              String    @id @default(uuid())
-  studentId       String    @map("student_id")
-  teacherId       String    @map("teacher_id")
-  classId         Int       @map("class_id") // Course id is Int
-  createdAt       DateTime  @default(now()) @map("created_at")
-  lastMessageAt   DateTime? @map("last_message_at")
-
-  student         User      @relation("ConversationStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  teacher         User      @relation("ConversationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
-  course          Course    @relation("ConversationCourse", fields: [classId], references: [id], onDelete: Cascade)
-
-  messages        Message[]
-  notifications   ChatNotification[] @relation("NotificationConversation")
-
-  @@unique([studentId, teacherId, classId])
-  @@map("conversations")
-}
-
-model Message {
-  id              String    @id @default(uuid())
-  conversationId  String?   @map("conversation_id")
-  senderId        String    @map("sender_id")
-  senderRole      String    @map("sender_role")
-  senderName      String    @map("sender_name")
-  senderAvatarUrl String?   @map("sender_avatar_url")
-  content         String    @db.Text
-  isDeleted       Boolean   @default(false) @map("is_deleted")
-  deletedBy       String?   @map("deleted_by")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  readAt          DateTime? @map("read_at")
-
-  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender          User          @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  deletedByUser   User?         @relation("MessageDeletedBy", fields: [deletedBy], references: [id], onDelete: SetNull)
-  notifications   ChatNotification[] @relation("NotificationMessage")
-
-  @@map("messages")
-}
-
-model ChatNotification {
-  id              String    @id @default(uuid())
-  userId          String    @map("user_id")
-  messageId       String    @map("message_id")
-  conversationId  String?   @map("conversation_id")
-  type            String    // 'dm' or 'global'
-  isRead          Boolean   @default(false) @map("is_read")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  user            User          @relation("UserChatNotification", fields: [userId], references: [id], onDelete: Cascade)
-  message         Message       @relation("NotificationMessage", fields: [messageId], references: [id], onDelete: Cascade)
-  conversation    Conversation? @relation("NotificationConversation", fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@map("notifications") // Wait, existing is mapped to "notification". Plural is "notifications"
-}
-
-model PushSubscription {
-  id              String    @id @default(uuid())
-  userId          String    @map("user_id")
-  subscription    Json      @map("subscription")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  user            User      @relation("UserPushSubscription", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("push_subscriptions")
 }
