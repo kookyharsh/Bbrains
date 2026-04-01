@@ -410,7 +410,7 @@ model AuditLog {
   category  LogCategory
   action    String
   entity    String
-  entityId  String
+  entityId  String      @map("entityId")
   change    Json?
   reason    String?
   createdAt DateTime    @default(now()) @map("created_at")

@@ -79,7 +79,7 @@ const createAnnouncement = async (userId, data) => {
     // Log the action
     await prisma.auditLog.create({
         data: {
-            userId,
+            user: { connect: { id: userId } },
             category: "ACADEMIC",
             action: "CREATE",
             entity: "Announcement",

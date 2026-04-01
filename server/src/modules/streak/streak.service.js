@@ -52,9 +52,12 @@ export const claimDailyPoints = async (userId) => {
         // 2. Log Action
         await tx.auditLog.create({
             data: {
-                userId,
+                user: { connect: { id: userId } },
+                category: 'SYSTEM',
                 action: 'DAILY_CLAIM',
-                details: { xp: rewardXP, day: dayIndex + 1 }
+                entity: 'User',
+                entityId: userId,
+                change: { xp: rewardXP, day: dayIndex + 1 }
             }
         });
 

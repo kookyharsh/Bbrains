@@ -944,7 +944,7 @@ async function main() {
       try {
         await prisma.auditLog.create({
           data: {
-            userId: getRandomItem([...students, ...teachers, ...admins, ...superAdmins]).id,
+            user: { connect: { id: getRandomItem([...students, ...teachers, ...admins, ...superAdmins]).id } },
             category: getRandomItem([LogCategory.AUTH, LogCategory.ACADEMIC, LogCategory.MARKET, LogCategory.FINANCE]),
             action: getRandomItem(logActions),
             entity: getRandomItem(logEntities),

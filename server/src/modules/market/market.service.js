@@ -225,7 +225,7 @@ const checkout = async (userId, pin) => {
 
         await tx.auditLog.create({
             data: {
-                userId,
+                user: { connect: { id: userId } },
                 category: "MARKET",
                 action: "CHECKOUT",
                 entity: "Order",
@@ -323,7 +323,7 @@ const buyNow = async (userId, productId, quantity, pin) => {
 
         await tx.auditLog.create({
             data: {
-                userId,
+                user: { connect: { id: userId } },
                 category: "MARKET",
                 action: "BUY_NOW",
                 entity: "Order",

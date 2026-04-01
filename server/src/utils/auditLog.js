@@ -17,7 +17,7 @@ export const createAuditLog = async (userId, category, action, entity, entityId,
     try {
         return await client.auditLog.create({
             data: {
-                userId,
+                user: userId ? { connect: { id: userId } } : undefined,
                 category,
                 action,
                 entity,

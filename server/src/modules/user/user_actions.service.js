@@ -81,12 +81,12 @@ const claimDailyRewards = async (userId) => {
         // 3. Log the action
         await tx.auditLog.create({
             data: {
-                userId: userId,
+                user: { connect: { id: userId } },
                 category: "SYSTEM",
                 action: "DAILY_CLAIM",
                 entity: "User",
                 entityId: userId,
-                details: {
+                change: {
                     xp: rewardXP,
                     coins: rewardCoins,
                     day: (currentStreak % DAILY_REWARD_XP.length) + 1
