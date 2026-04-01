@@ -348,6 +348,8 @@ export const removeFromCartHandler = async (req, res) => {
 export const checkoutHandler = async (req, res) => {
   try {
     const { pin } = req.body;
+    console.log('[checkoutHandler] Request body:', req.body);
+    console.log('[checkoutHandler] Pin received:', pin);
     if (!pin) return sendError(res, 'PIN required for checkout', 400);
 
     const result = await checkout(req.user.id, pin);

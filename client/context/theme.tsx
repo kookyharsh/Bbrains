@@ -5,6 +5,7 @@ import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "n
 import { useEffect, useLayoutEffect } from "react"
 import { allThemes, isBuiltInTheme } from "@/themes"
 import { useUser } from "@/hooks/use-user"
+import { libraryApi } from "@/services/api/client"
 
 interface User {
   id: string;
@@ -15,20 +16,41 @@ function useThemesInternal() {
   const { user } = useUser() as { user: User | null }
   const [userThemes, setUserThemes] = React.useState<string[]>([])
   
+  // Load themes from localStorage and server
   React.useEffect(() => {
-    if (user?.id) {
-      const savedThemes = localStorage.getItem(`user-${user.id}-themes`)
-      if (savedThemes) {
-        try {
-          setUserThemes(JSON.parse(savedThemes))
-        } catch (e) {
-          console.error('Failed to parse saved themes', e)
-          setUserThemes([])
+    const loadThemes = async () => {
+      // First load from localStorage
+      if (user?.id) {
+        const savedThemes = localStorage.getItem(`user-${user.id}-themes`)
+        if (savedThemes) {
+          try {
+            setUserThemes(JSON.parse(savedThemes))
+          } catch (e) {
+            console.error('Failed to parse saved themes', e)
+            setUserThemes(['light', 'dark'])
+          }
+        } else {
+          setUserThemes(['light', 'dark'])
         }
-      } else {
-        setUserThemes(['light', 'dark'])
+        
+        // Then fetch purchased themes from server
+        try {
+          const response = await libraryApi.getLibrary('theme', 1, 100)
+          if (response.success && response.data) {
+            const purchasedThemeIds = response.data.map((item: any) => String(item.productId))
+            setUserThemes(prev => {
+              const combined = [...new Set([...prev, ...purchasedThemeIds])]
+              localStorage.setItem(`user-${user.id}-themes`, JSON.stringify(combined))
+              return combined
+            })
+          }
+        } catch (e) {
+          console.error('Failed to fetch purchased themes', e)
+        }
       }
     }
+    
+    loadThemes()
   }, [user?.id])
   
   const addTheme = (themeId: string) => {

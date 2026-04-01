@@ -22,6 +22,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/services/supabase/client"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { useTheme } from "@/context/theme"
 
 export default function SettingsPage() {
     const [user, setUser] = useState<any>(null)
@@ -42,6 +43,7 @@ export default function SettingsPage() {
     const [isPinSetup, setIsPinSet] = useState(false)
 
     const { uploadFile, isUploading } = useCloudinaryUpload()
+    const { addTheme, setTheme } = useTheme()
 
     const loadData = useCallback(async () => {
         try {
@@ -168,9 +170,10 @@ export default function SettingsPage() {
             setUpdating(true)
             const res = await themeApi.applyTheme(themeId)
             if (res.success) {
+                addTheme(String(themeId))
+                setTheme(String(themeId))
                 setActiveThemeId(String(themeId))
-                toast.success("Theme applied! Reloading to take effect...")
-                setTimeout(() => window.location.reload(), 1000)
+                toast.success("Theme applied!")
             } else {
                 toast.error(res.message || "Failed to apply theme")
             }

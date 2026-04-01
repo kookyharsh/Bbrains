@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Library, Search, Download, Star, BookOpen, Palette, FileText, Eye, Play, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { libraryApi, themeApi, LibraryItem, Product } from "@/services/api/client";
+import { useTheme } from "@/context/theme";
 
 export default function LibraryPage() {
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -31,6 +32,7 @@ export default function LibraryPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [applyingTheme, setApplyingTheme] = useState(false);
+  const { addTheme, setTheme } = useTheme();
   const limit = 12;
 
   useEffect(() => {
@@ -105,6 +107,8 @@ export default function LibraryPage() {
       setApplyingTheme(true);
       const response = await themeApi.applyTheme(item.productId);
       if (response.success) {
+        addTheme(String(item.productId));
+        setTheme(String(item.productId));
         toast.success("Theme applied successfully!");
       } else {
         toast.error(response.message || "Failed to apply theme");

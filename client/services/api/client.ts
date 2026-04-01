@@ -988,6 +988,9 @@ export const libraryApi = {
   getDownloadUrl: async (productId: number): Promise<ApiResponse<{ url: string }>> => {
     return api.get<{ url: string }>(`/market/library/${productId}/download`);
   },
+  getActiveTheme: async (): Promise<ApiResponse<{ id: number; name: string } | null>> => {
+    return api.get<{ id: number; name: string } | null>('/market/library/active-theme');
+  },
 };
 
 export const marketApi = {
