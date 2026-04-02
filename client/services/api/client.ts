@@ -271,6 +271,7 @@ export interface LeaderboardEntry {
   lastName?: string;
   avatar?: string;
   xp: number;
+  points?: number;
 }
 
 export interface Announcement {
@@ -634,11 +635,11 @@ export const attendanceApi = {
 };
 
 export const leaderboardApi = {
-  getLeaderboard: async (): Promise<ApiResponse<LeaderboardEntry[]>> => {
-    return api.get<LeaderboardEntry[]>('/leaderboard');
+  getLeaderboard: async (sortBy: 'xp' | 'points' = 'xp'): Promise<ApiResponse<LeaderboardEntry[]>> => {
+    return api.get<LeaderboardEntry[]>(`/leaderboard?sortBy=${sortBy}`);
   },
-  getMyPosition: async (): Promise<ApiResponse<LeaderboardEntry>> => {
-    return api.get<LeaderboardEntry>('/leaderboard/me');
+  getMyPosition: async (sortBy: 'xp' | 'points' = 'xp'): Promise<ApiResponse<LeaderboardEntry>> => {
+    return api.get<LeaderboardEntry>(`/leaderboard/me?sortBy=${sortBy}`);
   },
 };
 

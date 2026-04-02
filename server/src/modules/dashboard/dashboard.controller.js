@@ -645,9 +645,10 @@ async function studentDashboard(userId, res) {
             enrollments,
             xp,
             achievements,
+            wallet,
             recentGrades,
             leaderboardPos,
-            leaderboard,
+            leaderboardEntries,
             xpLeaderboard,
             announcements,
             recentClaims,
@@ -684,23 +685,8 @@ async function studentDashboard(userId, res) {
                 take: 5,
                 orderBy: { gradedAt: 'desc' }
             }),
-            prisma.leaderboard.findFirst({
-                where: { userId, category: 'allTime' },
-                select: { rank: true, score: true }
-            }),
-            prisma.leaderboard.findMany({
-                where: { category: 'allTime' },
-                orderBy: { score: 'desc' },
-                take: 5,
-                include: {
-                    user: {
-                        select: {
-                            username: true,
-                            userDetails: { select: { avatar: true, firstName: true, lastName: true } }
-                        }
-                    }
-                }
-            }),
+            prisma.$queryRaw`SELECT "xpRank" as rank, "totalXp" as score FROM "leaderboard_view" WHERE "userId" = ${userId} LIMIT 1`,
+            prisma.$queryRaw`SELECT "userId", "username", "firstName", "lastName", "avatar", "totalXp", "totalPoints", "xpRank" as rank FROM "leaderboard_view" ORDER BY "xpRank" ASC LIMIT 5`,
             prisma.xp.findMany({
                 orderBy: { xp: 'desc' },
                 take: 5,
@@ -766,6 +752,8 @@ async function studentDashboard(userId, res) {
             }),
         ]);
 
+        const userLeaderboardPos = leaderboardPos && leaderboardPos[0] ? leaderboardPos[0] : null;
+
         // Normalize user profile for frontend: flatten avatar and names
         const userProfile = {
             ...user,
@@ -806,14 +794,16 @@ async function studentDashboard(userId, res) {
             : (nextLevel === null ? null : userLevel * 1000);
 
         // Fallback leaderboard if needed
-        const finalLeaderboard = leaderboard && leaderboard.length > 0 
-            ? leaderboard 
+        const finalLeaderboard = leaderboardEntries && leaderboardEntries.length > 0 
+            ? leaderboardEntries 
             : (xpLeaderboard || []).map((entry, index) => ({
-                id: entry.id,
                 userId: entry.userId,
-                score: entry.xp,
+                totalXp: entry.xp,
                 rank: index + 1,
-                user: entry.user
+                username: entry.user?.username,
+                firstName: entry.user?.userDetails?.firstName,
+                lastName: entry.user?.userDetails?.lastName,
+                avatar: entry.user?.userDetails?.avatar
             }));
 
         return sendSuccess(res, {
@@ -825,7 +815,7 @@ async function studentDashboard(userId, res) {
                 currentLevelRequiredXp: currentLevelXp,
                 nextLevelRequiredXp: nextLevelXp,
                 walletBalance: Number(wallet?.balance) || 0,
-                leaderboardRank: leaderboardPos?.rank || null,
+                leaderboardRank: userLeaderboardPos?.rank || null,
                 totalAchievements: achievements?.length || 0,
                 streak: streak
             },

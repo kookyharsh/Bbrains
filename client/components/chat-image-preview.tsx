@@ -120,7 +120,7 @@ export function ChatImagePreview({
               className={cn(
                 'relative overflow-hidden',
                 variant === 'message'
-                  ? 'w-full max-h-[70vh]'
+                  ? 'w-full max-h-[70vh] md:max-h-[50vh]'
                   : 'w-24 h-24 md:w-28 md:h-28 lg:w-32 lg:h-32'
               )}
               style={variant === 'message' ? { aspectRatio: messageAspectRatio ?? 16 / 9 } : undefined}
@@ -130,7 +130,8 @@ export function ChatImagePreview({
                 alt={attachment.name || 'Preview'}
                 fill
                 className={cn(
-                  'object-cover transition-transform duration-300',
+                  'transition-transform duration-300',
+                  variant === 'message' ? 'object-contain' : 'object-cover',
                   variant === 'message' ? 'hover:scale-[1.02]' : 'hover:scale-105'
                 )}
                 onLoadingComplete={(img) => {

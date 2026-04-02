@@ -8,6 +8,8 @@ export type LeaderboardLikeEntry = {
   rank?: number;
   score?: number;
   xp?: number;
+  totalXp?: number;
+  totalPoints?: number;
   username?: string;
   firstName?: string;
   lastName?: string;
@@ -26,6 +28,7 @@ export interface TransformedLeaderboardEntry {
   id: string;
   rank: number;
   xp: number;
+  points: number;
   username: string;
   firstName: string;
   lastName: string;

@@ -17,7 +17,8 @@ export function transformLeaderboard(leaderboard: LeaderboardLikeEntry[]): Trans
   return leaderboard.map((entry, index) => ({
     id: entry.userId || entry.id || "",
     rank: entry.rank ?? index + 1,
-    xp: entry.score ?? entry.xp ?? 0,
+    xp: entry.totalXp ?? entry.score ?? entry.xp ?? 0,
+    points: entry.totalPoints ?? 0,
     username: entry.user?.username || entry.username || "Unknown",
     firstName: entry.user?.userDetails?.firstName || entry.firstName || "",
     lastName: entry.user?.userDetails?.lastName || entry.lastName || "",

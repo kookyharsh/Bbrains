@@ -117,7 +117,7 @@ export const MessageItem = React.memo(function MessageItem({
                                 key={`${msg.id}-att-${idx}`}
                                 attachment={att}
                                 variant="message"
-                                className="w-full"
+                                className="w-full md:max-w-[50%]"
                             />
                         ))}
                     </div>
