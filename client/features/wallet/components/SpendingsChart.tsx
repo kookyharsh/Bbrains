@@ -41,8 +41,8 @@ export function SpendingsChart() {
                   color: "hsl(var(--foreground))"
                 }}
               />
-              <Bar dataKey="sent" fill="#ef4444" radius={[4, 4, 0, 0]} name="Sent" />
-              <Bar dataKey="received" fill="#22c55e" radius={[4, 4, 0, 0]} name="Received" />
+              <Bar dataKey="sent" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} name="Sent" />
+              <Bar dataKey="received" fill="var(--color-chart-2)" radius={[4, 4, 0, 0]} name="Received" />
             </BarChart>
           </ResponsiveContainer>
         </div>
