@@ -15,12 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
     dashboardApi, userApi, walletApi, themeApi, libraryApi, 
-    User as ApiUser, LibraryItem 
+    User as ApiUser, LibraryItem, getBaseUrl
 } from "@/services/api/client"
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { supabase } from "@/services/supabase/client"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import { useTheme } from "@/context/theme"
 
@@ -118,8 +117,18 @@ export default function SettingsPage() {
 
         setUpdating(true)
         try {
-            const { error } = await supabase.auth.updateUser({ password: newPassword })
-            if (error) throw error
+            const response = await fetch(`${getBaseUrl()}/auth/password`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword: confirmPassword, newPassword }),
+                credentials: 'include',
+            })
+
+            const data = await response.json()
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Failed to update password")
+            }
+            
             toast.success("Password updated successfully")
             setNewPassword("")
             setConfirmPassword("")

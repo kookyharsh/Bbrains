@@ -29,7 +29,9 @@ export default function SuperadminGlobalFeaturesPage() {
         try {
             const token = await getAuthToken()
             const res = await fetch(`${getBaseUrl()}/superadmin/features/global`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { 
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                }
             })
             if (!res.ok) throw new Error("Failed to fetch features")
             const data = await res.json()
@@ -48,7 +50,7 @@ export default function SuperadminGlobalFeaturesPage() {
             const res = await fetch(`${getBaseUrl()}/superadmin/features/global`, {
                 method: "PUT",
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ features })

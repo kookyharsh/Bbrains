@@ -11,7 +11,7 @@ import {
     LogOut,
     User,
 } from "lucide-react"
-import { createClient } from "@/services/supabase/client"
+import { getBaseUrl, setAuthToken } from "@/services/api/client"
 import { NotificationsBell } from "@/components/shell/NotificationsBell"
 import { ThemeSwitcher } from "@/components/shell/theme-switcher"
 import { SidebarTrigger } from "@/components/ui/sidebar"
@@ -86,9 +86,14 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
     )
 
     const handleLogout = async () => {
-        const supabase = createClient()
-        await supabase.auth.signOut()
+        try {
+            await fetch(`${getBaseUrl()}/logout`, { method: 'POST', credentials: 'include' })
+        } catch (e) {
+            console.error('Logout error:', e)
+        }
+        setAuthToken(null)
         router.push("/auth/login")
+        router.refresh()
     }
 
     if (!mounted) {

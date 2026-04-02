@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useRef } from "react"
+import React, { useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuTrigger,
@@ -8,8 +8,8 @@ import {
 import {
     EmojiPicker, EmojiPickerContent, EmojiPickerFooter, EmojiPickerSearch,
 } from "@/components/ui/emoji-picker"
-import { PlusCircle, Send, Smile, X, ImagePlus, Loader2, Hash } from "lucide-react"
-import type { Member, Message } from "@/features/chat/data"
+import { Send, Smile, X, ImagePlus, Loader2, Hash } from "lucide-react"
+import type { Member } from "@/features/chat/data"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface MessageInputProps {
@@ -20,6 +20,7 @@ interface MessageInputProps {
     replyingMessage: { id: string; username: string; content: string } | null
     pendingAttachments: { file: File; previewUrl: string }[]
     isUploading?: boolean
+    uploadError?: string | null
     onChange: (val: string) => void
     onSend: () => void
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void
@@ -42,6 +43,7 @@ export function MessageInput({
     replyingMessage, 
     pendingAttachments,
     isUploading = false,
+    uploadError = null,
     onChange, 
     onSend, 
     onKeyDown, 
@@ -68,8 +70,24 @@ export function MessageInput({
             .slice(0, 5)
     }, [mentionQuery, members])
 
+    useEffect(() => {
+        const focusTimer = setTimeout(() => {
+            inputRef.current?.focus()
+        }, 120)
+
+        return () => clearTimeout(focusTimer)
+    }, [])
+
     return (
-        <div className="px-3 py-3 border-t border-border bg-card mt-auto relative">
+        <div className="px-3 py-3 border-t border-border bg-card mt-auto relative z-40 sticky bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] md:static md:bottom-auto">
+            {uploadError && (
+                <div
+                    role="alert"
+                    className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive"
+                >
+                    {uploadError}
+                </div>
+            )}
             {/* Reply Preview */}
             {replyingMessage && (
                 <div className="flex items-center justify-between mb-2 px-2 py-1.5 bg-muted/50 rounded-md text-xs">
@@ -181,6 +199,7 @@ export function MessageInput({
                             value={message}
                             onChange={(e) => onChange(e.target.value)}
                             onKeyDown={onKeyDown}
+                            autoFocus
                             aria-label="Message input"
                             placeholder={`Message #${channelName}`}
                             className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-muted-foreground"

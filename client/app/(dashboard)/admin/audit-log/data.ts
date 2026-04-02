@@ -28,7 +28,8 @@ export async function fetchAuditLogs(filters: AuditLogFilters = {}): Promise<Api
     });
 
     if (!response.ok) {
-        throw new Error("Failed to fetch audit logs");
+        const errorBody = await response.text();
+        throw new Error(`Failed to fetch audit logs: ${response.status} ${response.statusText} - ${errorBody}`);
     }
 
     const data = await response.json();

@@ -20,11 +20,22 @@ const attachmentSchema = z.object({
 });
 
 const createMessageSchema = z.object({
-    content: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+    content: z.string().max(MAX_MESSAGE_LENGTH).optional().default(""),
     chatId: z.string().trim().min(1).max(MAX_CHAT_ID_LENGTH).optional(),
     mentions: z.array(z.string().trim().min(1).max(64)).max(50).optional(),
     replyTo: z.string().trim().min(1).max(100).optional().nullable(),
     attachments: z.array(attachmentSchema).max(10).optional(),
+}).superRefine((payload, ctx) => {
+    const hasText = String(payload.content || "").trim().length > 0;
+    const hasAttachments = Array.isArray(payload.attachments) && payload.attachments.length > 0;
+
+    if (!hasText && !hasAttachments) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["content"],
+            message: "Message must include text or at least one attachment",
+        });
+    }
 });
 
 const updateMessageSchema = z.object({
@@ -183,6 +194,7 @@ export const getChatMembers = async (req, res) => {
 export const createChatMessage = async (req, res) => {
     try {
         const validated = createMessageSchema.parse(req.body ?? {});
+        const content = String(validated.content || "").trim();
         const chatId = normalizeChatId(validated.chatId);
         const mentions = normalizeMentions(validated.mentions);
         const replyTo = validated.replyTo ? String(validated.replyTo).trim() : null;
@@ -209,7 +221,7 @@ export const createChatMessage = async (req, res) => {
 
         const message = await prisma.chatMessage.create({
             data: {
-                content: validated.content,
+                content,
                 chatId,
                 userId,
                 username: profile.username,

@@ -33,14 +33,14 @@ export function ChatImagePreview({
 }: ChatImagePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [messageAspectRatio, setMessageAspectRatio] = useState<number | null>(null)
+  const urlWithoutQuery = attachment.url.split(/[?#]/)[0]
 
   // Robust type checking
-  const isImage = (attachment.type?.toLowerCase().includes('image') || 
-                  /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(attachment.url)) && 
-                  !attachment.url.includes('?') // basic heuristic to avoid complex URLs sometimes
+  const isImage = attachment.type?.toLowerCase().includes('image') ||
+                  /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(urlWithoutQuery)
   
   const isVideo = attachment.type?.toLowerCase().includes('video') || 
-                  /\.(mp4|webm|ogg|mov)$/i.test(attachment.url)
+                  /\.(mp4|webm|ogg|mov)$/i.test(urlWithoutQuery)
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();

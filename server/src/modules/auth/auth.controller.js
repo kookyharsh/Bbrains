@@ -6,11 +6,10 @@ import { generateToken } from "../../utils/tokengen.js";
 import { getRandomAvatar } from "../../utils/randomavatar.js";
 import { sendSuccess, sendCreated, sendError } from "../../utils/response.js";
 import { createAuditLog } from "../../utils/auditLog.js";
-import supabase from "../../utils/supabase.js";
+import crypto from "crypto";
+import prisma from "../../utils/prisma.js";
 
 dotenv.config();
-
-const SUPABASE_INVITE_REDIRECT_URL = process.env.SUPABASE_INVITE_REDIRECT_URL || "http://localhost:3000/auth/confirm";
 
 const registerSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/, "Username must be alphanumeric with underscores"),
@@ -24,6 +23,11 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required")
 });
 
+const passwordUpdateSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters")
+});
+
 const register = async (req, res) => {
   try {
     const validated = registerSchema.parse(req.body);
@@ -34,29 +38,15 @@ const register = async (req, res) => {
     }
 
     const collegeId = validated.collegeId || 45;
-
-    const { data: supabaseUser, error: supabaseError } = await supabase.auth.admin.createUser({
-      email: validated.email,
-      password: validated.password,
-      email_confirm: true,
-      user_metadata: {
-        username: validated.username
-      }
-    });
-
-    if (supabaseError) {
-      console.error('Supabase user creation error:', supabaseError);
-      return sendError(res, "Failed to create user in authentication system", 500);
-    }
-
-    const supabaseUserId = supabaseUser.user.id;
+    const hashedPassword = await bcrypt.hash(validated.password, 10);
+    const userId = crypto.randomUUID();
 
     const newUser = await createUser(
-      supabaseUserId,
+      userId,
       validated.username,
       validated.email,
       collegeId,
-      validated.password,
+      hashedPassword,
       getRandomAvatar()
     );
 
@@ -76,18 +66,14 @@ const login = async (req, res) => {
   try {
     const validated = loginSchema.parse(req.body);
 
-    const { data: supabaseData, error: supabaseError } = await supabase.auth.signInWithPassword({
-      email: validated.email,
-      password: validated.password
-    });
-
-    if (supabaseError || !supabaseData.user) {
+    const user = await findUserByEmail(validated.email);
+    if (!user || !user.password) {
       return sendError(res, "Invalid credentials", 401);
     }
 
-    const user = await findUserByEmail(validated.email);
-    if (!user) {
-      return sendError(res, "User not found in database. Please contact an administrator.", 404);
+    const isPasswordValid = await bcrypt.compare(validated.password, user.password);
+    if (!isPasswordValid) {
+      return sendError(res, "Invalid credentials", 401);
     }
 
     const token = generateToken({
@@ -106,7 +92,7 @@ const login = async (req, res) => {
 
     await createAuditLog(user.id, 'AUTH', 'LOGIN', 'User', user.id);
 
-    return sendSuccess(res, { user: userData, supabaseToken: supabaseData.session.access_token }, "Login successful");
+    return sendSuccess(res, { user: userData, token }, "Login successful");
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
@@ -125,4 +111,44 @@ const logout = async (req, res) => {
   return sendSuccess(res, null, "Logged out successfully");
 };
 
-export { register, login, logout };
+const updatePassword = async (req, res) => {
+  try {
+    if (!req.user) {
+      return sendError(res, "Not authenticated", 401);
+    }
+
+    const validated = passwordUpdateSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    if (!user || !user.password) {
+      return sendError(res, "User not found", 404);
+    }
+
+    const isPasswordValid = await bcrypt.compare(validated.currentPassword, user.password);
+    if (!isPasswordValid) {
+      return sendError(res, "Current password is incorrect", 401);
+    }
+
+    const hashedPassword = await bcrypt.hash(validated.newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { password: hashedPassword }
+    });
+
+    await createAuditLog(req.user.id, 'AUTH', 'PASSWORD_UPDATE', 'User', req.user.id);
+
+    return sendSuccess(res, null, "Password updated successfully");
+  } catch (error) {
+    if (error.name === 'ZodError') {
+      return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+    }
+    console.error(error);
+    return sendError(res, "Password update failed", 500);
+  }
+};
+
+export { register, login, logout, updatePassword };

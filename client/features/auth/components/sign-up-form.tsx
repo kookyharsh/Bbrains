@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
-import { createClient } from '@/services/supabase/client'
+import { getBaseUrl } from '@/services/api/client'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,7 +29,6 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
 
     if (password !== repeatPassword) {
       setErrors({ repeatPassword: 'Passwords do not match' })
@@ -53,21 +52,21 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     setIsLoading(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
-        },
+      const response = await fetch(`${getBaseUrl()}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, username: email.split('@')[0] }),
+        credentials: 'include',
       })
 
-      if (error) {
-        toast.error(error.message)
-        throw error
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Registration failed')
       }
 
-      toast.success('Account created! Please check your email to verify.')
-      router.push('/auth/sign-up-success')
+      toast.success('Account created! You can now login.')
+      router.push('/auth/login')
     } catch (error: unknown) {
       if (error instanceof Error) {
         setErrors({ form: error.message })

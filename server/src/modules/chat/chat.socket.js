@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 import prisma from "../../utils/prisma.js";
 import { insertChatMessage, getMessageById, updateChatMessage, deleteChatMessage } from '../../lib/supabase-chat.js';
 
@@ -96,12 +97,24 @@ const authenticateSocketUser = async (socket) => {
         throw new Error("Missing authentication token");
     }
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded || !decoded.id) {
         throw new Error("Invalid authentication token");
     }
 
-    const dbUser = await findUserBySupabaseId(user.id);
+    const dbUser = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        include: {
+            roles: {
+                include: {
+                    role: {
+                        select: { name: true }
+                    }
+                }
+            }
+        }
+    });
+
     if (!dbUser) {
         throw new Error("Authenticated user was not found in the application database");
     }

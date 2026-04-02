@@ -1,21 +1,18 @@
 import { redirect } from 'next/navigation'
-
+import { cookies } from 'next/headers'
 import { LogoutButton } from '@/components/shell/logout-button'
-import { getServerSupabase as createClient } from '@/services/supabase/server'
 
 export default async function ProtectedPage() {
-  const supabase = await createClient()
+  const cookieStore = await cookies()
+  const token = cookieStore.get('token')?.value
 
-  const { data, error } = await supabase.auth.getClaims()
-  if (error || !data?.claims) {
+  if (!token) {
     redirect('/auth/login')
   }
 
   return (
     <div className="flex h-svh w-full items-center justify-center gap-2">
-      <p>
-        Hello <span>{data.claims.email}</span>
-      </p>
+      <p>Hello, you are authenticated!</p>
       <LogoutButton />
     </div>
   )

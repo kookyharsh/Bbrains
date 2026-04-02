@@ -45,7 +45,9 @@ export default function SuperadminCollegesPage() {
         try {
             const token = await getAuthToken()
             const res = await fetch(`${getBaseUrl()}/superadmin/colleges`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { 
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                }
             })
             if (!res.ok) throw new Error("Failed to fetch colleges")
             const data = await res.json()
@@ -62,7 +64,9 @@ export default function SuperadminCollegesPage() {
         try {
             const token = await getAuthToken()
             const res = await fetch(`${getBaseUrl()}/superadmin/colleges/${college.id}/features`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { 
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                }
             })
             if (!res.ok) throw new Error("Failed to load features")
             const data = await res.json()
@@ -81,7 +85,7 @@ export default function SuperadminCollegesPage() {
             const res = await fetch(`${getBaseUrl()}/superadmin/colleges/${selectedCollege.id}/features`, {
                 method: "PUT",
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ features: featuresForm })

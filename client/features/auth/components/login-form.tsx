@@ -5,7 +5,7 @@ import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
-import { supabase } from '@/services/supabase/client'
+import { getBaseUrl, setAuthToken } from '@/services/api/client'
 import { HandButton } from '@/components/hand-drawn/button'
 import {
   HandCard,
@@ -38,7 +38,6 @@ export function LoginForm({
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Use the shared Supabase client instance
 
     const validationErrors = validate(
       { email, password },
@@ -54,23 +53,26 @@ export function LoginForm({
     setIsLoading(true)
 
     try {
-      // Sign in with password and capture the session so we can reuse the token on API calls
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch(`${getBaseUrl()}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include',
       })
 
-      if (error) {
-        toast.error(error.message)
-        throw error
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Login failed')
       }
 
-      // Tokens and session are managed by the shared Supabase client via cookies
+      if (data.data?.token) {
+        setAuthToken(data.data.token)
+      }
+
       toast.success('Login successful!')
       
       try {
-        // Import dashboardApi dynamically or use a direct fetch to avoid circular deps if any
-        // Assuming we can just import it at top but let's check if it needs to be imported
         const { dashboardApi } = await import('@/services/api/client')
         const userResp = await dashboardApi.getUser()
         
@@ -92,7 +94,6 @@ export function LoginForm({
             router.push('/dashboard')
           }
         } else {
-          // Fallback if we can't get role
           router.push('/dashboard')
         }
       } catch (err) {

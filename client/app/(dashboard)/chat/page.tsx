@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { useChatMessages } from "@/features/chat/hooks/useChatMessages";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
-import { supabase } from "@/services/supabase/client";
 import { chatApi, type ChatMemberProfile } from "@/services/api/client";
 
 // Components
@@ -24,6 +23,8 @@ import { Memberssidebar } from "@/features/chat/components/MembersSidebar";
 // Data & Utils
 import { Message, Member } from "@/features/chat/data";
 import { extractMentions, mapApiMember } from "@/features/chat/utils";
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 export default function ChatPage() {
   // Hooks
@@ -58,6 +59,7 @@ export default function ChatPage() {
   const [mentionIndex, setMentionIndex] = useState(0);
   const [membersList, setMembersList] = useState<Member[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<{ file: File; previewUrl: string }[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -140,6 +142,7 @@ export default function ChatPage() {
 
     try {
         const uploadedAttachments: { url: string; type: string; name?: string }[] = [];
+        let failedUploads = 0;
         
         for (const att of pendingAttachments) {
             const url = await uploadFile(att.file);
@@ -149,7 +152,16 @@ export default function ChatPage() {
                     type: att.file.type,
                     name: att.file.name
                 });
+            } else {
+                failedUploads += 1;
             }
+        }
+
+        if (failedUploads > 0) {
+            const errorMsg = `${failedUploads} attachment${failedUploads > 1 ? "s" : ""} failed to upload. Please try again.`;
+            setUploadError(errorMsg);
+            toast.error(errorMsg);
+            return;
         }
 
         if (editingMsgId) {
@@ -162,18 +174,35 @@ export default function ChatPage() {
         }
         
         setMessage("");
+        setUploadError(null);
         setReplyingMsg(null);
         setPendingAttachments((prev) => {
             prev.forEach(att => URL.revokeObjectURL(att.previewUrl));
             return [];
         });
     } catch (error) {
-        toast.error("Failed to send message");
+        const errorMessage = error instanceof Error ? error.message : "Failed to send message";
+        setUploadError(errorMessage);
+        toast.error(errorMessage);
     }
   }, [message, pendingAttachments, isUploading, editingMsgId, replyingMsg, uploadFile, editMessage, sendMessage]);
 
   const handleFileSelect = useCallback((files: File[]) => {
-    const newPending = files.map(f => ({
+    const tooLarge = files.filter((f) => f.size > MAX_ATTACHMENT_BYTES);
+    const validFiles = files.filter((f) => f.size <= MAX_ATTACHMENT_BYTES);
+
+    if (tooLarge.length > 0) {
+      const tooLargeNames = tooLarge.map((f) => f.name).join(", ");
+      const errorMsg = `File must be 5MB or smaller. Remove and re-upload: ${tooLargeNames}`;
+      setUploadError(errorMsg);
+      toast.error(errorMsg);
+    } else {
+      setUploadError(null);
+    }
+
+    if (validFiles.length === 0) return;
+
+    const newPending = validFiles.map(f => ({
       file: f,
       previewUrl: URL.createObjectURL(f)
     }));
@@ -187,6 +216,7 @@ export default function ChatPage() {
       newPending.splice(index, 1);
       return newPending;
     });
+    setUploadError(null);
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -286,7 +316,7 @@ export default function ChatPage() {
   }, [handleOpenProfile]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-card md:rounded-xl md:border md:shadow-sm">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-card pb-bottom-nav md:pb-0 md:rounded-xl md:border md:shadow-sm">
       <ChannelHeader 
         channelName="Global Chat"
         showMembers={showMembers}
@@ -297,7 +327,7 @@ export default function ChatPage() {
 
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 flex flex-col min-w-0">
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4 pb-28 md:pb-4">
             <div className="space-y-1">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
@@ -348,6 +378,7 @@ export default function ChatPage() {
             replyingMessage={replyingMsg}
             pendingAttachments={pendingAttachments}
             isUploading={isUploading}
+            uploadError={uploadError}
             onChange={(val) => {
                 setMessage(val);
                 onDetectMention(val);

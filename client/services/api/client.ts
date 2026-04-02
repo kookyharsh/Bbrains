@@ -1,5 +1,4 @@
 import axios, { AxiosInstance } from "axios"
-import { supabase } from '../supabase/client';
 
 export const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
@@ -32,56 +31,29 @@ export interface ApiError {
 }
 
 export async function getAuthToken(): Promise<string | null> {
-  // SSR path: use server-side helper to fetch the token from cookies/session
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     try {
-      const { cookies } = await import('next/headers');
-      const { createServerClient } = await import('@supabase/ssr');
-
+      const { cookies } = await import("next/headers");
       const cookieStore = await cookies();
-
-      const supabaseServer = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-          cookies: {
-            getAll() {
-              return cookieStore.getAll();
-            },
-            setAll() {
-              // Read-only in this context
-            },
-          },
-        }
-      );
-
-      const { data: { session }, error } = await supabaseServer.auth.getSession();
-      if (error || !session?.access_token) return null;
-      return session.access_token;
-    } catch (e) {
-      console.error('SSR getAuthToken error:', e);
+      return cookieStore.get("token")?.value || null;
+    } catch {
       return null;
     }
   }
 
-  // Client path: use shared client session via cookies
-  try {
-    if (!supabase) return null;
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session?.access_token) {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) return null;
-      
-      const { data: { session: refreshedSession } } = await supabase.auth.getSession();
-      return refreshedSession?.access_token || null;
-    }
-    
-    return session.access_token;
-  } catch (e) {
-    console.error('Error getting token:', e);
-    return null;
+  const stored = localStorage.getItem("auth_token");
+  if (stored && stored !== "null" && stored !== "undefined") {
+    return stored;
+  }
+  return null;
+}
+
+export function setAuthToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) {
+    localStorage.setItem("auth_token", token);
+  } else {
+    localStorage.removeItem("auth_token");
   }
 }
 
@@ -101,6 +73,7 @@ async function makeRequest<T>(
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include',
     });
 
     const data = await response.json();

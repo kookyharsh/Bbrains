@@ -1,8 +1,8 @@
 import { UserRole, Sex, TransactionType, TransactionStatus, LeaderboardCategory, LogCategory, ProductApproval } from '@prisma/client';
 // @ts-ignore
 import prisma from '../src/utils/prisma.js';
-// @ts-ignore
-import { createSupabaseUser, listSupabaseUsers, deleteSupabaseUser } from '../src/modules/auth/supabase-user.service.js';
+import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 declare const process: any;
 
@@ -92,20 +92,7 @@ async function main() {
     await safeDeleteMany(prisma.level,   'Level');
     await safeDeleteMany(prisma.address, 'Address');
 
-    // Clean Supabase Users
-    console.log("🧹 Cleaning Supabase auth users...");
-    try {
-      const users = await listSupabaseUsers({ perPage: 1000 });
-      if (users && users.length > 0) {
-        for (const u of users) {
-          await deleteSupabaseUser(u.id);
-        }
-      }
-    } catch (e: any) {
-      console.warn("⚠️ Could not clean up Supabase users. Ignoring if creating fails.", e);
-    }
-
-    console.log("✅ Database and Auth cleaned.");
+    console.log("✅ Database cleaned.");
 
     console.log("📍 Creating addresses...");
     const collegeAddresses = [];
@@ -173,13 +160,16 @@ async function main() {
     const teachers: any[] = [];
     const students: any[] = [];
 
-    async function createUserComplete(supabaseUserId: string, userData: any, detailsData: any, userType: 'admin' | 'teacher' | 'student') {
+    async function createUserComplete(userData: any, detailsData: any, userType: 'admin' | 'teacher' | 'student') {
+      const userId = crypto.randomUUID();
+      const hashedPassword = await bcrypt.hash(userData.password || "seed_password_123", 10);
+
       const user = await prisma.user.create({
         data: {
-          id: supabaseUserId,
+          id: userId,
           email: userData.email,
           username: userData.username,
-          password: userData.password ?? "seed_password_123",
+          password: hashedPassword,
           type: userData.type,
           collegeId: userData.collegeId,
           userDetails: {
@@ -208,7 +198,6 @@ async function main() {
         }
       });
 
-      // FIX: walletIdForUserId now correctly returns "wallet_<uuid>" for every user.
       await prisma.wallet.upsert({
         where: { userId: user.id },
         update: {
@@ -227,14 +216,11 @@ async function main() {
     console.log("  Creating 1 super admin...");
     {
       const email = "superadmin@bbrains.com";
-      const supabaseUser = await createSupabaseUser(email, "superadmin123", {
-        username: "super_admin"
-      });
       const superAdmin = await createUserComplete(
-        supabaseUser.id,
         {
           email,
           username: "super_admin",
+          password: "superadmin123",
           type: UserRole.superadmin,
           collegeId: colleges[0].id
         },
@@ -253,22 +239,18 @@ async function main() {
         data: { userId: superAdmin.id, roleId: superAdminRole.id }
       });
 
-      console.log(`    ✅ Super admin created with Supabase ID: ${superAdmin.id}`);
+      console.log(`    ✅ Super admin created: ${superAdmin.id}`);
     }
 
     console.log("  Creating 2 admins...");
     for (let i = 1; i <= 2; i++) {
       const email = `admin${i}@learnytics.com`;
-      const supabaseUser = await createSupabaseUser(email, "admin123", {
-        username: `admin_${i}`
-      });
-      const supabaseUserId = supabaseUser.id;
 
       const admin = await createUserComplete(
-        supabaseUserId,
         {
           email,
           username: `admin_${i}`,
+          password: "admin123",
           type: UserRole.admin,
           collegeId: colleges[0].id
         },
@@ -287,7 +269,7 @@ async function main() {
         data: { userId: admin.id, roleId: adminRole.id }
       });
 
-      console.log(`    ✅ Admin ${i} created with Supabase ID: ${admin.id}`);
+      console.log(`    ✅ Admin ${i} created: ${admin.id}`);
     }
 
     console.log("  Creating 5 teachers...");
@@ -336,16 +318,12 @@ async function main() {
     for (let i = 0; i < teacherProfiles.length; i++) {
       const teacherProfile = teacherProfiles[i];
       const email = `teacher${i + 1}@learnytics.com`;
-      const supabaseUser = await createSupabaseUser(email, "teacher123", {
-        username: teacherProfile.username
-      });
-      const supabaseUserId = supabaseUser.id;
 
       const teacher = await createUserComplete(
-        supabaseUserId,
         {
           email,
           username: teacherProfile.username,
+          password: "teacher123",
           type: UserRole.teacher,
           collegeId: teacherProfile.collegeId
         },
@@ -365,17 +343,13 @@ async function main() {
         data: { userId: teacher.id, roleId: teacherRole.id }
       });
 
-      console.log(`    ✅ Teacher ${i + 1} created with Supabase ID: ${teacher.id}`);
+      console.log(`    ✅ Teacher ${i + 1} created: ${teacher.id}`);
     }
 
     console.log("  Creating 10 students...");
     const studentNames = ["Harry", "Ron", "Hermione", "Draco", "Luna", "Neville", "Ginny", "Cedric", "Cho", "Viktor"];
     for (let i = 0; i < 10; i++) {
       const email = `student${i + 1}@learnytics.com`;
-      const supabaseUser = await createSupabaseUser(email, "student123", {
-        username: `student_${studentNames[i].toLowerCase()}`
-      });
-      const supabaseUserId = supabaseUser.id;
 
       const studentAddress = await prisma.address.create({
         data: {
@@ -388,10 +362,10 @@ async function main() {
       });
 
       const student = await createUserComplete(
-        supabaseUserId,
         {
           email,
           username: `student_${studentNames[i].toLowerCase()}`,
+          password: "student123",
           type: UserRole.student,
           collegeId: getRandomItem(colleges).id
         },
@@ -422,7 +396,7 @@ async function main() {
         });
       }
 
-      console.log(`    ✅ Student ${i + 1} created with Supabase ID: ${student.id}`);
+      console.log(`    ✅ Student ${i + 1} created: ${student.id}`);
     }
 
     console.log(`✅ All users created: ${superAdmins.length} super admins, ${admins.length} admins, ${teachers.length} teachers, ${students.length} students`);

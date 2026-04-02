@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/sidebar"
 import React from 'react'
 import { NotificationProvider } from "@/components/providers/notification-provider"
-
-import { getServerSupabase as createClient } from "@/services/supabase/server"
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getBaseUrl } from "@/services/api/client"
 
 type LayoutRoleEntry = {
     role?: {
@@ -19,105 +20,126 @@ type LayoutRoleEntry = {
 
 type LayoutUserDetails = {
     avatar?: string | null;
-    first_name?: string | null;
-    last_name?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
     bio?: string | null;
 }
 
-async function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+type LayoutUserXP = {
+    level?: number;
+    xp?: number;
+}
 
-    let formattedUser: {
-        id: string;
-        email?: string;
-        imageUrl?: string;
-        firstName?: string;
-        lastName?: string;
-        fullName?: string;
-        username?: string;
-        type?: string;
-        bio?: string;
-        level?: number;
-        xp?: number;
-        createdAt?: string;
-    } | null = null;
-    if (user) {
-        // Fetch user type and details from DB
-        const { data: dbUser } = await supabase
-            .from('user')
-            .select(`
-                type,
-                username,
-                created_at,
-                roles:user_roles (
-                    role:role_id (
-                        name
-                    )
-                ),
-                userDetails:user_details (
-                    avatar,
-                    first_name,
-                    last_name,
-                    bio
-                ),
-                xp (level, xp)
-            `)
-            .eq('user_id', user.id)
-            .single()
+type LayoutDBUser = {
+    type?: string | null;
+    username?: string | null;
+    createdAt?: string | null;
+    roles?: LayoutRoleEntry[] | null;
+    userDetails?: LayoutUserDetails | null;
+    xp?: LayoutUserXP | null;
+}
 
-        const userXpData = Array.isArray(dbUser?.xp) ? dbUser?.xp[0] : dbUser?.xp;
-        const userXp = userXpData || { level: 1, xp: 0 };
-        const roleEntries = Array.isArray(dbUser?.roles) ? (dbUser.roles as LayoutRoleEntry[]) : [];
-        const hasManagerRole = roleEntries.some((entry) => entry.role?.name?.toLowerCase().includes('manager'));
-        const hasBbrainsOfficialRole = roleEntries.some((entry) => entry.role?.name?.toLowerCase().includes('bbrains_official'));
+async function fetchUserFromAPI(token: string): Promise<LayoutDBUser | null> {
+    try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+        const response = await fetch(`${baseUrl}/user/me`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            cache: 'no-store',
+        })
 
-        let appRole = dbUser?.type || 'student';
-        if (hasBbrainsOfficialRole || dbUser?.type === 'admin') {
-            appRole = 'bbrains_official'; // Priority 1: bb_official / admin can manage
-        } else if (hasManagerRole) {
-            appRole = 'manager';
+        if (!response.ok) return null
+
+        const result = await response.json()
+        if (result.success && result.data) {
+            return result.data
         }
-        
-        // Get details from user_details table if they exist
-        const rawDetails = dbUser?.userDetails;
-        const details = (Array.isArray(rawDetails) ? rawDetails[0] : rawDetails) as LayoutUserDetails | null | undefined;
-        
-        formattedUser = {
-            id: user.id,
-            email: user.email,
-            imageUrl: details?.avatar || "",
-            firstName: details?.first_name || "",
-            lastName: details?.last_name || "",
-            bio: details?.bio || "",
-            fullName: details?.first_name ? `${details.first_name} ${details.last_name || ""}` : (dbUser?.username || user.email?.split('@')[0] || ""),
-            username: dbUser?.username || user.email?.split('@')[0] || "",
-            type: appRole,
-            level: userXp.level,
-            xp: userXp.xp,
-            createdAt: dbUser?.created_at,
-        };
+        return null
+    } catch {
+        return null
     }
+}
+
+async function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const cookieStore = await cookies()
+    const token = cookieStore.get('token')?.value
+
+    if (!token) {
+        redirect("/auth/login")
+    }
+
+    const dbUser = await fetchUserFromAPI(token)
+
+    if (!dbUser) {
+        redirect("/auth/login")
+    }
+
+    const userXp = dbUser.xp || { level: 1, xp: 0 };
+    const roleEntries = Array.isArray(dbUser?.roles) ? (dbUser.roles as LayoutRoleEntry[]) : [];
+    const roleNames = roleEntries
+        .map((entry) => entry.role?.name?.trim().toLowerCase())
+        .filter((value): value is string => Boolean(value));
+    const dbType = dbUser?.type?.trim().toLowerCase();
+
+    let appRole = dbType || 'student';
+    if (roleNames.some((name) => name.includes('bbrains_official'))) {
+        appRole = 'bbrains_official';
+    } else if (roleNames.some((name) => name.includes('manager'))) {
+        appRole = 'manager';
+    } else if (roleNames.some((name) => name.includes('superadmin'))) {
+        appRole = 'superadmin';
+    } else if (roleNames.some((name) => name.includes('admin')) || dbType === 'admin') {
+        appRole = 'admin';
+    } else if (roleNames.some((name) => name.includes('teacher')) || dbType === 'teacher') {
+        appRole = 'teacher';
+    }
+    
+    const allRoles: string[] = []
+    
+    if (dbType && dbType !== 'student') {
+        allRoles.push(dbType)
+    }
+    
+    for (const name of roleNames) {
+        if (!allRoles.includes(name)) {
+            allRoles.push(name)
+        }
+    }
+    
+    if (allRoles.length === 0) {
+        allRoles.push('student')
+    }
+    
+    const details = dbUser?.userDetails;
+    
+    const formattedUser = {
+        id: dbUser.id || '',
+        imageUrl: details?.avatar || "",
+        firstName: details?.firstName || "",
+        lastName: details?.lastName || "",
+        bio: details?.bio || "",
+        fullName: details?.firstName ? `${details.firstName} ${details.lastName || ""}` : (dbUser?.username || ""),
+        username: dbUser?.username || "",
+        type: dbType || "student",
+        appRole,
+        roles: allRoles,
+        level: userXp.level,
+        xp: userXp.xp,
+        createdAt: dbUser?.createdAt,
+    };
 
     return (
         <SidebarProvider defaultOpen={true}>
             <NotificationProvider>
                 <div className="flex h-screen w-full overflow-hidden bg-background">
-                    {/* Sidebar on the left - height: 100vh */}
                     <AppSidebar user={formattedUser} />
 
-                    {/* Main Content Area on the right */}
                     <SidebarInset className="md:ml-2 flex flex-col h-full overflow-hidden min-w-0 w-full">
-                        {/* Navbar starts after the sidebar and spans the remaining width */}
                         <MainNavbar user={formattedUser} />
 
-                        {/* 
-                            Fix 7: Layout Scroll Conflict
-                            We remove overflow-y-auto from this container and use flex-1 min-h-0.
-                            This ensures that children like Chat (which use h-full) are strictly constrained.
-                            Pages that need to scroll will now have their own scroll containers.
-                        */}
-                        <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-16 md:pb-0">
+                        <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-bottom-nav md:pb-0">
                              {children}
                         </main>
                         <MobileBottomNav user={formattedUser} />

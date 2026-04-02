@@ -1,5 +1,4 @@
 import prisma from "../../utils/prisma.js";
-import { deleteSupabaseUser } from "../auth/supabase-user.service.js";
 
 const DAILY_REWARD_XP = [50, 50, 75, 75, 100, 100, 200];
 const STREAK_RESET_HOURS = 48;
@@ -13,13 +12,6 @@ const updateUser = async (id, data) => {
 };
 
 const deleteUser = async (id) => {
-    try {
-        await deleteSupabaseUser(id);
-    } catch (error) {
-        console.error('Failed to delete Supabase user:', error);
-        throw error;
-    }
-
     return await prisma.user.delete({
         where: { id: id }
     });

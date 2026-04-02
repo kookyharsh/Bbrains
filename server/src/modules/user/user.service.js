@@ -1,10 +1,8 @@
 import prisma from "../../utils/prisma.js";
 import jwt from 'jsonwebtoken';
-import {
-    createSupabaseUser,
-    deleteSupabaseUser,
-} from '../auth/supabase-user.service.js';
 import { getRandomAvatar } from "../../utils/randomavatar.js";
+import crypto from "crypto";
+import bcrypt from "bcrypt";
 
 const findUserByEmail = async (email) => {
     return await prisma.user.findUnique({
@@ -357,20 +355,19 @@ const createManagedUser = async (data) => {
         assignRoleNames = [],
     } = data;
 
-    const supabaseUser = await createSupabaseUser(email, password, {
-        username,
-        type,
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = crypto.randomUUID();
 
     try {
         await prisma.$transaction(async (tx) => {
             await tx.user.create({
                 data: {
-                    id: supabaseUser.id,
+                    id: userId,
                     username,
                     email,
                     collegeId,
                     type,
+                    password: hashedPassword,
                     userDetails: {
                         create: {
                             avatar: getRandomAvatar(),
@@ -398,21 +395,21 @@ const createManagedUser = async (data) => {
             });
 
             await tx.xp.upsert({
-                where: { userId: supabaseUser.id },
+                where: { userId: userId },
                 update: {},
                 create: {
-                    userId: supabaseUser.id,
+                    userId: userId,
                     xp: 0,
                     level: 1,
                 }
             });
 
             await tx.wallet.upsert({
-                where: { userId: supabaseUser.id },
+                where: { userId: userId },
                 update: {},
                 create: {
-                    id: `wallet_${supabaseUser.id}`,
-                    userId: supabaseUser.id,
+                    id: `wallet_${userId}`,
+                    userId: userId,
                     balance: 500,
                     pin: "000000",
                 }
@@ -428,12 +425,12 @@ const createManagedUser = async (data) => {
                 await tx.userRoles.upsert({
                     where: {
                         userId_roleId: {
-                            userId: supabaseUser.id,
+                            userId: userId,
                             roleId: role.id,
                         }
                     },
                     create: {
-                        userId: supabaseUser.id,
+                        userId: userId,
                         roleId: role.id,
                     },
                     update: {},
@@ -452,7 +449,7 @@ const createManagedUser = async (data) => {
 
                 await tx.enrollment.create({
                     data: {
-                        userId: supabaseUser.id,
+                        userId: userId,
                         courseId: course.id,
                     }
                 });
@@ -471,26 +468,21 @@ const createManagedUser = async (data) => {
                     throw new Error('Selected class teacher assignment was not found');
                 }
 
-                if (course.classTeacherId && course.classTeacherId !== supabaseUser.id) {
+                if (course.classTeacherId && course.classTeacherId !== userId) {
                     throw new Error('This class already has a class teacher assigned');
                 }
 
                 await tx.course.update({
                     where: { id: course.id },
                     data: {
-                        classTeacherId: supabaseUser.id,
+                        classTeacherId: userId,
                     }
                 });
             }
         });
 
-        return await getUserSummaryByID(supabaseUser.id);
+        return await getUserSummaryByID(userId);
     } catch (error) {
-        try {
-            await deleteSupabaseUser(supabaseUser.id);
-        } catch (cleanupError) {
-            console.error('Failed to rollback Supabase user creation:', cleanupError);
-        }
         throw error;
     }
 };
@@ -521,8 +513,6 @@ const createManager = async (data) => {
 
 const deleteUser = async (userId) => {
     try {
-        await deleteSupabaseUser(userId);
-        
         const user = await prisma.user.delete({
             where: { id: userId }
         });

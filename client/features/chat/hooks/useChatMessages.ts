@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/services/supabase/client'
-import { chatApi, type ChatAttachment, type ChatMessageRecord } from '@/services/api/client'
+import { chatApi, dashboardApi, type ChatAttachment, type ChatMessageRecord } from '@/services/api/client'
 import type { Message } from '@/features/chat/data'
 
 export type ChatMessageDisplay = Message;
@@ -59,6 +59,21 @@ const formatMessage = (msg: ChatMessageRecord | ChatRealtimeMessage): ChatMessag
     }
 }
 
+const upsertMessage = (
+    prev: ChatMessageDisplay[],
+    nextMessage: ChatMessageDisplay
+): ChatMessageDisplay[] => {
+    const existingIndex = prev.findIndex((m) => m.id === nextMessage.id)
+    const merged =
+        existingIndex >= 0
+            ? prev.map((m) => (m.id === nextMessage.id ? nextMessage : m))
+            : [...prev, nextMessage]
+
+    return merged.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+}
+
 export function useChatMessages() {
     const [messages, setMessages] = useState<ChatMessageDisplay[]>([])
     const [loading, setLoading] = useState(true)
@@ -70,14 +85,16 @@ export function useChatMessages() {
     const fetchMessages = useCallback(async () => {
         try {
             setLoading(true)
-            const { data: user } = await supabase.auth.getUser()
-            if (user?.user) {
-                setCurrentUserId(user.user.id)
+            const userResp = await dashboardApi.getUser()
+            if (userResp.success && userResp.data) {
+                setCurrentUserId(userResp.data.id)
             }
 
             const response = await chatApi.getMessages(undefined, 50)
             if (response.success && response.data) {
-                const formatted = response.data.map(formatMessage)
+                const formatted = response.data
+                    .map(formatMessage)
+                    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
                 setMessages(formatted)
                 setHasMore(formatted.length === 50)
             }
@@ -99,7 +116,13 @@ export function useChatMessages() {
             if (response.success && response.data) {
                 const formatted = response.data.map(formatMessage);
                 if (formatted.length > 0) {
-                    setMessages(prev => [...formatted, ...prev]);
+                    setMessages(prev => {
+                        let next = [...prev];
+                        for (const message of formatted) {
+                            next = upsertMessage(next, message);
+                        }
+                        return next;
+                    });
                 }
                 setHasMore(formatted.length === 50);
             }
@@ -113,10 +136,12 @@ export function useChatMessages() {
     const sendMessage = async (content: string, attachments: any[] = [], mentions: string[] = [], replyToId?: string) => {
         try {
             const response = await chatApi.sendMessage(content, attachments, mentions, replyToId)
-            if (response.success && response.data) {
-                // Optimistic update or wait for real-time?
-                // For now, let's let real-time handle it or manual fetch if needed
+            if (!response.success || !response.data) {
+                throw new Error(response.message || response.error || 'Failed to send message')
             }
+
+            const newMessage = formatMessage(response.data)
+            setMessages((prev) => upsertMessage(prev, newMessage))
             return response
         } catch (error) {
             console.error('Failed to send message:', error)
@@ -142,7 +167,7 @@ export function useChatMessages() {
             const response = await chatApi.editMessage(messageId, content, mentions)
             if (response.success && response.data) {
                 const updated = formatMessage(response.data)
-                setMessages(prev => prev.map(m => m.id === messageId ? updated : m))
+                setMessages((prev) => upsertMessage(prev, updated))
             }
             return response
         } catch (error) {
@@ -165,9 +190,11 @@ export function useChatMessages() {
                 },
                 (payload: { eventType: "INSERT" | "UPDATE" | "DELETE"; new: ChatRealtimeMessage; old: { id: string } }) => {
                     if (payload.eventType === 'INSERT') {
-                        setMessages(prev => [...prev, formatMessage(payload.new)])
+                        const inserted = formatMessage(payload.new)
+                        setMessages((prev) => upsertMessage(prev, inserted))
                     } else if (payload.eventType === 'UPDATE') {
-                        setMessages(prev => prev.map(m => m.id === payload.new.id ? formatMessage(payload.new) : m))
+                        const updated = formatMessage(payload.new)
+                        setMessages((prev) => upsertMessage(prev, updated))
                     } else if (payload.eventType === 'DELETE') {
                         setMessages(prev => prev.filter(m => m.id !== payload.old.id))
                     }

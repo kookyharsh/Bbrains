@@ -7,7 +7,14 @@ import {
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
-export type Role = "student" | "teacher" | "admin" | "staff" | "manager" | "bbrains_official";
+export type Role =
+    | "student"
+    | "teacher"
+    | "admin"
+    | "staff"
+    | "manager"
+    | "superadmin"
+    | "bbrains_official";
 
 export type SubItem = {
     title: string;
@@ -106,13 +113,39 @@ const extraItemsMap: Record<Role, { label: string; items: SidebarItem[] } | null
     admin:   { label: "Admin Panel",   items: adminExtraItems },
     staff: null,
     manager: { label: "Manager Panel", items: managerExtraItems },
+    superadmin: { label: "Admin Panel", items: adminExtraItems },
     bbrains_official: { label: "Bbrains Official", items: bbrainsOfficialExtraItems },
 };
 
-export function getSidebarGroups(role: Role): SidebarGroup[] {
+const allowedRoles: ReadonlySet<Role> = new Set<Role>([
+    "student",
+    "teacher",
+    "admin",
+    "staff",
+    "manager",
+    "superadmin",
+    "bbrains_official",
+]);
+
+export function resolveRole(rawRole?: string | string[] | null): Role | Role[] {
+    if (Array.isArray(rawRole)) {
+        const result = rawRole.map(r => resolveRole(r) as Role).filter(Boolean) as Role[];
+        return result.length > 0 ? result : ["student"];
+    }
+    
+    const normalized = rawRole?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+    if (!normalized) return "student";
+    if (allowedRoles.has(normalized as Role)) return normalized as Role;
+    return "student";
+}
+
+export function getSidebarGroups(role: Role | Role[]): SidebarGroup[] {
+    const roles = Array.isArray(role) ? role : [role];
+    const primaryRole = roles[0] || "student";
+
     const sharedItems = [...baseSidebarItems];
 
-    if (role === "student") {
+    if (primaryRole === "student") {
         const assignmentsIndex = sharedItems.findIndex((item) => item.url === "/assignments");
         sharedItems.splice(assignmentsIndex + 1, 0, { title: "Results", url: "/results", icon: Trophy });
     }
@@ -121,9 +154,14 @@ export function getSidebarGroups(role: Role): SidebarGroup[] {
         { items: sharedItems },
     ];
 
-    const extra = extraItemsMap[role];
-    if (extra) {
-        groups.push({ groupLabel: extra.label, items: extra.items });
+    for (const r of roles) {
+        const extra = extraItemsMap[r];
+        if (extra) {
+            const existingLabel = groups.find(g => g.groupLabel === extra.label);
+            if (!existingLabel) {
+                groups.push({ groupLabel: extra.label, items: extra.items });
+            }
+        }
     }
 
     return groups;

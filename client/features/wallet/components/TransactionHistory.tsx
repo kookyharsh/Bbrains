@@ -35,7 +35,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
   };
 
   const filteredTxns = transactions.filter((t) => {
-    const desc = t.description || "";
+    const desc = t.note || "";
     const amt = t.amount?.toString() || "";
     if (txnSearch && !desc.toLowerCase().includes(txnSearch.toLowerCase()) && !amt.includes(txnSearch)) return false;
     return true;
@@ -93,8 +93,8 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground text-sm">{txn.description || "No description"}</p>
-                    <p className="text-xs text-muted-foreground">{txn.createdAt ? formatTxnDate(txn.createdAt) : "Unknown date"}</p>
+                    <p className="font-medium text-foreground text-sm">{txn.note || "No description"}</p>
+                    <p className="text-xs text-muted-foreground">{txn.transactionDate ? formatTxnDate(txn.transactionDate) : "Unknown date"}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="flex items-center gap-1">
@@ -135,7 +135,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
             </div>
             <div>
               <h3 className="text-lg font-bold text-foreground capitalize">Transaction Details</h3>
-              <p className="text-sm text-muted-foreground">{showTxnReceipt?.createdAt ? formatTxnDate(showTxnReceipt.createdAt) : ''}</p>
+                <p className="text-sm text-muted-foreground">{showTxnReceipt?.transactionDate ? formatTxnDate(showTxnReceipt.transactionDate) : ''}</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm text-left">
               <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-bold text-foreground">{showTxnReceipt?.amount ?? 0} B-Coins</span></div>

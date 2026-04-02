@@ -10,7 +10,8 @@ import Link from "next/link";
 import { Settings, BarChart3 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getSidebarGroups, Role } from "./sidebarData"
+import { getSidebarGroups, resolveRole } from "./sidebarData"
+import type { Role } from "./sidebarData"
 import { UserProfileCard, UserStatus, statusColors, statusLabels } from "../user-profile-card"
 import { useNotifications } from "../providers/notification-provider"
 
@@ -24,6 +25,8 @@ interface AppSidebarProps {
         fullName?: string;
         username?: string;
         type?: string;
+        appRole?: string;
+        roles?: string[];
         bio?: string;
         level?: number;
         xp?: number;
@@ -40,8 +43,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
     const [showProfileCard, setShowProfileCard] = useState(false)
     const [userStatus, setUserStatus] = useState<UserStatus>("online")
 
-    const role = (user?.type?.toLowerCase() ?? "student") as Role
-    const groups = getSidebarGroups(role)
+    const userRoles = user?.roles || [user?.type || "student"]
+    const resolvedRoles = resolveRole(userRoles) as Role[]
+    const groups = getSidebarGroups(resolvedRoles)
 
     return (
         <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -62,7 +66,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 {groups.map((group, groupIndex) => (
                     <SidebarGroup key={groupIndex}>
                         <SidebarGroupLabel className="px-4 text-[10px] font-bold text-sidebar-foreground/60 uppercase tracking-[0.1em] mb-4 group-data-[collapsible=icon]:hidden">
-                            {/* First group always says "Main Menu"; role panels use their label */}
                             {group.groupLabel ?? "Main Menu"}
                         </SidebarGroupLabel>
                         <SidebarGroupContent>

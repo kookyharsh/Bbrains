@@ -1,47 +1,54 @@
 import { redirect } from "next/navigation";
-import { dashboardApi, type DashboardData } from "@/services/api/client";
-import { getServerSupabase as createClient } from "@/services/supabase/server";
+import { dashboardApi, type DashboardData, getAuthToken } from "@/services/api/client";
+import { cookies } from "next/headers";
 import { LeaderboardLikeEntry, RoleRow } from "./types";
 import { transformLeaderboard } from "./utils";
 
 export async function getDashboardOverviewData() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
 
-  if (!user) {
+  if (!token) {
     redirect("/auth/login");
   }
 
-  const [{ data: dbUser }, { data: roleRows }] = await Promise.all([
-    supabase
-      .from("user")
-      .select("type")
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("user_roles")
-      .select("role:role_id(name)")
-      .eq("user_id", user.id),
-  ]);
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  const roleNames = ((roleRows || []) as RoleRow[]).flatMap((row) => {
-    if (Array.isArray(row?.role)) {
-      return row.role.map((role) => role?.name).filter(Boolean) as string[];
+  let dbUserType: string | null = null;
+  let roleNames: string[] = [];
+
+  try {
+    const userResponse = await fetch(`${baseUrl}/user/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      if (userData.success && userData.data) {
+        dbUserType = userData.data.type;
+        roleNames = (userData.data.roles || []).flatMap((row: RoleRow) => {
+          if (Array.isArray(row?.role)) {
+            return row.role.map((role) => role?.name).filter(Boolean) as string[];
+          }
+          return row?.role?.name ? [row.role.name] : [];
+        });
+      }
     }
-
-    return row?.role?.name ? [row.role.name] : [];
-  });
+  } catch {
+  }
 
   const isManager = roleNames.some((name: string) =>
     name.toLowerCase().includes("manager")
   );
 
-  if (dbUser?.type === "superadmin") {
+  if (dbUserType === "superadmin") {
     redirect("/superadmin/overview");
   }
-  if (dbUser?.type === "admin") {
+  if (dbUserType === "admin") {
     redirect("/admin/overview");
   }
 
@@ -49,7 +56,7 @@ export async function getDashboardOverviewData() {
     redirect("/manager/overview");
   }
 
-  if (dbUser?.type === "teacher") {
+  if (dbUserType === "teacher") {
     redirect("/teacher/overview");
   }
 
