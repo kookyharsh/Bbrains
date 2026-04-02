@@ -129,8 +129,8 @@ export default function LibraryPage() {
     const config = item.themeConfig;
     if (!config) return null;
     return {
-      primary: (config.primaryColor as string) || "oklch(var(--primary))",
-      secondary: (config.secondaryColor as string) || "oklch(var(--secondary))",
+      primary: (config.primaryColor as string) || "#8b5cf6",
+      secondary: (config.secondaryColor as string) || "#ec4899",
       dark: config.darkMode ? true : false,
     };
   };
@@ -311,8 +311,8 @@ export default function LibraryPage() {
                   style={{
                     background: (() => {
                       const config = selectedItem.themeConfig;
-                      const primary = (config.primaryColor as string) || "oklch(var(--primary))";
-                      const secondary = (config.secondaryColor as string) || "oklch(var(--secondary))";
+                      const primary = (config.primaryColor as string) || "#8b5cf6";
+                      const secondary = (config.secondaryColor as string) || "#ec4899";
                       return `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
                     })()
                   }}

@@ -30,7 +30,7 @@ export type SidebarGroup = {
 // ─── Shared by all roles ───────────────────────────────────────────────────
 const baseSidebarItems: SidebarItem[] = [
     { title: "Dashboard", url: "/dashboard", icon: Home },
-    {title:"Announcements",url:"/announcements",icon:Megaphone},
+    {title:"announcements",url:"/announcements",icon:Megaphone},
     { title: "Assignments", url: "/assignments", icon: Book },
     { title: "Chat", url: "/chat", icon: MessageSquare },
     {

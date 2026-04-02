@@ -95,8 +95,8 @@ export default function ThemesPage() {
     const config = metadata?.themeConfig;
     if (!config) return null;
     return {
-      primary: config.primaryColor as string || "oklch(var(--primary))",
-      secondary: config.secondaryColor as string || "oklch(var(--secondary))",
+      primary: config.primaryColor as string || "#8b5cf6",
+      secondary: config.secondaryColor as string || "#ec4899",
       dark: config.darkMode ? true : false,
     };
   };
@@ -149,14 +149,14 @@ export default function ThemesPage() {
                     style={{
                       background: previewColors 
                         ? `linear-gradient(135deg, ${previewColors.primary} 0%, ${previewColors.secondary} 100%)`
-                        : "linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--secondary)) 100%)"
+                        : "linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)"
                     }}
                     onClick={() => {
                       setSelectedTheme(theme);
                       setShowPreview(true);
                     }}
                   >
-                    <div className="absolute inset-0 bg-accent/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                       <Eye className="w-8 h-8 text-white" />
                     </div>
                     {previewColors?.dark && (
@@ -242,8 +242,8 @@ export default function ThemesPage() {
                 style={{
                   background: (() => {
                     const config = selectedTheme.metadata?.themeConfig;
-                    const primary = config?.primaryColor as string || "oklch(var(--primary))";
-                    const secondary = config?.secondaryColor as string || "oklch(var(--secondary))";
+                    const primary = config?.primaryColor as string || "#8b5cf6";
+                    const secondary = config?.secondaryColor as string || "#ec4899";
                     return `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
                   })()
                 }}

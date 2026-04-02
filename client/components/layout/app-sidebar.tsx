@@ -87,7 +87,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                                         <div className="relative">
                                                             <item.icon className={`${isCollapsed ? "h-[22px] w-[22px]" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
                                                             {isChat && unreadCount > 0 && isCollapsed && (
-                                                                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-background" />
+                                                                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
                                                             )}
                                                         </div>
                                                         <span className="text-[13px] group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
@@ -112,8 +112,8 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                                                             href={subItem.url}
                                                                             className={`flex items-center gap-3 py-2 transition-colors text-[12px]
                                                                                 ${isSubActive
-                                                                                    ? "text-foreground font-medium"
-                                                                                    : "text-muted-foreground hover:text-foreground"
+                                                                                    ? "text-ui-light-textPrimary dark:text-ui-dark-textPrimary font-medium"
+                                                                                    : "text-ui-light-textSecondary hover:text-ui-light-textPrimary dark:text-ui-dark-textSecondary dark:hover:text-white"
                                                                                 }`}
                                                                         >
                                                                             <span>{subItem.title}</span>
@@ -155,13 +155,13 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                 className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} w-full ${isCollapsed ? "" : "hover:bg-sidebar-accent/10 rounded-xl p-2 -mx-2"} transition-colors`}
                             >
                                 <div className="relative">
-                                    <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-border shrink-0 transition-all duration-200`}>
+                                    <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
                                         <AvatarImage src={user?.imageUrl} />
                                         <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-xs uppercase">
                                             {user?.firstName?.[0]}{user?.lastName?.[0]}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div className={`absolute -bottom-0.5 -right-0.5 ${statusColors[userStatus]} w-3 h-3 rounded-full border-2 border-background`} />
+                                    <div className={`absolute -bottom-0.5 -right-0.5 ${statusColors[userStatus]} w-3 h-3 rounded-full border-2 border-white dark:border-gray-800`} />
                                 </div>
                                 {!isCollapsed && (
                                     <div className="flex-1 min-w-0 text-left">
