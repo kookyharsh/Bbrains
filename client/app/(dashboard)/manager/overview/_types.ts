@@ -41,7 +41,7 @@ export interface ManagerOverviewProfile {
     bio: string
     walletBalance: number
     ownIncomeReceived: number | null
-    ownIncomeSource: "tagged-transactions" | "credit-transactions" | "unavailable"
+    ownIncomeSource: "tagged-transactions" | "unavailable"
     roles: string[]
 }
 

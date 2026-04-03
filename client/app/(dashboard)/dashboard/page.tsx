@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { DailyRewardCard } from "@/features/dashboard/components/DailyRewardCard";
 import { WalletMiniCard } from "@/features/dashboard/components/WalletMiniCard";
 import { AttendanceCard } from "@/features/dashboard/components/AttendanceCard";
@@ -41,7 +42,9 @@ export default async function DashboardOverview() {
         />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
-        <FeeStatusCard feeSummary={dashboardData?.feeSummary} />
+        <Link href="/transactions?view=fees" className="block h-full">
+          <FeeStatusCard feeSummary={dashboardData?.feeSummary} />
+        </Link>
         <AttendanceCard initialAttendance={dashboardData?.attendance} />
       </div>
 

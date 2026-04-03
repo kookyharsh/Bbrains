@@ -40,6 +40,7 @@ const baseSidebarItems: SidebarItem[] = [
     {title:"announcements",url:"/announcements",icon:Megaphone},
     { title: "Assignments", url: "/assignments", icon: Book },
     { title: "Chat", url: "/chat", icon: MessageSquare },
+    { title: "My Transactions", url: "/transactions", icon: ArrowUpDown },
     {
         title: "Wallet",
         url: "/wallet",
@@ -104,6 +105,7 @@ const managerExtraItems: SidebarItem[] = [
     { title: "Classes",       url: "/manager/classes",       icon: BookOpen },
     { title: "Teachers",      url: "/manager/teachers",      icon: UserCheck },
     { title: "Students",      url: "/manager/students",      icon: Users },
+    { title: "Transactions",  url: "/manager/transactions",  icon: ArrowUpDown },
 ];
 
 // ─── Role → grouped sidebar ────────────────────────────────────────────────

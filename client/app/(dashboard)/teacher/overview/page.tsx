@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { DashboardContent } from "@/components/dashboard-content";
 import { AttendanceCard } from "@/features/dashboard/components/AttendanceCard";
@@ -170,7 +171,7 @@ export default function OverviewPage() {
           client.get<{ success: boolean; data: TeacherDashboardUser }>("/user/me"),
           client.get<{ success: boolean; data: TeacherCourse[] }>("/courses?limit=100"),
           client.get<{ success: boolean; data: Announcement[] }>("/announcements"),
-          client.get<{ success: boolean; data: Transaction[] }>("/transactions/me?limit=100&type=credit&status=success"),
+          client.get<{ success: boolean; data: Transaction[] }>("/transactions/me?limit=100&category=salary&type=credit&status=success"),
           client.get<{ success: boolean; data: AttendanceRecord[] }>("/attendance"),
         ]);
 
@@ -416,12 +417,14 @@ export default function OverviewPage() {
           icon={<CalendarDays className="size-5" />}
           sub={todayName}
         />
-        <StatCard
-          label="Income Received"
-          value={formatCurrency(incomeReceived)}
-          icon={<BadgeIndianRupee className="size-5" />}
-          sub="Successful wallet credits"
-        />
+        <Link href="/transactions?view=salary" className="block">
+          <StatCard
+            label="Salary Received"
+            value={formatCurrency(incomeReceived)}
+            icon={<BadgeIndianRupee className="size-5" />}
+            sub="Successful salary credits"
+          />
+        </Link>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[1.25fr_0.9fr]">
