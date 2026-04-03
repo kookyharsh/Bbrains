@@ -157,6 +157,7 @@ model Submission {
   assignmentId Int        @map("assignment_id")
   userId       String     @map("user_id")
   filePath     String     @map("file_path") @db.VarChar(255)
+  content      String?    @db.Text
   submittedAt  DateTime   @default(now()) @map("submitted_at")
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
   user         User       @relation(fields: [userId], references: [id])

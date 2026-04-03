@@ -33,6 +33,7 @@ const getAssignments = async (courseId) => {
 const submitAssignment = async (userId, data) => {
     const assignmentId = parseInt(String(data.assignmentId), 10);
     const filePath = data.fileUrl || data.filePath || '';
+    const content = data.content || null;
 
     const existing = await prisma.submission.findFirst({
         where: { assignmentId, userId }
@@ -43,6 +44,7 @@ const submitAssignment = async (userId, data) => {
             where: { id: existing.id },
             data: {
                 filePath,
+                content,
                 submittedAt: new Date()
             }
         });
@@ -52,7 +54,8 @@ const submitAssignment = async (userId, data) => {
         data: {
             userId,
             assignmentId,
-            filePath
+            filePath,
+            content
         }
     });
 };
@@ -61,6 +64,13 @@ const getSubmissions = async (assignmentId) => {
     return await prisma.submission.findMany({
         where: { assignmentId: parseInt(assignmentId) },
         include: { user: { select: { username: true, email: true } } }
+    });
+};
+
+const getMySubmissions = async (userId) => {
+    return await prisma.submission.findMany({
+        where: { userId },
+        include: { assignment: { select: { id: true, title: true, courseId: true, course: { select: { name: true } } } } }
     });
 };
 
@@ -108,6 +118,7 @@ export {
     getAssignments,
     submitAssignment,
     getSubmissions,
+    getMySubmissions,
     createAnnouncement,
     getAnnouncements,
     deleteAnnouncement
