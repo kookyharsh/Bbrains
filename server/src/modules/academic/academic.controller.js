@@ -1,5 +1,5 @@
 import {
-    createAssignment, getAssignments, submitAssignment,
+    createAssignment, getAssignments, submitAssignment, getMySubmissions,
     getSubmissions, createAnnouncement, getAnnouncements,
     deleteAnnouncement
 } from "./academic.service.js";
@@ -112,6 +112,16 @@ export const submitAssignmentHandler = async (req, res) => {
     } catch (error) {
         if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
         return sendError(res, 'Failed to submit', 500);
+    }
+};
+
+// GET /academic/submissions/me
+export const getMySubmissionsHandler = async (req, res) => {
+    try {
+        const submissions = await getMySubmissions(req.user.id);
+        return sendSuccess(res, submissions);
+    } catch (error) {
+        return sendError(res, 'Failed to fetch submissions', 500);
     }
 };
 

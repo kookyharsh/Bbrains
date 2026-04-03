@@ -528,6 +528,18 @@ export interface Assignment {
     name: string;
   };
   status?: string;
+  submission?: {
+    id: number;
+    filePath: string;
+    content?: string;
+    submittedAt: string;
+  };
+  grade?: {
+    id: number;
+    grade: string;
+    gradedAt: string;
+    gradedBy: string;
+  };
 }
 
 export const dashboardApi = {
@@ -575,6 +587,12 @@ export const assignmentApi = {
   getAssignments: async (courseId?: number): Promise<ApiResponse<Assignment[]>> => {
     const url = courseId ? `/academic/assignments?courseId=${courseId}` : '/academic/assignments';
     return api.get<Assignment[]>(url);
+  },
+  getAssignmentDetails: async (id: number): Promise<ApiResponse<Assignment>> => {
+    return api.get<Assignment>(`/academic/assignments/${id}`);
+  },
+  getMySubmissions: async (): Promise<ApiResponse<any[]>> => {
+    return api.get<any[]>('/academic/submissions/me');
   },
   submitAssignment: async (data: AssignmentSubmission): Promise<ApiResponse<any>> => {
     return api.post('/academic/submissions', data);
