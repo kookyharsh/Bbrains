@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { assignmentApi, dashboardApi, gradeApi, type Assignment } from "@/services/api/client"
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload"
-import { Calendar, CheckCircle2, Clock, Eye, FileText, Loader2, Search, Upload } from "lucide-react"
+import { Calendar, CheckCircle2, Clock, Download, Eye, FileText, Loader2, Search, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { TeacherAssignmentManager } from "@/features/assignments/components/TeacherAssignmentManager"
 import { ChatImagePreview } from "@/components/chat-image-preview"
@@ -184,7 +184,7 @@ export default function AssignmentsPage() {
     const loadingToast = toast.loading("Uploading your assignment...")
 
     try {
-      const fileUrl = await uploadFile(selectedFile)
+      const fileUrl = await uploadFile(selectedFile, { folder: 'assignments' })
       if (!fileUrl) {
         throw new Error("Upload failed")
       }
@@ -326,15 +326,16 @@ export default function AssignmentsPage() {
         <DialogContent className="rounded-[32px] sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{viewAssignment?.title}</DialogTitle>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge variant="secondary">{viewAssignment?.course?.name || "General"}</Badge>
+              {viewAssignment?.grade && (
+                <Badge variant="default" className="bg-green-600 text-white">
+                  Grade: {viewAssignment.grade.grade}
+                </Badge>
+              )}
+            </div>
             <DialogDescription>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                <Badge variant="secondary">{viewAssignment?.course?.name || "General"}</Badge>
-                {viewAssignment?.grade && (
-                  <Badge variant="default" className="bg-green-600 text-white">
-                    Grade: {viewAssignment.grade.grade}
-                  </Badge>
-                )}
-              </div>
+              {viewAssignment?.course?.name || "General"} {viewAssignment?.grade ? `• Grade: ${viewAssignment.grade.grade}` : ''}
             </DialogDescription>
           </DialogHeader>
 
@@ -363,15 +364,25 @@ export default function AssignmentsPage() {
                     }}
                   />
                 ) : (
-                  <a
-                    href={viewAssignment.file}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-brand-orange hover:underline flex items-center gap-1"
-                  >
-                    <FileText className="h-4 w-4" />
-                    View Attachment
-                  </a>
+                  <div className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="text-sm truncate">
+                        {viewAssignment.file.split("/").pop()?.split("?")[0] || "Assignment file"}
+                      </span>
+                    </div>
+                    <a
+                      href={viewAssignment.file}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0"
+                    >
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </a>
+                  </div>
                 )}
               </div>
             )}
@@ -385,16 +396,38 @@ export default function AssignmentsPage() {
                       {viewAssignment.submission.content}
                     </p>
                   )}
-                  {viewAssignment.submission.filePath &&
-                    isImageFile(viewAssignment.submission.filePath) && (
-                      <ChatImagePreview
-                        attachment={{
-                          url: viewAssignment.submission.filePath,
-                          type: getImageMimeType(viewAssignment.submission.filePath),
-                          name: "Submitted File",
-                        }}
-                      />
-                    )}
+                  {viewAssignment.submission.filePath && (
+                    <>
+                      {isImageFile(viewAssignment.submission.filePath) ? (
+                        <ChatImagePreview
+                          attachment={{
+                            url: viewAssignment.submission.filePath,
+                            type: getImageMimeType(viewAssignment.submission.filePath),
+                            name: "Submitted File",
+                          }}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-between p-2 rounded-md bg-background/50">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="text-sm truncate">
+                              {viewAssignment.submission.content || "Submitted file"}
+                            </span>
+                          </div>
+                          <a
+                            href={viewAssignment.submission.filePath}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0"
+                          >
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Submitted: {fmtDate(viewAssignment.submission.submittedAt)}
                   </p>

@@ -145,7 +145,7 @@ export default function ChatPage() {
         let failedUploads = 0;
         
         for (const att of pendingAttachments) {
-            const url = await uploadFile(att.file);
+            const url = await uploadFile(att.file, { folder: 'chat attachments' });
             if (url) {
                 uploadedAttachments.push({
                     url,
