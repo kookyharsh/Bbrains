@@ -1,5 +1,5 @@
 import { FinanceTransactionsWorkspace } from "@/features/transactions/components/FinanceTransactionsWorkspace"
 
-export default function AdminTransactionsPage() {
-  return <FinanceTransactionsWorkspace mode="admin" />
+export default function ManagerTransactionsPage() {
+  return <FinanceTransactionsWorkspace mode="manager" />
 }

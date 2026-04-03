@@ -178,6 +178,16 @@ export const getTeachers = async (req, res) => {
     }
 };
 
+// GET /users/staff
+export const getStaff = async (req, res) => {
+    try {
+        const result = await getUsersByRole('staff');
+        return sendSuccess(res, result);
+    } catch (error) {
+        return sendError(res, 'Failed to fetch staff', 500);
+    }
+};
+
 // GET /users/managers
 export const getManagers = async (req, res) => {
     try {

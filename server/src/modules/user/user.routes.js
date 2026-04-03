@@ -1,6 +1,6 @@
 import express from 'express';
 import {
-    getMe, getUserByUsername, getStudents, getTeachers,
+    getMe, getUserByUsername, getStudents, getTeachers, getStaff,
     getStudentByUsername, getTeacherByUsername,
     addTeacher, addStudent, addManager, getManagers, updateTeacher, updateStudent, deleteTeacher, searchUser
 } from './user_management.controller.js';
@@ -24,6 +24,7 @@ router.get('/:id/details', verifyToken, authorize('teacher', 'admin', 'manager')
 // Student endpoints
 router.get('/students', verifyToken, authorize('teacher', 'admin', 'staff', 'manager'), getStudents);
 router.get('/students/:username', verifyToken, authorize('teacher', 'admin', 'staff', 'manager'), getStudentByUsername);
+router.get('/staff', verifyToken, authorize('admin', 'manager'), getStaff);
 router.post('/students', verifyToken, authorize('admin', 'manager'), addStudent);
 router.put('/students/:id', verifyToken, authorize('admin', 'manager'), updateStudent);
 

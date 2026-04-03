@@ -230,13 +230,57 @@ export interface WalletData {
 export interface Transaction {
   id: string | number;
   userId: string;
+  recordedById?: string | null;
+  relatedUserId?: string | null;
+  entryGroupId?: string | null;
   amount: number | string;
-  type: string;
+  type: "credit" | "debit" | string;
+  category?: "salary" | "fee" | "transfer" | "other" | string;
   description: string;
   transactionDate: string;
   createdAt: string;
-  status: string;
+  status: "success" | "failed" | "pending" | string;
+  paymentMode?: string | null;
+  referenceId?: string | null;
+  primaryRecord?: boolean;
   note?: string;
+  user?: {
+    id: string;
+    username: string;
+    type: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  } | null;
+  relatedUser?: {
+    id: string;
+    username: string;
+    type: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  } | null;
+  recordedByUser?: {
+    id: string;
+    username: string;
+    type: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  } | null;
+}
+
+export interface ManualTransactionInput {
+  category: "salary" | "fee";
+  targetUserId: string;
+  amount: number;
+  paymentMode: "cash" | "cheque" | "upi" | "dd" | "bank_transfer" | "card" | "neft" | "rtgs" | "imps" | "other";
+  referenceId?: string;
+  note?: string;
+  paymentDate: string;
 }
 
 export interface AttendanceData {
@@ -532,7 +576,44 @@ export interface Assignment {
 
 export const dashboardApi = {
   getDashboard: async (): Promise<ApiResponse<DashboardData>> => {
-    return api.get<DashboardData>('/dashboard');
+    const token = await getAuthToken();
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/dashboard`, {
+        method: "GET",
+        headers,
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || "An error occurred",
+          error: data.error || data.message,
+        };
+      }
+
+      return {
+        ...data,
+        success: true,
+        data: (data.data !== undefined ? data.data : data) as DashboardData,
+        message: data.message,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Network error",
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   },
   getUser: async (): Promise<ApiResponse<User>> => {
     return api.get<User>('/user/me');
@@ -548,6 +629,15 @@ export const dashboardApi = {
 export const userApi = {
   getStudents: async (): Promise<ApiResponse<User[]>> => {
     return api.get<User[]>('/user/students');
+  },
+  getTeachers: async (): Promise<ApiResponse<User[]>> => {
+    return api.get<User[]>('/user/teachers');
+  },
+  getStaff: async (): Promise<ApiResponse<User[]>> => {
+    return api.get<User[]>('/user/staff');
+  },
+  getManagers: async (): Promise<ApiResponse<User[]>> => {
+    return api.get<User[]>('/user/managers');
   },
   updateProfile: async (id: string, data: { username?: string }): Promise<ApiResponse<User>> => {
     return api.put<User>(`/user/update/${id}`, data);
@@ -793,11 +883,41 @@ export const assessmentApi = {
 };
 
 export const transactionApi = {
-  getMyTransactions: async (): Promise<ApiResponse<Transaction[]>> => {
-    return api.get<Transaction[]>('/transactions/me');
+  getMyTransactions: async (params?: Record<string, string | number | undefined>): Promise<ApiResponse<Transaction[]>> => {
+    const query = params
+      ? '?' + new URLSearchParams(
+        Object.entries(params)
+          .filter(([, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, String(value)])
+      ).toString()
+      : '';
+    return api.get<Transaction[]>(`/transactions/me${query}`);
+  },
+  getRecordedTransactions: async (params?: Record<string, string | number | undefined>): Promise<ApiResponse<Transaction[]>> => {
+    const query = params
+      ? '?' + new URLSearchParams(
+        Object.entries(params)
+          .filter(([, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, String(value)])
+      ).toString()
+      : '';
+    return api.get<Transaction[]>(`/transactions/recorded${query}`);
   },
   getTransaction: async (id: string): Promise<ApiResponse<Transaction>> => {
     return api.get<Transaction>(`/transactions/${id}`);
+  },
+  getUserTransactions: async (userId: string, params?: Record<string, string | number | undefined>): Promise<ApiResponse<Transaction[]>> => {
+    const query = params
+      ? '?' + new URLSearchParams(
+        Object.entries(params)
+          .filter(([, value]) => value !== undefined && value !== "")
+          .map(([key, value]) => [key, String(value)])
+      ).toString()
+      : '';
+    return api.get<Transaction[]>(`/transactions/user/${userId}${query}`);
+  },
+  createManualTransaction: async (data: ManualTransactionInput): Promise<ApiResponse<Transaction>> => {
+    return api.post<Transaction>('/transactions/manual', data);
   },
 };
 

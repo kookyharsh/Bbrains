@@ -356,13 +356,23 @@ model OrderItem {
 model TransactionHistory {
   id              Int               @id @default(autoincrement())
   userId          String            @map("user_id")
+  recordedById    String?           @map("recorded_by_id")
+  relatedUserId   String?           @map("related_user_id")
+  entryGroupId    String?           @map("entry_group_id") @db.VarChar(64)
   transactionDate DateTime          @default(now()) @map("transaction_date")
   amount          Decimal           @db.Decimal(10, 2)
   type            TransactionType
+  category        String            @default("other") @db.VarChar(30)
   status          TransactionStatus @default(pending)
+  paymentMode     String?           @map("payment_mode") @db.VarChar(30)
+  referenceId     String?           @map("reference_id") @db.VarChar(100)
+  primaryRecord   Boolean           @default(true) @map("primary_record")
   note            String?           @db.VarChar(255)
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([recordedById, primaryRecord, transactionDate(sort: Desc)])
+  @@index([relatedUserId])
+  @@index([category, transactionDate(sort: Desc)])
   @@index([userId, transactionDate(sort: Desc)])
   @@map("transaction_history")
 }

@@ -99,11 +99,21 @@ export interface ApiAuditLog {
 export interface ApiTransaction {
     id: number
     userId: string
+    recordedById?: string | null
+    relatedUserId?: string | null
+    entryGroupId?: string | null
     transactionDate: string
     amount: number | string
     type: "credit" | "debit"
+    category?: "salary" | "fee" | "transfer" | "other" | string
     status: "success" | "failed" | "pending"
+    paymentMode?: string | null
+    referenceId?: string | null
+    primaryRecord?: boolean
     note?: string
+    user?: ApiUser | null
+    relatedUser?: ApiUser | null
+    recordedByUser?: ApiUser | null
 }
 
 export interface ApiCourse {

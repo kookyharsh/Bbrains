@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import prisma from '../utils/prisma.js';
 import { sendError } from '../utils/response.js';
+import { isDatabaseUnavailableError } from '../utils/prisma-errors.js';
 
 const verifyToken = async (req, res, next) => {
   try {
@@ -51,6 +52,10 @@ const verifyToken = async (req, res, next) => {
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       console.error('[AuthMiddleware] Token verification error:', err.message);
       return sendError(res, 'Invalid or expired authentication token', 401);
+    }
+    if (isDatabaseUnavailableError(err)) {
+      console.error('[AuthMiddleware] Database connectivity error:', err);
+      return sendError(res, 'Database temporarily unavailable. Please try again in a moment.', 503);
     }
     console.error('[AuthMiddleware] Unexpected server error:', err);
     return sendError(res, 'Internal server error during authentication', 500);
