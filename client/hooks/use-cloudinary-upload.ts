@@ -13,7 +13,7 @@ export function useCloudinaryUpload() {
   const [progress, setProgress] = useState(0)
   const [previews, setPreviews] = useState<AttachmentUpload[]>([])
 
-  const uploadFile = useCallback(async (file: File): Promise<string | null> => {
+  const uploadFile = useCallback(async (file: File, options?: { folder?: string; useFilename?: boolean }): Promise<string | null> => {
     if (!file) return null
     if (!CLOUD_NAME || !UPLOAD_PRESET) {
       console.warn('Cloudinary config not set')
@@ -25,7 +25,11 @@ export function useCloudinaryUpload() {
     const form = new FormData()
     form.append('file', file)
     form.append('upload_preset', UPLOAD_PRESET)
-    form.append('folder', 'chat attachment')
+    form.append('folder', options?.folder || 'chat attachment')
+    if (options?.useFilename) {
+      form.append('use_filename', 'true')
+      form.append('unique_filename', 'false')
+    }
     try {
       const xhr = new XMLHttpRequest()
       xhr.open('POST', url, true)
@@ -37,22 +41,35 @@ export function useCloudinaryUpload() {
       const promise = new Promise<string | null>((resolve) => {
         xhr.onload = () => {
           try {
+            console.log('Cloudinary response status:', xhr.status)
+            console.log('Cloudinary response text:', xhr.responseText)
             const data = JSON.parse(xhr.responseText)
+            if (xhr.status >= 400) {
+              console.error('Cloudinary upload error:', data.error)
+              setIsUploading(false)
+              setProgress(0)
+              resolve(null)
+              return
+            }
             const secureUrl = data?.secure_url ?? null
             if (secureUrl) {
               const att = { url: secureUrl, type: file.type, name: file.name }
               setPreviews((p) => [...p, att])
               resolve(secureUrl)
             } else {
+              console.error('No secure_url in Cloudinary response:', data)
               resolve(null)
             }
-          } catch {
+          } catch (e) {
+            console.error('Failed to parse Cloudinary response:', e)
+            console.error('Raw response:', xhr.responseText)
             resolve(null)
           }
           setIsUploading(false)
           setProgress(0)
         }
         xhr.onerror = () => {
+          console.error('Cloudinary XHR error')
           setIsUploading(false)
           resolve(null)
         }
