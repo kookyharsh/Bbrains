@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { DailyRewardCard } from "@/features/dashboard/components/DailyRewardCard";
 import { WalletMiniCard } from "@/features/dashboard/components/WalletMiniCard";
 import { AttendanceCard } from "@/features/dashboard/components/AttendanceCard";
@@ -10,12 +11,27 @@ import { DashboardContent } from "@/components/dashboard-content";
 import { LevelWidget } from "@/features/dashboard/components/LevelWidget";
 import { CurrentDate } from "@/features/dashboard/components/CurrentDate";
 import { FeeStatusCard } from "@/features/dashboard/components/FeeStatusCard";
+import { StudentDashboardNewView } from "@/features/dashboard/components/StudentDashboardNewView";
 import { getDashboardOverviewData } from "@/features/dashboard/data";
 
 export default async function DashboardOverview() {
+  const cookieStore = await cookies();
+  const uiMode = cookieStore.get("ui-mode")?.value === "new" ? "new" : "classic";
   const { dashboardData, transformedLeaderboard, username } = await getDashboardOverviewData();
   const resolvedLevel = dashboardData?.stats?.level ?? dashboardData?.user?.xp?.level ?? 1;
   const resolvedXp = dashboardData?.stats?.xp ?? dashboardData?.user?.xp?.xp ?? 0;
+
+  if (uiMode === "new") {
+    return (
+      <StudentDashboardNewView
+        dashboardData={dashboardData}
+        transformedLeaderboard={transformedLeaderboard}
+        username={username}
+        resolvedLevel={resolvedLevel}
+        resolvedXp={resolvedXp}
+      />
+    );
+  }
 
   return (
     <DashboardContent className="space-y-6">

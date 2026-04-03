@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter, Kalam, Patrick_Hand } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -48,24 +49,31 @@ export const viewport: Viewport = {
 };
 
 import { ThemeProvider } from "@/context/theme"
+import { UiModeProvider, type UiMode } from "@/context/ui-mode"
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister"
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const uiModeCookie = cookieStore.get("ui-mode")?.value;
+  const initialUiMode: UiMode = uiModeCookie === "new" ? "new" : "classic";
+
   return (
     <html lang="en" className={`${inter.variable} ${kalam.variable} ${patrickHand.variable}`} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <TooltipProvider>
-            {children}
-            <Toaster position="top-right" />
-          </TooltipProvider>
-        </ThemeProvider>
+        <UiModeProvider initialMode={initialUiMode}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <TooltipProvider>
+              {children}
+              <Toaster position="top-right" />
+            </TooltipProvider>
+          </ThemeProvider>
+        </UiModeProvider>
         <ServiceWorkerRegister />
       </body>
     </html>
