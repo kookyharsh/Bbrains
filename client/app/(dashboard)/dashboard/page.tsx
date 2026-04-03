@@ -32,7 +32,7 @@ export default async function DashboardOverview() {
       </div>
 
       {/* Top row cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <LevelWidget 
           level={resolvedLevel} 
           xp={resolvedXp} 
@@ -41,7 +41,7 @@ export default async function DashboardOverview() {
         />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
-        <FeeStatusCard feeSummary={dashboardData?.feeSummary} />
+        {/* <FeeStatusCard feeSummary={dashboardData?.feeSummary} /> */}
         <AttendanceCard initialAttendance={dashboardData?.attendance} />
       </div>
 

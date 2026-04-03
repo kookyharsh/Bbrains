@@ -64,8 +64,11 @@ export function LevelWidget({ level: initialLevel, xp: initialXp, nextLevelXp, c
 
   const hasNextLevel = resolvedNextLevelXp > resolvedCurrentLevelXp;
 
-  const xpNeeded = hasNextLevel ? Math.max(resolvedNextLevelXp - resolvedCurrentLevelXp, 0) : 0;
-  const xpInLevel = Math.max(safeXp - resolvedCurrentLevelXp, 0);
+  // Some responses can have xp lower than currentLevelXp (stale/mismatched level thresholds).
+  // In that case, treat progress start as 0 so the bar still reflects remaining XP.
+  const progressStartXp = safeXp >= resolvedCurrentLevelXp ? resolvedCurrentLevelXp : 0;
+  const xpNeeded = hasNextLevel ? Math.max(resolvedNextLevelXp - progressStartXp, 0) : 0;
+  const xpInLevel = Math.max(safeXp - progressStartXp, 0);
   const xpRemaining = hasNextLevel ? Math.max(resolvedNextLevelXp - safeXp, 0) : 0;
   const progress = hasNextLevel && xpNeeded > 0
     ? Math.min(100, Math.max(0, Math.round((xpInLevel / xpNeeded) * 100)))
