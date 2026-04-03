@@ -1,4 +1,4 @@
-import { getOrdersByUser, getOrderById, getAllOrders, updateOrderStatus } from './order.service.js';
+import { getOrdersByUser, getOrderById, getAllOrders, scanAndDeliver, updateOrderStatus } from './order.service.js';
 import { sendSuccess, sendPaginated, sendError } from '../../utils/response.js';
 import { createAuditLog } from '../../utils/auditLog.js';
 
@@ -20,12 +20,8 @@ export const getOrder = async (req, res) => {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid order ID', 400);
 
-        const order = await getOrderById(id);
+        const order = await getOrderById(id, req.user.type === 'admin' ? null : req.user.id);
         if (!order) return sendError(res, 'Order not found', 404);
-
-        if (order.userId !== req.user.id && req.user.type !== 'admin') {
-            return sendError(res, 'Not authorized', 403);
-        }
 
         return sendSuccess(res, order);
     } catch (error) {
@@ -33,7 +29,7 @@ export const getOrder = async (req, res) => {
     }
 };
 
-// GET /orders (admin)
+// GET /orders/all (admin)
 export const listAllOrders = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -47,14 +43,27 @@ export const listAllOrders = async (req, res) => {
     }
 };
 
-// PUT /orders/:id/status
+// POST /orders/:id/deliver (seller scans QR)
+export const deliverOrder = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) return sendError(res, 'Invalid order ID', 400);
+
+        const result = await scanAndDeliver(id, req.user.id);
+        return sendSuccess(res, result, 'Order marked as delivered');
+    } catch (error) {
+        return sendError(res, error.message || 'Failed to deliver order', 400);
+    }
+};
+
+// PUT /orders/:id/status (admin)
 export const updateOrderStatusHandler = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid order ID', 400);
 
         const { status } = req.body;
-        const validStatuses = ['pending', 'completed', 'cancelled', 'delivered'];
+        const validStatuses = ['order_placed', 'completed', 'cancelled', 'delivered'];
         if (!validStatuses.includes(status)) {
             return sendError(res, 'Invalid status. Must be one of: ' + validStatuses.join(', '), 400);
         }

@@ -6,11 +6,20 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { assignmentApi, dashboardApi, gradeApi, type Assignment } from "@/services/api/client"
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload"
-import { Calendar, CheckCircle2, Clock, Download, Eye, FileText, Loader2, Search, Upload } from "lucide-react"
+import { Calendar, CheckCircle2, Clock, Download, Eye, FileText, Loader2, Search, Upload, X } from "lucide-react"
 import { toast } from "sonner"
 import { TeacherAssignmentManager } from "@/features/assignments/components/TeacherAssignmentManager"
 import { ChatImagePreview } from "@/components/chat-image-preview"
@@ -455,7 +464,8 @@ export default function AssignmentsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <Drawer
+        direction="right"
         open={!!submitAssignment}
         onOpenChange={(open) => {
           if (!open && !submitting) {
@@ -466,86 +476,104 @@ export default function AssignmentsPage() {
           }
         }}
       >
-        <DialogContent className="rounded-[32px] sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle>Submit Assignment</DialogTitle>
-            <DialogDescription>
-              Upload your completed work for{" "}
-              <span className="font-semibold text-foreground">
-                {submitAssignment?.title}
-              </span>
-              .
-            </DialogDescription>
-          </DialogHeader>
+        <DrawerContent className="p-0 data-[vaul-drawer-direction=right]:w-full data-[vaul-drawer-direction=right]:sm:max-w-xl before:inset-0 before:rounded-none before:border-white/10 before:bg-background sm:p-0 sm:before:rounded-l-[2rem]">
+          <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
+            <DrawerHeader className="border-b border-border/60 p-6 text-left">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <DrawerTitle className="text-xl font-bold">Submit Assignment</DrawerTitle>
+                  <DrawerDescription>
+                    Upload your completed work for{" "}
+                    <span className="font-semibold text-foreground">
+                      {submitAssignment?.title}
+                    </span>
+                    .
+                  </DrawerDescription>
+                </div>
+                <DrawerClose asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DrawerClose>
+              </div>
+            </DrawerHeader>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">
-                Submission Comment (Optional)
+            <div className="flex-1 space-y-4 overflow-y-auto p-6">
+              <div>
+                <label className="text-sm font-medium">
+                  Submission Comment (Optional)
+                </label>
+                <Textarea
+                  placeholder="Add any notes about your submission..."
+                  value={submissionComment}
+                  onChange={(e) => setSubmissionComment(e.target.value)}
+                  className="mt-2 rounded-xl"
+                  rows={4}
+                  disabled={submitting}
+                />
+              </div>
+
+              <label
+                htmlFor="assignment-file"
+                className="flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-border/70 p-6 text-center transition hover:border-brand-orange/40 hover:bg-brand-orange/5"
+              >
+                <FileText className="mb-3 h-8 w-8 text-brand-orange" />
+                <p className="text-sm font-medium text-foreground">Click to choose a file</p>
+                {selectedFile && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
+                {!selectedFile && (
+                  <p className="text-xs text-muted-foreground">
+                    PDF, image, or archive formats work well here.
+                  </p>
+                )}
+                <input
+                  id="assignment-file"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  disabled={submitting}
+                />
               </label>
-              <Textarea
-                placeholder="Add any notes about your submission..."
-                value={submissionComment}
-                onChange={(e) => setSubmissionComment(e.target.value)}
-                className="mt-2 rounded-xl"
-                rows={3}
-                disabled={submitting}
-              />
+
+              {filePreviewUrl && selectedFile && (
+                <ChatImagePreview
+                  attachment={{
+                    url: filePreviewUrl,
+                    type: getImageMimeType(selectedFile.name),
+                    name: selectedFile.name,
+                  }}
+                />
+              )}
+
+              {submitting && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading your file...
+                </div>
+              )}
             </div>
 
-            <label
-              htmlFor="assignment-file"
-              className="flex h-36 cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-border/70 p-6 text-center transition hover:border-brand-orange/40 hover:bg-brand-orange/5"
-            >
-              <FileText className="mb-3 h-8 w-8 text-brand-orange" />
-              <p className="text-sm font-medium text-foreground">Click to choose a file</p>
-              {selectedFile && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Selected: {selectedFile.name}
-                </p>
-              )}
-              {!selectedFile && (
-                <p className="text-xs text-muted-foreground">
-                  PDF, image, or archive formats work well here.
-                </p>
-              )}
-              <input
-                id="assignment-file"
-                type="file"
-                className="hidden"
-                onChange={handleFileSelect}
-                disabled={submitting}
-              />
-            </label>
-
-            {filePreviewUrl && selectedFile && (
-              <ChatImagePreview
-                attachment={{
-                  url: filePreviewUrl,
-                  type: getImageMimeType(selectedFile.name),
-                  name: selectedFile.name,
-                }}
-              />
-            )}
-
-            {submitting ? (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading your file...
-              </div>
-            ) : (
+            <DrawerFooter className="border-t border-border/60 bg-background/95 p-6 sm:flex-row sm:justify-end">
+              <DrawerClose asChild>
+                <Button variant="ghost" disabled={submitting}>
+                  Cancel
+                </Button>
+              </DrawerClose>
               <Button
-                className="w-full rounded-2xl"
+                className="rounded-2xl"
                 onClick={handleFileSubmit}
-                disabled={!selectedFile}
+                disabled={!selectedFile || submitting}
               >
                 <Upload className="mr-2 h-4 w-4" />
-                Submit Assignment
+                {submitting ? "Submitting..." : "Submit Assignment"}
               </Button>
-            )}
+            </DrawerFooter>
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </DashboardContent>
   )
 }

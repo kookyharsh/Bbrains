@@ -1,0 +1,11 @@
+{
+  "ui": {
+    "showModelInfoInChat": true
+  },
+  "ide": {
+    "enabled": true
+  },
+  "model": {
+    "name": ""
+  }
+}

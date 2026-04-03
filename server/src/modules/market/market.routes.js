@@ -4,7 +4,8 @@ import {
     searchProductsHandler, addToCartHandler, getCartHandler,
     removeFromCartHandler, checkoutHandler, buyNowHandler,
     getMyProducts, getPendingProducts, approveProduct, requestProductEdit,
-    getAllThemes, getTheme, getLibrary, getDownloadUrl, applyTheme, getActiveTheme
+    getAllThemes, getTheme, getLibrary, getDownloadUrl, applyTheme, getActiveTheme,
+    getProductReviews, checkCanReview, createReview, getSales
 } from './market.controller.js';
 import verifyToken from '../../middleware/auth.middleware.js';
 import authorize from '../../middleware/authorize.js';
@@ -18,15 +19,19 @@ router.get('/ping', (req, res) => res.json({ status: 'ok', service: 'market' }))
 router.get('/products', verifyToken, getAllProducts);
 router.get('/products/search', verifyToken, searchProductsHandler);
 router.get('/products/:id', verifyToken, getProduct);
-// Any authenticated user can create products; approval is handled in controller
 router.post('/products', verifyToken, createProduct);
-// updateProduct controller now handles creator vs admin checks
 router.put('/products/:id', verifyToken, updateProduct);
 router.post('/products/:id/request-edit', verifyToken, requestProductEdit);
-router.delete('/products/:id', verifyToken, authorize('admin'), deleteProduct);
+router.delete('/products/:id', verifyToken, deleteProduct);
 
-// My Products (any user can see their own)
+// Reviews
+router.get('/products/:id/reviews', verifyToken, getProductReviews);
+router.get('/products/:id/can-review', verifyToken, checkCanReview);
+router.post('/products/:id/reviews', verifyToken, createReview);
+
+// My Products & Sales
 router.get('/my-products', verifyToken, getMyProducts);
+router.get('/sales', verifyToken, getSales);
 
 // Pending products & approval (admin/teacher only)
 router.get('/pending', verifyToken, authorize('teacher', 'admin'), getPendingProducts);

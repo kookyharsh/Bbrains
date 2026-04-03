@@ -56,7 +56,9 @@ const baseSidebarItems: SidebarItem[] = [
         icon: ShoppingCart,
         subItems: [
             { title: "Browse", url: "/market", icon: ShoppingCart },
-            { title: "Library", url: "/market/library", icon: Library },
+            { title: "My Products", url: "/products", icon: ShoppingBag },
+            { title: "Library", url: "/library", icon: Library },
+            { title: "Orders", url: "/orders", icon: FileText },
         ],
     },
     { title: "Tools", url: "/tools", icon: Wrench },

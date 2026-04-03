@@ -1,7 +1,7 @@
 import {
-  getAllProducts as getProductsList, createProduct as createProductSvc, updateProduct as updateProductSvc,
+  getAllProducts as getProductsList, getProductWithDetails, createProduct as createProductSvc, updateProduct as updateProductSvc,
   deleteProduct as deleteProductSvc, findProductByName, addToCart, getCart,
-  removeFromCart, checkout, buyNow
+  removeFromCart, checkout, buyNow, getCreatorSales
 } from "./market.service.js";
 import { sendSuccess, sendCreated, sendPaginated, sendError } from "../../utils/response.js";
 import { createAuditLog } from "../../utils/auditLog.js";
@@ -16,8 +16,11 @@ const productSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(255).optional(),
   price: z.number().positive(),
-  stock: z.number().int().nonnegative(),
+  stock: z.number().int().nonnegative().optional(),
   imageUrl: z.string().url().optional(),
+  productType: z.enum(['digital', 'physical']).default('physical'),
+  fileUrl: z.string().url().optional(),
+  fileType: z.string().optional(),
   category: z.string().max(50).optional(),
   metadata: z.record(z.any()).optional()
 });
@@ -48,81 +51,97 @@ export const getAllProducts = async (req, res) => {
 
 // GET /market/products/:id
 export const getProduct = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
-    const product = await prisma.product.findUnique({ where: { id } });
-    if (!product) return sendError(res, 'Product not found', 404);
-    return sendSuccess(res, product);
-  } catch (error) {
-    return sendError(res, 'Failed to fetch product', 500);
-  }
+    try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
+        const product = await getProductWithDetails(id);
+        if (!product) return sendError(res, 'Product not found', 404);
+        if (product.approval !== 'approved') {
+            const isCreator = product.creatorId === req.user?.id;
+            const isAdmin = req.user?.type === 'admin' || req.user?.type === 'teacher';
+            if (!isCreator && !isAdmin) {
+                return sendError(res, 'Product not found', 404);
+            }
+        }
+        return sendSuccess(res, product);
+    } catch (error) {
+        return sendError(res, 'Failed to fetch product', 500);
+    }
 };
 
 export const createProduct = async (req, res) => {
-  try {
-    const body = req.body;
-    if (!body) return sendError(res, 'No data provided', 400);
+    try {
+        const body = req.body;
+        if (!body) return sendError(res, 'No data provided', 400);
 
-    // Simplify schema for debugging
-    const schema = z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      price: z.number(),
-      stock: z.number(),
-      imageUrl: z.string().optional(),
-      category: z.string().optional(),
-      metadata: z.any().optional()
-    });
+        const schema = z.object({
+            name: z.string(),
+            description: z.string().optional(),
+            price: z.number(),
+            stock: z.number().optional(),
+            imageUrl: z.string().optional(),
+            productType: z.enum(['digital', 'physical']).default('physical'),
+            fileUrl: z.string().optional(),
+            fileType: z.string().optional(),
+            category: z.string().optional(),
+            metadata: z.any().optional()
+        });
 
-    const validated = schema.parse(body);
-    
-    if (!req.user) {
-      console.error('[createProduct] req.user is missing! Auth middleware might have failed silently.');
-      return sendError(res, 'User context missing', 401);
+        const validated = schema.parse(body);
+        
+        if (!req.user) {
+            console.error('[createProduct] req.user is missing! Auth middleware might have failed silently.');
+            return sendError(res, 'User context missing', 401);
+        }
+
+        const isPrivileged = req.user.type === "teacher" || req.user.type === "admin";
+        const approval = isPrivileged ? "approved" : "pending";
+        
+        const metadata = typeof validated.metadata === 'object' ? validated.metadata : {};
+        if (validated.category) {
+            metadata.category = validated.category;
+        }
+
+        const productData = {
+            name: validated.name,
+            description: validated.description || '',
+            price: Number(validated.price),
+            stock: validated.productType === 'physical' ? Number(validated.stock || 0) : 999999,
+            image: validated.imageUrl || null,
+            creatorId: req.user.id,
+            approval,
+            metadata,
+            productType: validated.productType
+        };
+
+        if (validated.productType === 'digital' && validated.fileUrl) {
+            metadata.fileUrl = validated.fileUrl;
+            metadata.fileType = validated.fileType || 'file';
+        }
+
+        const product = await createProductSvc(
+            productData.name,
+            productData.description,
+            productData.price,
+            productData.stock,
+            productData.image,
+            productData.creatorId,
+            productData.approval,
+            productData.metadata,
+            productData.productType
+        );
+
+        await createAuditLog(req.user.id, 'MARKET', 'CREATE', 'Product', product.id);
+        return sendCreated(res, product, 'Product created');
+    } catch (error) {
+        console.error('[createProduct] CATCH BLOCK:', error);
+        
+        if (error && (error.name === 'ZodError' || error.constructor?.name === 'ZodError')) {
+            return sendError(res, 'Validation failed', 400, error.errors || []);
+        }
+
+        return sendError(res, error?.message || 'Failed to create product', 500);
     }
-
-    const isPrivileged = req.user.type === "teacher" || req.user.type === "admin";
-    const approval = isPrivileged ? "approved" : "pending";
-    
-    const productData = {
-      name: validated.name,
-      description: validated.description || '',
-      price: Number(validated.price),
-      stock: Number(validated.stock),
-      image: validated.imageUrl || null,
-      creatorId: req.user.id,
-      approval,
-      metadata: typeof validated.metadata === 'object' ? validated.metadata : {}
-    };
-
-    // Include category in metadata if not present
-    if (validated.category) {
-      productData.metadata.category = validated.category;
-    }
-
-    const product = await createProductSvc(
-      productData.name,
-      productData.description,
-      productData.price,
-      productData.stock,
-      productData.image,
-      productData.creatorId,
-      productData.approval,
-      productData.metadata
-    );
-
-    await createAuditLog(req.user.id, 'MARKET', 'CREATE', 'Product', product.id);
-    return sendCreated(res, product, 'Product created');
-  } catch (error) {
-    console.error('[createProduct] CATCH BLOCK:', error);
-    
-    if (error && (error.name === 'ZodError' || error.constructor?.name === 'ZodError')) {
-      return sendError(res, 'Validation failed', 400, error.errors || []);
-    }
-
-    return sendError(res, error?.message || 'Failed to create product', 500);
-  }
 };
 
 
@@ -208,16 +227,27 @@ export const requestProductEdit = async (req, res) => {
 
 // DELETE /market/products/:id
 export const deleteProduct = async (req, res) => {
-  try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
-    await deleteProductSvc(id);
-    await createAuditLog(req.user.id, 'MARKET', 'DELETE', 'Product', id);
-    return sendSuccess(res, null, 'Product deleted');
-  } catch (error) {
-    if (error.code === 'P2025') return sendError(res, 'Product not found', 404);
-    return sendError(res, 'Failed to delete product', 500);
-  }
+    try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
+
+        const product = await prisma.product.findUnique({ where: { id } });
+        if (!product) return sendError(res, 'Product not found', 404);
+
+        const isCreator = product.creatorId === req.user.id;
+        const isAdmin = req.user.type === 'admin';
+
+        if (!isCreator && !isAdmin) {
+            return sendError(res, 'Unauthorized to delete this product', 403);
+        }
+
+        await deleteProductSvc(id);
+        await createAuditLog(req.user.id, 'MARKET', 'DELETE', 'Product', id);
+        return sendSuccess(res, null, 'Product deleted');
+    } catch (error) {
+        if (error.code === 'P2025') return sendError(res, 'Product not found', 404);
+        return sendError(res, 'Failed to delete product', 500);
+    }
 };
 
 // GET /market/products/search?query=...
@@ -236,15 +266,57 @@ export const searchProductsHandler = async (req, res) => {
 // GET /market/my-products
 // Returns all products created by the current user (any approval status)
 export const getMyProducts = async (req, res) => {
-  try {
-    const products = await prisma.product.findMany({
-      where: { creatorId: req.user.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    return sendSuccess(res, products);
-  } catch (error) {
-    return sendError(res, 'Failed to fetch your products', 500);
-  }
+    try {
+        const products = await prisma.product.findMany({
+            where: { creatorId: req.user.id },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                reviews: { select: { rating: true } },
+                orderItems: {
+                    select: { quantity: true },
+                    where: {
+                        order: {
+                            OR: [
+                                { status: 'completed' },
+                                { status: 'delivered' }
+                            ]
+                        }
+                    }
+                }
+            }
+        });
+
+        const productsWithStats = products.map(p => {
+            const reviewCount = p.reviews.length;
+            const avgRating = reviewCount > 0
+                ? parseFloat((p.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount).toFixed(1))
+                : 0;
+            const unitsSold = p.orderItems.reduce((sum, oi) => sum + oi.quantity, 0);
+
+            return {
+                ...p,
+                rating: avgRating,
+                reviewCount,
+                unitsSold,
+                reviews: undefined,
+                orderItems: undefined
+            };
+        });
+
+        return sendSuccess(res, productsWithStats);
+    } catch (error) {
+        return sendError(res, 'Failed to fetch your products', 500);
+    }
+};
+
+// GET /market/sales
+export const getSales = async (req, res) => {
+    try {
+        const sales = await getCreatorSales(req.user.id);
+        return sendSuccess(res, sales);
+    } catch (error) {
+        return sendError(res, 'Failed to fetch sales data', 500);
+    }
 };
 
 // GET /market/pending
@@ -608,5 +680,139 @@ export const getActiveTheme = async (req, res) => {
     return sendSuccess(res, theme);
   } catch (error) {
     return sendError(res, 'Failed to get active theme', 500);
+  }
+};
+
+// GET /market/products/:id/reviews - Get reviews for a product
+export const getProductReviews = async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
+
+    const reviews = await prisma.review.findMany({
+      where: { productId },
+      include: {
+        user: {
+          select: {
+            username: true,
+            userDetails: {
+              select: { firstName: true, lastName: true, avatar: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calculate stats
+    const totalReviews = reviews.length;
+    const ratingCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let sumRating = 0;
+    reviews.forEach(r => {
+      if (ratingCounts[r.rating] !== undefined) {
+        ratingCounts[r.rating]++;
+        sumRating += r.rating;
+      }
+    });
+    const averageRating = totalReviews > 0 ? parseFloat((sumRating / totalReviews).toFixed(1)) : 0;
+
+    return sendSuccess(res, {
+      reviews,
+      stats: {
+        averageRating,
+        totalReviews,
+        ratingCounts
+      }
+    });
+  } catch (error) {
+    console.error('[getProductReviews] Error:', error);
+    return sendError(res, 'Failed to fetch reviews', 500);
+  }
+};
+
+// GET /market/products/:id/can-review - Check if user can review (has purchased)
+export const checkCanReview = async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
+
+    // Check if user has purchased this product
+    const purchase = await prisma.library.findFirst({
+      where: {
+        productId,
+        userId: req.user.id
+      }
+    });
+
+    // Also check if user has any order containing this product
+    const orderWithProduct = await prisma.orderItem.findFirst({
+      where: {
+        productId,
+        order: { userId: req.user.id }
+      }
+    });
+
+    const hasPurchased = !!purchase || !!orderWithProduct;
+    return sendSuccess(res, { hasPurchased });
+  } catch (error) {
+    console.error('[checkCanReview] Error:', error);
+    return sendError(res, 'Failed to check purchase status', 500);
+  }
+};
+
+// POST /market/products/:id/reviews - Create a review
+export const createReview = async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    if (isNaN(productId)) return sendError(res, 'Invalid product ID', 400);
+
+    const { rating, comment } = req.body;
+    if (!rating || rating < 1 || rating > 5) {
+      return sendError(res, 'Rating must be between 1 and 5', 400);
+    }
+
+    // Check if user has purchased the product
+    const purchase = await prisma.library.findFirst({
+      where: { productId, userId: req.user.id }
+    });
+    const orderWithProduct = await prisma.orderItem.findFirst({
+      where: { productId, order: { userId: req.user.id } }
+    });
+    const hasPurchased = !!purchase || !!orderWithProduct;
+
+    if (!hasPurchased) {
+      return sendError(res, 'You must purchase this product to leave a review', 403);
+    }
+
+    // Check if user already reviewed
+    const existingReview = await prisma.review.findFirst({
+      where: { productId, userId: req.user.id }
+    });
+    if (existingReview) {
+      return sendError(res, 'You have already reviewed this product', 400);
+    }
+
+    const review = await prisma.review.create({
+      data: {
+        productId,
+        userId: req.user.id,
+        rating,
+        comment: comment || ''
+      },
+      include: {
+        user: {
+          select: {
+            username: true,
+            userDetails: { select: { firstName: true, lastName: true, avatar: true } }
+          }
+        }
+      }
+    });
+
+    await createAuditLog(req.user.id, 'MARKET', 'CREATE_REVIEW', 'Review', review.id, { productId, rating });
+    return sendCreated(res, review, 'Review submitted');
+  } catch (error) {
+    console.error('[createReview] Error:', error);
+    return sendError(res, 'Failed to create review', 500);
   }
 };

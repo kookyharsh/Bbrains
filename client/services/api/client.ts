@@ -631,7 +631,7 @@ export const dashboardApi = {
     return api.get<User>('/user/me');
   },
   searchUsers: async (query: string): Promise<ApiResponse<User[]>> => {
-    return api.get<User[]>(`/user/search?q=${encodeURIComponent(query)}`);
+    return api.get<User[]>(`/user/search?name=${encodeURIComponent(query)}`);
   },
   claimDaily: async (): Promise<ApiResponse<{ xp: number; coins: number; streak: StreakData }>> => {
     return api.post<{ xp: number; coins: number; streak: StreakData }>('/user/claim-daily');
@@ -1065,9 +1065,68 @@ export interface Product {
   image?: string;
   price: number;
   stock: number;
-  approval: 'pending' | 'approved' | 'rejected';
+  productType: 'digital' | 'physical';
+  approval: 'draft' | 'pending' | 'approved' | 'rejected';
   metadata?: ProductMetadata;
   createdAt: string;
+  rating?: number;
+  reviewCount?: number;
+  unitsSold?: number;
+  creator?: {
+    id: string;
+    username: string;
+    userDetails?: { firstName?: string; lastName?: string; avatar?: string | null };
+  };
+  images?: string[];
+}
+
+export interface OrderItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  quantity: number;
+  price: number;
+  deliveryStatus?: string;
+  product?: Product;
+}
+
+export interface Order {
+  id: number;
+  userId: string;
+  status: string;
+  orderType: string;
+  qrCode?: string;
+  deliveredAt?: string;
+  orderDate: string;
+  totalAmount: number;
+  items: OrderItem[];
+  user?: {
+    id: string;
+    username: string;
+    userDetails?: { firstName?: string; lastName?: string; avatar?: string | null };
+  };
+}
+
+export interface SalesData {
+  totalEarnings: number;
+  productBreakdown: {
+    productId: number;
+    name: string;
+    productType: string;
+    unitsSold: number;
+    revenue: number;
+    avgRating: number;
+    reviewCount: number;
+  }[];
+  recentTransactions: {
+    buyer: string;
+    product: string;
+    date: string;
+    amount: number;
+    productType: string;
+  }[];
+  digitalSales: { units: number; revenue: number };
+  physicalSales: { units: number; revenue: number };
 }
 
 export interface LibraryItem {
@@ -1083,6 +1142,8 @@ export interface LibraryItem {
   version?: string;
   purchasedAt: string;
   creator: string;
+  productType?: 'digital' | 'physical';
+  deliveryStatus?: string;
 }
 
 export const libraryApi = {
@@ -1112,11 +1173,11 @@ export const marketApi = {
   getProduct: async (id: number): Promise<ApiResponse<Product>> => {
     return api.get<Product>(`/market/products/${id}`);
   },
-  createProduct: async (data: { name: string; description?: string; price: number; stock: number; imageUrl?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
+  createProduct: async (data: { name: string; description?: string; price: number; stock?: number; imageUrl?: string; productType?: 'digital' | 'physical'; fileUrl?: string; fileType?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
     return api.post<Product>('/market/products', data);
   },
-  buyNow: async (productId: number, quantity: number, pin: string): Promise<ApiResponse<unknown>> => {
-    return api.post<unknown>('/market/buy-now', { productId, quantity, pin });
+  buyNow: async (productId: number, quantity: number, pin: string): Promise<ApiResponse<{ order: Order; qrCode?: string }>> => {
+    return api.post<{ order: Order; qrCode?: string }>('/market/buy-now', { productId, quantity, pin });
   },
   getCart: async (): Promise<ApiResponse<unknown[]>> => {
     return api.get<unknown[]>('/market/cart');
@@ -1124,17 +1185,70 @@ export const marketApi = {
   addToCart: async (productId: number, quantity: number): Promise<ApiResponse<void>> => {
     return api.post<void>('/market/cart', { productId, quantity });
   },
-  checkout: async (pin: string): Promise<ApiResponse<unknown>> => {
-    return api.post<unknown>('/market/checkout', { pin });
+  checkout: async (pin: string): Promise<ApiResponse<{ order: Order; qrCode?: string }>> => {
+    return api.post<{ order: Order; qrCode?: string }>('/market/checkout', { pin });
   },
   getMyProducts: async (): Promise<ApiResponse<Product[]>> => {
     return api.get<Product[]>('/market/my-products');
+  },
+  getSales: async (): Promise<ApiResponse<SalesData>> => {
+    return api.get<SalesData>('/market/sales');
+  },
+  deleteProduct: async (id: number): Promise<ApiResponse<void>> => {
+    return api.delete<void>(`/market/products/${id}`);
   },
   updateProduct: async (id: number, data: { name?: string; description?: string; price?: number; stock?: number; imageUrl?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
     return api.put<Product>(`/market/products/${id}`, data);
   },
   requestEditReview: async (id: number, data: { name?: string; description?: string; price?: number; stock?: number; imageUrl?: string; metadata?: ProductMetadata }): Promise<ApiResponse<Product>> => {
     return api.post<Product>(`/market/products/${id}/request-edit`, data);
+  },
+};
+
+export const orderApi = {
+  getOrders: async (page = 1, limit = 20): Promise<ApiResponse<Order[]>> => {
+    return api.get<Order[]>(`/orders/me?page=${page}&limit=${limit}`);
+  },
+  getOrder: async (id: number): Promise<ApiResponse<Order>> => {
+    return api.get<Order>(`/orders/${id}`);
+  },
+  deliverOrder: async (id: number): Promise<ApiResponse<Order>> => {
+    return api.post<Order>(`/orders/${id}/deliver`, {});
+  },
+};
+
+export interface Review {
+  id: number;
+  productId: number;
+  userId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  user?: {
+    username: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+      avatar?: string | null;
+    };
+  };
+}
+
+export interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  ratingCounts: Record<number, number>; // {1: count, 2: count, 3: count, 4: count, 5: count}
+}
+
+export const reviewApi = {
+  getReviews: async (productId: number): Promise<ApiResponse<{ reviews: Review[]; stats: ReviewStats }>> => {
+    return api.get<{ reviews: Review[]; stats: ReviewStats }>(`/market/products/${productId}/reviews`);
+  },
+  createReview: async (productId: number, data: { rating: number; comment: string }): Promise<ApiResponse<Review>> => {
+    return api.post<Review>(`/market/products/${productId}/reviews`, data);
+  },
+  hasPurchased: async (productId: number): Promise<ApiResponse<{ hasPurchased: boolean }>> => {
+    return api.get<{ hasPurchased: boolean }>(`/market/products/${productId}/can-review`);
   },
 };
 
