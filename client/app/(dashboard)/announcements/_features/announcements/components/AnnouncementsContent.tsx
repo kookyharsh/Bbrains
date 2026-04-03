@@ -24,6 +24,7 @@ interface AnnouncementsContentProps {
 export function AnnouncementsContent({ initialAnnouncements, currentUser }: AnnouncementsContentProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
   const [searchQuery, setSearchQuery] = useState("");
+  const [newAnnouncementTitle, setNewAnnouncementTitle] = useState("");
   const [newAnnouncement, setNewAnnouncement] = useState("");
   const [posting, setPosting] = useState(false);
 
@@ -34,25 +35,19 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
   );
 
   const handlePost = async () => {
-    if (!newAnnouncement.trim()) return;
+    if (!newAnnouncementTitle.trim() || !newAnnouncement.trim()) return;
     
     setPosting(true);
     try {
-      // Extract first line as title, max 60 chars.
-      const lines = newAnnouncement.trim().split('\n');
-      let title = lines[0];
-      if (title.length > 60) {
-        title = title.substring(0, 60) + "...";
-      }
-
       const response = await announcementApi.createAnnouncement({
-        title,
+        title: newAnnouncementTitle.trim(),
         description: newAnnouncement.trim(),
         category: "general"
       });
       
       if (response.success && response.data) {
         setAnnouncements([response.data, ...announcements]);
+        setNewAnnouncementTitle("");
         setNewAnnouncement("");
         toast.success("Announcement posted successfully");
       } else {
@@ -65,7 +60,7 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
     }
   };
 
-  const isStaff = currentUser?.type === "admin" || currentUser?.type === "teacher";
+  const isStaff = currentUser?.type === "admin" || currentUser?.type === "teacher" || currentUser?.type === "manager";
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)] flex flex-col">
@@ -181,33 +176,42 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
       {/* Floating Chat Bar for Teachers/Admins */}
       {isStaff && (
         <div className="sticky bottom-6 left-0 right-0 max-w-4xl mx-auto w-full z-10 px-4 md:px-0 pointer-events-none">
-          <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-xl flex items-end gap-3 p-2 pointer-events-auto">
-            <button className="p-3 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center shrink-0">
-              <Paperclip className="h-5 w-5" />
-            </button>
-            <textarea
-              className="flex-1 bg-transparent border-none py-3 px-2 text-sm text-foreground focus:outline-none focus:ring-0 resize-none min-h-[44px] max-h-[150px] placeholder:text-muted-foreground"
-              placeholder="Send a new announcement..."
-              value={newAnnouncement}
-              onChange={(e) => {
-                setNewAnnouncement(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handlePost();
-                }
-              }}
+          <div className="bg-card/95 backdrop-blur-md border border-border rounded-2xl shadow-xl flex flex-col items-end gap-3 p-3 pointer-events-auto">
+            <input
+              className="w-full bg-transparent border-b border-border py-2 px-1 text-sm text-foreground focus:outline-none focus:border-primary placeholder:text-muted-foreground"
+              placeholder="Announcement title..."
+              value={newAnnouncementTitle}
+              onChange={(e) => setNewAnnouncementTitle(e.target.value)}
+              maxLength={100}
             />
-            <button
-              onClick={handlePost}
-              disabled={!newAnnouncement.trim() || posting}
-              className="h-11 w-11 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+            <div className="flex items-end gap-3 w-full">
+              <button className="p-3 text-muted-foreground hover:text-primary transition-colors flex items-center justify-center shrink-0">
+                <Paperclip className="h-5 w-5" />
+              </button>
+              <textarea
+                className="flex-1 bg-transparent border-none py-3 px-2 text-sm text-foreground focus:outline-none focus:ring-0 resize-none min-h-[44px] max-h-[150px] placeholder:text-muted-foreground"
+                placeholder="Announcement content..."
+                value={newAnnouncement}
+                onChange={(e) => {
+                  setNewAnnouncement(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handlePost();
+                  }
+                }}
+              />
+              <button
+                onClick={handlePost}
+                disabled={!newAnnouncementTitle.trim() || !newAnnouncement.trim() || posting}
+                className="h-11 w-11 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

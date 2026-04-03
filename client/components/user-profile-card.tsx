@@ -1,24 +1,8 @@
 "use client"
 
 import React from 'react'
-import { Settings, Circle } from "lucide-react"
+import { Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-export type UserStatus = "online" | "idle" | "do-not-disturb" | "offline"
-
-export const statusColors: Record<UserStatus, string> = {
-    "online": "bg-green-500",
-    "idle": "bg-yellow-500", 
-    "do-not-disturb": "bg-red-500",
-    "offline": "bg-gray-400"
-}
-
-export const statusLabels: Record<UserStatus, string> = {
-    "online": "Online",
-    "idle": "Away",
-    "do-not-disturb": "Do Not Disturb",
-    "offline": "Offline"
-}
 
 interface UserProfileCardProps {
     user: {
@@ -32,13 +16,11 @@ interface UserProfileCardProps {
         bio?: string;
         createdAt?: string | Date;
     } | null;
-    userStatus: UserStatus;
-    setUserStatus: (status: UserStatus) => void;
 }
 
-export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfileCardProps) {
+export function UserProfileCard({ user }: UserProfileCardProps) {
     return (
-        <div className="absolute bottom-20 left-6 w-85 bg-background-light dark:bg-[#221610] rounded-xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.24)] border border-gray-200 dark:border-gray-800 z-50">
+        <div className="absolute bottom-20 left-6 w-85 bg-white dark:bg-black rounded-xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.24)] border border-gray-200 dark:border-gray-800 z-50">
             <div className="relative h-24 bg-linear-to-r from-brand-purple to-purple-400">
                 <div className="absolute top-2 right-2 flex gap-1.5">
                     <button className="bg-black/20 hover:bg-black/40 text-white p-1.5 rounded-full transition-colors flex items-center justify-center">
@@ -50,15 +32,14 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
             <div className="px-4 pb-4">
                 <div className="relative flex justify-between items-end -mt-12 mb-2">
                     <div className="relative">
-                        <div className="h-24 w-24 rounded-full border-[6px] border-background-light dark:border-[#221610] bg-gray-300 overflow-hidden relative shadow-sm">
+                        <div className="h-24 w-24 rounded-full border-[6px] border-white dark:border-black bg-gray-300 overflow-hidden relative shadow-sm">
                             <Avatar className="h-full w-full rounded-none">
-                                <AvatarImage src={user?.imageUrl} className="object-cover" />
+                                <AvatarImage src={user?.imageUrl || undefined} className="object-cover" />
                                 <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-2xl uppercase rounded-none flex items-center justify-center">
                                     {user?.firstName?.[0]}{user?.lastName?.[0]}
                                 </AvatarFallback>
                             </Avatar>
                         </div>
-                        <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-background-light dark:border-[#221610] ${statusColors[userStatus]}`}></div>
                     </div>
                 </div>
                 
@@ -79,29 +60,6 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                 </div>
                 
                 <div className="space-y-3 max-h-50 overflow-y-auto pr-1 custom-scrollbar">
-                    <div className="space-y-1.5">
-                        <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Set Status</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {(["online", "idle", "do-not-disturb", "offline"] as UserStatus[]).map((status) => (
-                                <button
-                                    key={status}
-                                    onClick={async (e) => {
-                                        e.stopPropagation();
-                                        setUserStatus(status);
-                                    }}
-                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-colors ${
-                                        userStatus === status 
-                                            ? "bg-brand-purple text-white border border-brand-purple" 
-                                            : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border border-transparent"
-                                    }`}
-                                >
-                                    <Circle className={`w-2 h-2 fill-current ${statusColors[status]}`} />
-                                    {statusLabels[status]}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    
                     <div className="space-y-1">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">About Me</h3>
                         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed min-h-5">

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { Eye, EyeOff } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { getBaseUrl, setAuthToken } from '@/services/api/client'
@@ -32,6 +33,7 @@ export function LoginForm({
 }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -152,15 +154,24 @@ export function LoginForm({
                     Forgot your password?
                   </Link>
                 </div>
-                <HandInput
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  disabled={isLoading}
-                  className={errors.password ? 'border-hand-red' : ''}
-                />
+                <div className="relative">
+                  <HandInput
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    disabled={isLoading}
+                    className={errors.password ? 'border-hand-red pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-hand-pencil/60 hover:text-hand-pencil transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-hand-red font-patrick">{errors.password}</p>
                 )}

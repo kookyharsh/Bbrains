@@ -71,7 +71,7 @@ export function MobileBottomNav({ user }: MobileBottomNavProps) {
                         }}
                     >
                         <Avatar className="w-6 h-6 rounded-full border border-background">
-                            <AvatarImage src={user?.imageUrl} className="object-cover" />
+                            <AvatarImage src={user?.imageUrl || undefined} className="object-cover" />
                             <AvatarFallback className="bg-brand-purple text-white font-black text-[10px] uppercase">
                                 {user?.firstName?.[0] || user?.username?.[0] || "U"}
                             </AvatarFallback>

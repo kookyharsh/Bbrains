@@ -38,6 +38,7 @@ type LayoutDBUser = {
     roles?: LayoutRoleEntry[] | null;
     userDetails?: LayoutUserDetails | null;
     xp?: LayoutUserXP | null;
+    avatar?: string | null;
 }
 
 async function fetchUserFromAPI(token: string): Promise<LayoutDBUser | null> {
@@ -117,7 +118,7 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
     
     const formattedUser = {
         id: dbUser.id || '',
-        imageUrl: details?.avatar || "",
+        imageUrl: details?.avatar || dbUser?.avatar || "",
         firstName: details?.firstName || "",
         lastName: details?.lastName || "",
         bio: details?.bio || "",

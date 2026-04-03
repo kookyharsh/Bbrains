@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { Eye, EyeOff } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { getBaseUrl } from '@/services/api/client'
@@ -23,6 +24,8 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeatPassword, setRepeatPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -113,15 +116,24 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  disabled={isLoading}
-                  className={errors.password ? 'border-red-500' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    disabled={isLoading}
+                    className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="text-sm text-red-500">{errors.password}</p>
                 )}
@@ -130,15 +142,24 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 <div className="flex items-center">
                   <Label htmlFor="repeat-password">Repeat Password</Label>
                 </div>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => handleInputChange('repeatPassword', e.target.value)}
-                  disabled={isLoading}
-                  className={errors.repeatPassword ? 'border-red-500' : ''}
-                />
+                <div className="relative">
+                  <Input
+                    id="repeat-password"
+                    type={showRepeatPassword ? 'text' : 'password'}
+                    required
+                    value={repeatPassword}
+                    onChange={(e) => handleInputChange('repeatPassword', e.target.value)}
+                    disabled={isLoading}
+                    className={errors.repeatPassword ? 'border-red-500 pr-10' : 'pr-10'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showRepeatPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 {errors.repeatPassword && (
                   <p className="text-sm text-red-500">{errors.repeatPassword}</p>
                 )}

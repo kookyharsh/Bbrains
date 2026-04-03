@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getSidebarGroups, resolveRole } from "./sidebarData"
 import type { Role } from "./sidebarData"
-import { UserProfileCard, UserStatus, statusColors, statusLabels } from "../user-profile-card"
+import { UserProfileCard } from "../user-profile-card"
 import { useNotifications } from "../providers/notification-provider"
 
 interface AppSidebarProps {
@@ -41,7 +41,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
     const { unreadCount } = useNotifications()
 
     const [showProfileCard, setShowProfileCard] = useState(false)
-    const [userStatus, setUserStatus] = useState<UserStatus>("online")
+    const [userStatus, setUserStatus] = useState<"online" | "idle" | "do-not-disturb" | "offline">("online")
 
     const userRoles = user?.roles || [user?.type || "student"]
     const resolvedRoles = resolveRole(userRoles) as Role[]
@@ -159,12 +159,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
                             >
                                 <div className="relative">
                                     <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
-                                        <AvatarImage src={user?.imageUrl} />
+                                        <AvatarImage src={user?.imageUrl || undefined} />
                                         <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-xs uppercase">
                                             {user?.firstName?.[0]}{user?.lastName?.[0]}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <div className={`absolute -bottom-0.5 -right-0.5 ${statusColors[userStatus]} w-3 h-3 rounded-full border-2 border-white dark:border-gray-800`} />
+                                    <div className={`absolute -bottom-0.5 -right-0.5 bg-green-500 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800`} />
                                 </div>
                                 {!isCollapsed && (
                                     <div className="flex-1 min-w-0 text-left">
@@ -172,7 +172,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                             {user?.fullName || user?.username || "Anonymous User"}
                                         </p>
                                         <p className="text-[11px] text-sidebar-foreground/60 truncate mt-0.5">
-                                            {statusLabels[userStatus]}
+                                            Online
                                         </p>
                                     </div>
                                 )}
@@ -181,8 +181,6 @@ export function AppSidebar({ user }: AppSidebarProps) {
                             {showProfileCard && !isCollapsed && (
                                 <UserProfileCard
                                     user={user}
-                                    userStatus={userStatus}
-                                    setUserStatus={setUserStatus}
                                 />
                             )}
                         </div>

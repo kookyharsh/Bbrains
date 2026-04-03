@@ -190,7 +190,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                                 </div>
 
                                 <Avatar className="h-9 w-9 rounded-2xl border border-border/70 shadow-sm md:h-10 md:w-10">
-                                    <AvatarImage src={user?.imageUrl} />
+                                    <AvatarImage src={user?.imageUrl || undefined} />
                                     <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
                                         {user?.firstName?.[0] || ""}
                                         {user?.lastName?.[0] || user?.username?.[0] || "U"}
@@ -203,7 +203,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                             <DropdownMenuLabel className="px-3 py-2">
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10 rounded-2xl border border-border/70">
-                                        <AvatarImage src={user?.imageUrl} />
+                                        <AvatarImage src={user?.imageUrl || undefined} />
                                         <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
                                             {user?.firstName?.[0] || ""}
                                             {user?.lastName?.[0] || user?.username?.[0] || "U"}

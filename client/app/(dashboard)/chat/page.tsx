@@ -495,14 +495,11 @@ export default function ChatPage() {
 
         {showMembers && (
           <>
-            {/* Hide on mobile to avoid overlap; show on md+ */}
-            <div className="hidden md:block">
-              <ChatSidebarRight 
-                members={membersList} 
-                currentUserId={currentUserId || ""} 
-                onSelectUser={(user) => handleOpenProfile(user.id)} 
-              />
-            </div>
+            <ChatSidebarRight 
+              members={membersList} 
+              currentUserId={currentUserId || ""} 
+              onSelectUser={(user) => handleOpenProfile(user.id)} 
+            />
 
             <div className="md:hidden">
               <div 
