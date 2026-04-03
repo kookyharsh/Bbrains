@@ -43,9 +43,24 @@ const createStudentSchema = z.object({
     classId: z.number().int().positive(),
 });
 
-const createManagerSchema = createStudentSchema.extend({
+const createManagerSchema = createStudentSchema.omit({
+    classId: true,
+}).extend({
     bio: z.string().max(500).optional()
 });
+
+const formatZodErrors = (error) => {
+    const issues = Array.isArray(error?.issues)
+        ? error.issues
+        : Array.isArray(error?.errors)
+            ? error.errors
+            : [];
+
+    return issues.map((entry) => ({
+        field: Array.isArray(entry?.path) ? entry.path.join('.') : '',
+        message: entry?.message || 'Invalid value',
+    }));
+};
 
 const resolveCollegeId = async (requestedCollegeId, fallbackCollegeId) => {
     const collegeId = requestedCollegeId ?? fallbackCollegeId;
@@ -297,7 +312,7 @@ export const addTeacher = async (req, res) => {
         return sendCreated(res, result, 'Teacher account created successfully.');
     } catch (error) {
         if (error.name === 'ZodError') {
-            return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+            return sendError(res, 'Validation failed', 400, formatZodErrors(error));
         }
         if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
         console.error("Add Teacher Error:", error);
@@ -324,7 +339,7 @@ export const addStudent = async (req, res) => {
         return sendCreated(res, result, 'Student account created successfully.');
     } catch (error) {
         if (error.name === 'ZodError') {
-            return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+            return sendError(res, 'Validation failed', 400, formatZodErrors(error));
         }
         if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
         console.error("Add Student Error:", error);
@@ -351,7 +366,7 @@ export const addManager = async (req, res) => {
         return sendCreated(res, result, 'Manager account created successfully.');
     } catch (error) {
         if (error.name === 'ZodError') {
-            return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+            return sendError(res, 'Validation failed', 400, formatZodErrors(error));
         }
         if (error.code === 'P2002') return sendError(res, 'Username or email already exists', 409);
         console.error("Add Manager Error:", error);

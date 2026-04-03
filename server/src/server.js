@@ -33,6 +33,7 @@ import notificationRouter from "./modules/notification/notification.routes.js";
 import configRouter from "./modules/config/config.routes.js";
 import suggestionRouter from "./modules/suggestion/suggestion.routes.js";
 import assessmentRouter from "./modules/assessment/assessment.routes.js";
+import prisma from "./utils/prisma.js";
 
 // Middleware imports
 import errorHandler from "./middleware/errorHandler.js";
@@ -120,6 +121,36 @@ initChatSocket(server);
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+let isShuttingDown = false;
+
+async function shutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`${signal} received. Closing server and database connections...`);
+
+  server.close(async () => {
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      console.error("Error while disconnecting Prisma:", error);
+    } finally {
+      process.exit(0);
+    }
+  });
+
+  setTimeout(() => {
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.once("SIGINT", () => {
+  void shutdown("SIGINT");
+});
+
+process.once("SIGTERM", () => {
+  void shutdown("SIGTERM");
 });
 
 export default app;
