@@ -103,6 +103,22 @@ function buildNoteFilters(keywords) {
     }));
 }
 
+function buildTransactionSignalFilters(category, legacyKeywords = []) {
+    return [
+        {
+            category,
+        },
+        ...buildNoteFilters(legacyKeywords),
+    ];
+}
+
+function toPlainNumber(value, fallback = 0) {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'bigint') return Number(value);
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 async function getCustomRoleNames(userId) {
     const roles = await prisma.userRoles.findMany({
         where: { userId },
@@ -131,6 +147,7 @@ export const getAdminOverview = async (req, res) => {
             staffCount,
             roleCounts,
             configs,
+            courses,
             feeTaggedCredits,
             latestTransactions,
         ] = await Promise.all([
@@ -206,6 +223,16 @@ export const getAdminOverview = async (req, res) => {
                 },
             }),
             prisma.systemConfig.findMany(),
+            prisma.course.findMany({
+                select: {
+                    feePerStudent: true,
+                    _count: {
+                        select: {
+                            enrollments: true,
+                        },
+                    },
+                },
+            }),
             prisma.transactionHistory.aggregate({
                 _sum: {
                     amount: true,
@@ -213,11 +240,23 @@ export const getAdminOverview = async (req, res) => {
                 where: {
                     type: 'credit',
                     status: 'success',
-                    OR: buildNoteFilters(feeNoteKeywords),
+                    OR: buildTransactionSignalFilters('fee', feeNoteKeywords),
                 },
             }),
             prisma.transactionHistory.findMany({
-                where: { status: 'success' },
+                where: {
+                    status: 'success',
+                    OR: [
+                        {
+                            category: 'fee',
+                            type: 'credit',
+                        },
+                        {
+                            category: 'salary',
+                            type: 'debit',
+                        },
+                    ],
+                },
                 select: {
                     amount: true,
                     type: true,
@@ -249,11 +288,14 @@ export const getAdminOverview = async (req, res) => {
             ? Number((studentsCount / teachersCount).toFixed(1))
             : null;
 
-        const feePerStudent = Number(firstDefinedConfig(configMap, feePerStudentKeys, 0) || 0);
         const configuredReceivedIncome = Number(firstDefinedConfig(configMap, receivedIncomeKeys, 0) || 0);
         const transactionReceivedIncome = Number(feeTaggedCredits._sum.amount || 0);
         const receivedIncome = configuredReceivedIncome || transactionReceivedIncome;
-        const accruedIncome = feePerStudent > 0 ? studentsCount * feePerStudent : 0;
+        const accruedIncome = courses.reduce((sum, course) => {
+            const classFee = Number(course.feePerStudent || 0);
+            const enrolledStudents = Number(course._count?.enrollments || 0);
+            return sum + (classFee * enrolledStudents);
+        }, 0);
         const receivableIncome = Math.max(accruedIncome - receivedIncome, 0);
         const currency = String(firstDefinedConfig(configMap, currencyKeys, 'INR') || 'INR');
 
@@ -277,12 +319,12 @@ export const getAdminOverview = async (req, res) => {
             },
             finance: {
                 currency,
-                feePerStudent,
+                feePerStudent: 0,
                 receivedIncome,
                 accruedIncome,
                 receivableIncome,
                 receivedSource: configuredReceivedIncome > 0 ? 'config' : 'transactions',
-                accruedSource: feePerStudent > 0 ? 'config' : 'unavailable',
+                accruedSource: courses.some((course) => Number(course.feePerStudent || 0) > 0) ? 'classes' : 'unavailable',
                 latestTransactions: latestTransactions.map((transaction) => ({
                     amount: Number(transaction.amount || 0),
                     type: transaction.type,
@@ -331,9 +373,6 @@ export const getManagerOverview = async (req, res) => {
             return sendError(res, 'Not authorized to access manager overview', 403);
         }
 
-        const salaryFilters = buildNoteFilters(salaryNoteKeywords);
-        const incomeFilters = buildNoteFilters(incomeNoteKeywords);
-
         const [
             managerUser,
             students,
@@ -346,8 +385,6 @@ export const getManagerOverview = async (req, res) => {
             anySalaryTransactions,
             ownTaggedCreditTotal,
             ownTaggedCreditCount,
-            ownAllCreditTotal,
-            ownAllCreditCount,
             privilegedAttendanceRecords,
             latestPrivilegedAttendance,
         ] = await Promise.all([
@@ -416,7 +453,7 @@ export const getManagerOverview = async (req, res) => {
                 where: {
                     type: 'credit',
                     status: 'success',
-                    OR: buildNoteFilters(feeNoteKeywords),
+                    OR: buildTransactionSignalFilters('fee', feeNoteKeywords),
                 },
             }),
             prisma.transactionHistory.aggregate({
@@ -426,14 +463,14 @@ export const getManagerOverview = async (req, res) => {
                 where: {
                     type: 'debit',
                     status: 'success',
-                    OR: salaryFilters,
+                    OR: buildTransactionSignalFilters('salary', salaryNoteKeywords),
                 },
             }),
             prisma.transactionHistory.count({
                 where: {
                     type: 'debit',
                     status: 'success',
-                    OR: salaryFilters,
+                    OR: buildTransactionSignalFilters('salary', salaryNoteKeywords),
                 },
             }),
             prisma.transactionHistory.aggregate({
@@ -444,7 +481,7 @@ export const getManagerOverview = async (req, res) => {
                     userId: managerId,
                     type: 'credit',
                     status: 'success',
-                    OR: incomeFilters,
+                    OR: buildTransactionSignalFilters('salary', salaryNoteKeywords),
                 },
             }),
             prisma.transactionHistory.count({
@@ -452,24 +489,7 @@ export const getManagerOverview = async (req, res) => {
                     userId: managerId,
                     type: 'credit',
                     status: 'success',
-                    OR: incomeFilters,
-                },
-            }),
-            prisma.transactionHistory.aggregate({
-                _sum: {
-                    amount: true,
-                },
-                where: {
-                    userId: managerId,
-                    type: 'credit',
-                    status: 'success',
-                },
-            }),
-            prisma.transactionHistory.count({
-                where: {
-                    userId: managerId,
-                    type: 'credit',
-                    status: 'success',
+                    OR: buildTransactionSignalFilters('salary', salaryNoteKeywords),
                 },
             }),
             prisma.attendance.findMany({
@@ -545,17 +565,12 @@ export const getManagerOverview = async (req, res) => {
                 : 'unavailable';
 
         const ownTaggedIncomeCount = ownTaggedCreditCount || 0;
-        const ownAllCreditsCount = ownAllCreditCount || 0;
         const ownIncomeReceived = ownTaggedIncomeCount > 0
             ? Number(ownTaggedCreditTotal._sum.amount || 0)
-            : ownAllCreditsCount > 0
-                ? Number(ownAllCreditTotal._sum.amount || 0)
-                : null;
+            : null;
         const ownIncomeSource = ownTaggedIncomeCount > 0
             ? 'tagged-transactions'
-            : ownAllCreditsCount > 0
-                ? 'credit-transactions'
-                : 'unavailable';
+            : 'unavailable';
 
         const attendanceSummary = privilegedAttendanceRecords.reduce((summary, record) => {
             summary.totalRecords += 1;
@@ -666,7 +681,7 @@ async function studentDashboard(userId, res) {
             }),
             prisma.enrollment.findMany({
                 where: { userId },
-                include: { course: { select: { name: true, id: true } } }
+                include: { course: { select: { name: true, id: true, feePerStudent: true } } }
             }),
             prisma.xp.findUnique({ where: { userId } }),
             prisma.userAchievements.findMany({
@@ -736,7 +751,7 @@ async function studentDashboard(userId, res) {
                     userId,
                     type: 'debit',
                     status: 'success',
-                    OR: buildNoteFilters(feeNoteKeywords),
+                    OR: buildTransactionSignalFilters('fee', feeNoteKeywords),
                 },
             }),
             prisma.transactionHistory.aggregate({
@@ -747,12 +762,18 @@ async function studentDashboard(userId, res) {
                     userId,
                     type: 'credit',
                     status: 'success',
-                    OR: buildNoteFilters(feeNoteKeywords),
+                    OR: buildTransactionSignalFilters('fee', feeNoteKeywords),
                 },
             }),
         ]);
 
         const userLeaderboardPos = leaderboardPos && leaderboardPos[0] ? leaderboardPos[0] : null;
+        const normalizedLeaderboardPos = userLeaderboardPos
+            ? {
+                rank: toPlainNumber(userLeaderboardPos.rank, null),
+                score: toPlainNumber(userLeaderboardPos.score, 0),
+            }
+            : null;
 
         // Normalize user profile for frontend: flatten avatar and names
         const userProfile = {
@@ -765,7 +786,10 @@ async function studentDashboard(userId, res) {
         const streak = calculateStreak(recentClaims);
         const configMap = new Map(configs.map((config) => [config.key, config]));
         const currency = String(firstDefinedConfig(configMap, currencyKeys, 'INR') || 'INR');
-        const totalFee = Number(firstDefinedConfig(configMap, feePerStudentKeys, 0) || 0);
+        const totalFee = (enrollments || []).reduce(
+            (sum, enrollment) => sum + Number(enrollment.course?.feePerStudent || 0),
+            0
+        );
         const debitFeePayments = Number(feeDebits._sum.amount || 0);
         const creditFeePayments = Number(feeCredits._sum.amount || 0);
         const paidAmount = debitFeePayments > 0 ? debitFeePayments : creditFeePayments;
@@ -795,10 +819,19 @@ async function studentDashboard(userId, res) {
 
         // Fallback leaderboard if needed
         const finalLeaderboard = leaderboardEntries && leaderboardEntries.length > 0 
-            ? leaderboardEntries 
+            ? leaderboardEntries.map((entry) => ({
+                userId: entry.userId,
+                totalXp: toPlainNumber(entry.totalXp, 0),
+                totalPoints: toPlainNumber(entry.totalPoints, 0),
+                rank: toPlainNumber(entry.rank, 0),
+                username: entry.username,
+                firstName: entry.firstName,
+                lastName: entry.lastName,
+                avatar: entry.avatar,
+            }))
             : (xpLeaderboard || []).map((entry, index) => ({
                 userId: entry.userId,
-                totalXp: entry.xp,
+                totalXp: toPlainNumber(entry.xp, 0),
                 rank: index + 1,
                 username: entry.user?.username,
                 firstName: entry.user?.userDetails?.firstName,
@@ -815,7 +848,7 @@ async function studentDashboard(userId, res) {
                 currentLevelRequiredXp: currentLevelXp,
                 nextLevelRequiredXp: nextLevelXp,
                 walletBalance: Number(wallet?.balance) || 0,
-                leaderboardRank: userLeaderboardPos?.rank || null,
+                leaderboardRank: normalizedLeaderboardPos?.rank || null,
                 totalAchievements: achievements?.length || 0,
                 streak: streak
             },

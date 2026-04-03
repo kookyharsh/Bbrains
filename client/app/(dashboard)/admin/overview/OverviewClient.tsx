@@ -291,9 +291,9 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                                     {formatCurrency(stats.finance.accruedIncome, stats.finance.currency)}
                                 </p>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    {stats.finance.accruedSource === "config"
-                                        ? `Based on ${formatCurrency(stats.finance.feePerStudent, stats.finance.currency)} per student`
-                                        : "Set a per-student fee config to calculate accrued income"}
+                                    {stats.finance.accruedSource === "classes"
+                                        ? "Based on class fee per student multiplied by enrolled students in each class"
+                                        : "No class fee data is available yet"}
                                 </p>
                             </div>
 
@@ -303,7 +303,7 @@ export function OverviewClient({ stats }: OverviewClientProps) {
                                     {formatCurrency(stats.finance.receivableIncome, stats.finance.currency)}
                                 </p>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Outstanding amount from accrued minus received income
+                                    Outstanding amount from class-based accrual minus received income
                                 </p>
                             </div>
                         </div>

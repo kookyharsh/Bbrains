@@ -92,9 +92,9 @@ export default function AdminFinancePage() {
               {formatCurrency(stats.finance.accruedIncome, stats.finance.currency)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {stats.finance.accruedSource === "config"
-                ? `Calculated from ${formatCurrency(stats.finance.feePerStudent, stats.finance.currency)} per student`
-                : "Configure a per-student fee key to enable this"}
+              {stats.finance.accruedSource === "classes"
+                ? "Calculated from class fee per student multiplied by enrolled students in each class"
+                : "No class fee data is available yet"}
             </p>
           </CardContent>
         </Card>
@@ -106,7 +106,7 @@ export default function AdminFinancePage() {
               {formatCurrency(stats.finance.receivableIncome, stats.finance.currency)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Outstanding accrued amount after subtracting received income
+              Outstanding amount after subtracting received income from class-based accrual
             </p>
           </CardContent>
         </Card>
