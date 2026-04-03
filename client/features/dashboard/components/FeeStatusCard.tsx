@@ -61,8 +61,8 @@ export function FeeStatusCard({ feeSummary }: FeeStatusCardProps) {
 
         <p className="text-xs text-muted-foreground">
           {isConfigured
-            ? `Total fee: ${formatCurrency(totalFee, currency)}`
-            : "Student fee is not configured yet."}
+            ? `Class fee total: ${formatCurrency(totalFee, currency)}`
+            : "Class fee is not configured yet."}
         </p>
       </CardContent>
     </Card>

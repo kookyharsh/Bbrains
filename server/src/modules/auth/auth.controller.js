@@ -6,6 +6,7 @@ import { generateToken } from "../../utils/tokengen.js";
 import { getRandomAvatar } from "../../utils/randomavatar.js";
 import { sendSuccess, sendCreated, sendError } from "../../utils/response.js";
 import { createAuditLog } from "../../utils/auditLog.js";
+import { isDatabaseUnavailableError } from "../../utils/prisma-errors.js";
 import crypto from "crypto";
 import prisma from "../../utils/prisma.js";
 
@@ -57,6 +58,10 @@ const register = async (req, res) => {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
     }
+    if (isDatabaseUnavailableError(error)) {
+      console.error('Registration database connectivity error:', error);
+      return sendError(res, 'Database temporarily unavailable. Please try again in a moment.', 503);
+    }
     console.error(error);
     return sendError(res, "Registration failed", 500);
   }
@@ -96,6 +101,10 @@ const login = async (req, res) => {
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+    }
+    if (isDatabaseUnavailableError(error)) {
+      console.error('Login database connectivity error:', error);
+      return sendError(res, 'Database temporarily unavailable. Please try again in a moment.', 503);
     }
     console.error(error);
     return sendError(res, "Login failed", 500);
@@ -145,6 +154,10 @@ const updatePassword = async (req, res) => {
   } catch (error) {
     if (error.name === 'ZodError') {
       return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
+    }
+    if (isDatabaseUnavailableError(error)) {
+      console.error('Password update database connectivity error:', error);
+      return sendError(res, 'Database temporarily unavailable. Please try again in a moment.', 503);
     }
     console.error(error);
     return sendError(res, "Password update failed", 500);

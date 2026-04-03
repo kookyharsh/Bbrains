@@ -40,6 +40,7 @@ const baseSidebarItems: SidebarItem[] = [
     {title:"announcements",url:"/announcements",icon:Megaphone},
     { title: "Assignments", url: "/assignments", icon: Book },
     { title: "Chat", url: "/chat", icon: MessageSquare },
+    { title: "My Transactions", url: "/transactions", icon: ArrowUpDown },
     {
         title: "Wallet",
         url: "/wallet",
@@ -104,6 +105,7 @@ const managerExtraItems: SidebarItem[] = [
     { title: "Classes",       url: "/manager/classes",       icon: BookOpen },
     { title: "Teachers",      url: "/manager/teachers",      icon: UserCheck },
     { title: "Students",      url: "/manager/students",      icon: Users },
+    { title: "Transactions",  url: "/manager/transactions",  icon: ArrowUpDown },
 ];
 
 // ─── Role → grouped sidebar ────────────────────────────────────────────────
@@ -143,7 +145,10 @@ export function getSidebarGroups(role: Role | Role[]): SidebarGroup[] {
     const roles = Array.isArray(role) ? role : [role];
     const primaryRole = roles[0] || "student";
 
-    const sharedItems = [...baseSidebarItems];
+    const sharedItems = [...baseSidebarItems].filter((item) => {
+        if (item.url !== "/transactions") return true;
+        return primaryRole !== "admin" && primaryRole !== "superadmin" && primaryRole !== "bbrains_official";
+    });
 
     if (primaryRole === "student") {
         const assignmentsIndex = sharedItems.findIndex((item) => item.url === "/assignments");

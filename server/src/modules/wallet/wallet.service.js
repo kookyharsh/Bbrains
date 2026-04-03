@@ -1,5 +1,6 @@
 import prisma from "../../utils/prisma.js";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 const transferFunds = async (senderId, recipientEmail, amount, note, pin) => {
     return await prisma.$transaction(async (tx) => {
@@ -44,12 +45,20 @@ const transferFunds = async (senderId, recipientEmail, amount, note, pin) => {
         });
 
         // 4. Log Transactions (Debit for Sender, Credit for Recipient)
+        const entryGroupId = crypto.randomUUID();
+
         const debitTx = await tx.transactionHistory.create({
             data: {
                 userId: senderId,
+                recordedById: senderId,
+                relatedUserId: recipientWallet.userId,
+                entryGroupId,
                 amount: amount,
                 type: 'debit',
+                category: 'transfer',
                 status: 'success',
+                paymentMode: 'wallet',
+                primaryRecord: true,
                 note: `Sent to ${recipientEmail}: ${note || ''}`
             }
         });
@@ -57,9 +66,15 @@ const transferFunds = async (senderId, recipientEmail, amount, note, pin) => {
         const creditTx = await tx.transactionHistory.create({
             data: {
                 userId: recipientWallet.userId,
+                recordedById: senderId,
+                relatedUserId: senderId,
+                entryGroupId,
                 amount: amount,
                 type: 'credit',
+                category: 'transfer',
                 status: 'success',
+                paymentMode: 'wallet',
+                primaryRecord: false,
                 note: `Received from ${senderWallet.id}: ${note || ''}`
             }
         });

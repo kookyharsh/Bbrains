@@ -27,7 +27,7 @@ export interface OverviewFinanceStats {
     accruedIncome: number
     receivableIncome: number
     receivedSource: "config" | "transactions"
-    accruedSource: "config" | "unavailable"
+    accruedSource: "classes" | "config" | "unavailable"
     latestTransactions: OverviewFinanceTransaction[]
 }
 

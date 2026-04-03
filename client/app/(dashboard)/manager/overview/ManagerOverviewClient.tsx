@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import type { ReactNode } from "react"
 import {
     ArrowRight,
@@ -130,21 +131,21 @@ export function ManagerOverviewClient({ stats }: { stats: ManagerOverviewStats }
                     </div>
 
                     <div className="grid gap-3 sm:min-w-[280px]">
-                        <Card className="border-border/60 bg-background/80 shadow-sm backdrop-blur">
-                            <CardContent className="p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Own Income Received</p>
-                                <p className="mt-2 text-2xl font-bold text-foreground">
-                                    {formatCurrency(stats.manager.ownIncomeReceived, stats.finance.currency)}
-                                </p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {stats.manager.ownIncomeSource === "tagged-transactions"
-                                        ? "From your income-tagged credit transactions"
-                                        : stats.manager.ownIncomeSource === "credit-transactions"
-                                            ? "From your successful credit transactions"
-                                            : "No dedicated income data exists yet"}
-                                </p>
-                            </CardContent>
-                        </Card>
+                        <Link href="/transactions" className="block">
+                            <Card className="border-border/60 bg-background/80 shadow-sm backdrop-blur transition-all hover:border-primary/40 hover:shadow-md">
+                                <CardContent className="p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Salary Received</p>
+                                    <p className="mt-2 text-2xl font-bold text-foreground">
+                                        {formatCurrency(stats.manager.ownIncomeReceived, stats.finance.currency)}
+                                    </p>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        {stats.manager.ownIncomeSource === "tagged-transactions"
+                                            ? "From your salary credit transactions"
+                                            : "No salary receipt data exists yet"}
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </Link>
 
                         <div className="rounded-2xl border border-border/60 bg-background/80 px-4 py-3 text-sm text-muted-foreground shadow-sm backdrop-blur">
                             {currentDate}
