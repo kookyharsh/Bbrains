@@ -82,7 +82,7 @@ export default function ManageUsersPage() {
   }
 
   async function handleCreateManager() {
-    if (!form.username.trim() || !form.email.trim() || !form.firstName.trim()) {
+    if (!form.username.trim() || !form.email.trim() || !form.firstName.trim() || !form.lastName.trim()) {
       toast.error("Please fill in the required manager details");
       return;
     }
