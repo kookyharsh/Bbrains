@@ -145,7 +145,10 @@ export function getSidebarGroups(role: Role | Role[]): SidebarGroup[] {
     const roles = Array.isArray(role) ? role : [role];
     const primaryRole = roles[0] || "student";
 
-    const sharedItems = [...baseSidebarItems];
+    const sharedItems = [...baseSidebarItems].filter((item) => {
+        if (item.url !== "/transactions") return true;
+        return primaryRole !== "admin" && primaryRole !== "superadmin" && primaryRole !== "bbrains_official";
+    });
 
     if (primaryRole === "student") {
         const assignmentsIndex = sharedItems.findIndex((item) => item.url === "/assignments");

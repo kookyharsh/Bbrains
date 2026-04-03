@@ -417,7 +417,7 @@ export default function OverviewPage() {
           icon={<CalendarDays className="size-5" />}
           sub={todayName}
         />
-        <Link href="/transactions?view=salary" className="block">
+        <Link href="/transactions" className="block">
           <StatCard
             label="Salary Received"
             value={formatCurrency(incomeReceived)}

@@ -1,17 +1,16 @@
 "use client"
 
-import Link from "next/link"
 import { useMemo, useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { ArrowLeftRight, BadgeIndianRupee, Loader2, ReceiptText } from "lucide-react"
 import { toast } from "sonner"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { transactionApi, type Transaction } from "@/services/api/client"
+import { dashboardApi, transactionApi, type Transaction, type User } from "@/services/api/client"
 
-type TransactionView = "all" | "fees" | "salary"
+type PersonalTransactionKind = "fees" | "salary"
 
 function formatCurrency(amount: number | string) {
   return new Intl.NumberFormat("en-IN", {
@@ -53,7 +52,22 @@ function isOwnSalaryTransaction(transaction: Transaction) {
   return transaction.category === "salary" && transaction.type === "credit"
 }
 
-function getViewCopy(view: TransactionView) {
+function hasManagerRole(user: Pick<User, "roles"> | null | undefined) {
+  return Boolean(
+    user?.roles?.some((entry) =>
+      entry?.role?.name?.toLowerCase().includes("manager")
+    )
+  )
+}
+
+function resolvePersonalTransactionKind(user: User | null): PersonalTransactionKind | null {
+  if (!user) return null
+  if (user.type === "student") return "fees"
+  if (user.type === "teacher" || user.type === "staff" || hasManagerRole(user)) return "salary"
+  return null
+}
+
+function getViewCopy(view: PersonalTransactionKind | null) {
   if (view === "fees") {
     return {
       title: "Fees Paid",
@@ -72,18 +86,18 @@ function getViewCopy(view: TransactionView) {
 
   return {
     title: "My Transactions",
-    subtitle: "Your own fee payments and salary receipts only.",
+    subtitle: "Only your own personal fee or salary transactions are shown here.",
     empty: "No personal fee or salary transactions found.",
   }
 }
 
 export default function PersonalTransactionsPage() {
-  const searchParams = useSearchParams()
+  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
 
-  const view = (searchParams.get("view") || "all") as TransactionView
-  const activeView: TransactionView = view === "fees" || view === "salary" ? view : "all"
+  const activeView = resolvePersonalTransactionKind(currentUser)
   const copy = getViewCopy(activeView)
 
   useEffect(() => {
@@ -92,7 +106,30 @@ export default function PersonalTransactionsPage() {
     const load = async () => {
       try {
         setLoading(true)
-        const response = await transactionApi.getMyTransactions({ limit: 200, status: "success" })
+        const userResponse = await dashboardApi.getUser()
+
+        if (!mounted) return
+
+        if (!userResponse.success || !userResponse.data) {
+          toast.error(userResponse.message || "Failed to load your profile")
+          return
+        }
+
+        const nextUser = userResponse.data
+        setCurrentUser(nextUser)
+
+        const nextView = resolvePersonalTransactionKind(nextUser)
+        if (!nextView) {
+          router.replace("/dashboard")
+          return
+        }
+
+        const response = await transactionApi.getMyTransactions({
+          limit: 200,
+          status: "success",
+          category: nextView === "fees" ? "fee" : "salary",
+          type: nextView === "fees" ? "debit" : "credit",
+        })
         if (!mounted) return
 
         if (response.success) {
@@ -112,22 +149,18 @@ export default function PersonalTransactionsPage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [router])
 
   const personalTransactions = useMemo(() => {
-    const ownPerspectiveTransactions = transactions.filter(
-      (transaction) => isOwnFeeTransaction(transaction) || isOwnSalaryTransaction(transaction)
-    )
-
     if (activeView === "fees") {
-      return ownPerspectiveTransactions.filter(isOwnFeeTransaction)
+      return transactions.filter(isOwnFeeTransaction)
     }
 
     if (activeView === "salary") {
-      return ownPerspectiveTransactions.filter(isOwnSalaryTransaction)
+      return transactions.filter(isOwnSalaryTransaction)
     }
 
-    return ownPerspectiveTransactions
+    return []
   }, [activeView, transactions])
 
   const totalAmount = personalTransactions.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0)
@@ -135,18 +168,6 @@ export default function PersonalTransactionsPage() {
   return (
     <div className="space-y-6">
       <SectionHeader title={copy.title} subtitle={copy.subtitle} />
-
-      <div className="flex flex-wrap gap-2">
-        <Badge asChild variant={activeView === "all" ? "default" : "outline"}>
-          <Link href="/transactions">All</Link>
-        </Badge>
-        <Badge asChild variant={activeView === "fees" ? "default" : "outline"}>
-          <Link href="/transactions?view=fees">Fees</Link>
-        </Badge>
-        <Badge asChild variant={activeView === "salary" ? "default" : "outline"}>
-          <Link href="/transactions?view=salary">Salary</Link>
-        </Badge>
-      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-border/60 shadow-sm">
@@ -160,7 +181,7 @@ export default function PersonalTransactionsPage() {
           <CardContent className="p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Total Amount</p>
             <p className="mt-2 text-3xl font-bold text-foreground">{formatCurrency(totalAmount)}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Combined amount for the currently selected personal transaction view.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Combined amount for your own {activeView === "fees" ? "fee payments" : "salary receipts"}.</p>
           </CardContent>
         </Card>
       </div>

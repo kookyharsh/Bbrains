@@ -131,7 +131,7 @@ export function ManagerOverviewClient({ stats }: { stats: ManagerOverviewStats }
                     </div>
 
                     <div className="grid gap-3 sm:min-w-[280px]">
-                        <Link href="/transactions?view=salary" className="block">
+                        <Link href="/transactions" className="block">
                             <Card className="border-border/60 bg-background/80 shadow-sm backdrop-blur transition-all hover:border-primary/40 hover:shadow-md">
                                 <CardContent className="p-4">
                                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Salary Received</p>

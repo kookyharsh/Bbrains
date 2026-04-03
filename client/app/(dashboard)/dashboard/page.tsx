@@ -42,7 +42,7 @@ export default async function DashboardOverview() {
         />
         <DailyRewardCard initialStreak={dashboardData?.streak} />
         <WalletMiniCard initialWallet={dashboardData?.wallet} />
-        <Link href="/transactions?view=fees" className="block h-full">
+        <Link href="/transactions" className="block h-full">
           <FeeStatusCard feeSummary={dashboardData?.feeSummary} />
         </Link>
         <AttendanceCard initialAttendance={dashboardData?.attendance} />
