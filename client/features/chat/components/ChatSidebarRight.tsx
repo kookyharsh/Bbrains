@@ -20,6 +20,10 @@ interface ChatSidebarRightProps {
 export function ChatSidebarRight({ members, currentUserId, onSelectUser }: ChatSidebarRightProps) {
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set())
 
+  interface PresenceEntry {
+    user_id?: string
+  }
+
   useEffect(() => {
     if (!currentUserId) return
 
@@ -27,10 +31,10 @@ export function ChatSidebarRight({ members, currentUserId, onSelectUser }: ChatS
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState() as Record<string, any[]>
+        const state = channel.presenceState() as Record<string, PresenceEntry[]>
         const onlineIds = new Set<string>()
         for (const key in state) {
-          state[key].forEach((presence: any) => {
+          state[key].forEach((presence: PresenceEntry) => {
             if (presence.user_id) onlineIds.add(presence.user_id)
           })
         }

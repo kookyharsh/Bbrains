@@ -79,7 +79,7 @@ export function MessageInput({
     }, [])
 
     return (
-        <div className="px-3 py-3 border-t border-border bg-card mt-auto relative z-40 sticky bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] md:static md:bottom-auto">
+        <div className="px-3 pt-3 pb-24 md:pb-3 border-t border-border bg-card mt-auto relative z-40 bottom-0 md:static">
             {uploadError && (
                 <div
                     role="alert"

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,54 +12,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { marketApi, Product, reviewApi, Review, ReviewStats } from "@/services/api/client";
 import { toast } from "sonner";
-import { Loader2, Star, ShoppingCart, Package, ArrowLeft, X, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle } from "lucide-react";
+import { 
+  Loader2, Star, ShoppingCart, Package, ArrowLeft, X, 
+  ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle,
+  Heart, Share2, ShieldCheck, Truck, RefreshCcw, Info
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-function ImageLightbox({ images, currentIndex, onClose, onNext, onPrev }: { images: string[]; currentIndex: number; onClose: () => void; onNext: () => void; onPrev: () => void }) {
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
-    const diff = touchStart - e.touches[0].clientX;
-    if (diff > 50) onNext();
-    else if (diff < -50) onPrev();
-    setTouchStart(null);
-  };
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") onNext();
-      if (e.key === "ArrowLeft") onPrev();
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onNext, onPrev, onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Image gallery">
-      <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white z-50">
-        <X className="w-6 h-6" />
-      </button>
-      {images.length > 1 && (
-        <>
-          <button onClick={onPrev} className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white hidden md:block">
-            <ChevronLeft className="w-8 h-8" />
-          </button>
-          <button onClick={onNext} className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white hidden md:block">
-            <ChevronRight className="w-8 h-8" />
-          </button>
-        </>
-      )}
-      <div className="relative w-full h-full max-w-4xl max-h-[80vh] p-4" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
-        <Image src={images[currentIndex]} alt={`Product image ${currentIndex + 1}`} fill className="object-contain" />
-      </div>
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-        {images.map((_, idx) => (
-          <span key={idx} className={`w-2 h-2 rounded-full ${idx === currentIndex ? "bg-white" : "bg-white/40"}`} />
-        ))}
-      </div>
-    </div>
-  );
-}
+// Helper to encode image URLs (existing logic)
+const encodeImageUrl = (url: string) => {
+  try {
+    const urlObj = new URL(url);
+    const params = new URLSearchParams(urlObj.search);
+    const newParams = new URLSearchParams();
+    for (const [key, value] of params) {
+      newParams.set(key, decodeURIComponent(value));
+    }
+    urlObj.search = newParams.toString();
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
+};
 
 function PinDialog({
   open,
@@ -76,13 +50,13 @@ function PinDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setPin(""); }}>
-      <DialogContent className="sm:max-w-md rounded-3xl border-white/10 bg-slate-950/95 backdrop-blur-2xl p-8 shadow-2xl">
+      <DialogContent className="sm:max-w-md rounded-[2.5rem] border-white/10 bg-slate-950/95 backdrop-blur-2xl p-8 shadow-2xl">
         <DialogHeader className="space-y-3">
           <div className="w-14 h-14 bg-brand-orange/10 rounded-2xl flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-7 h-7 text-brand-orange" />
           </div>
-          <DialogTitle className="text-2xl font-black tracking-tight text-white text-center">Confirm Purchase</DialogTitle>
-          <DialogDescription className="text-base font-medium text-white/50 text-center">Enter your 6-digit PIN to authorize</DialogDescription>
+          <DialogTitle className="text-2xl font-black tracking-tight text-white text-center">Confirm Authorization</DialogTitle>
+          <DialogDescription className="text-base font-medium text-white/50 text-center">Enter your 6-digit cryptographic PIN to sign this transaction.</DialogDescription>
         </DialogHeader>
         <div className="py-6">
           <div className="flex justify-center">
@@ -97,7 +71,7 @@ function PinDialog({
         </div>
         <DialogFooter>
           <Button onClick={() => onConfirm(pin)} disabled={pin.length < 6 || isProcessing} className="w-full h-14 rounded-2xl bg-brand-orange hover:bg-brand-orange/90 text-white font-black uppercase tracking-widest shadow-lg shadow-brand-orange/20 disabled:opacity-50">
-            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirm & Pay"}
+            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign & Finalize"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -107,14 +81,15 @@ function PinDialog({
 
 export default function MarketProductDetail() {
   const params = useParams();
+  const router = useRouter();
   const productId = Number(params?.id);
+  
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [showPin, setShowPin] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats | null>(null);
   const [canReview, setCanReview] = useState(false);
@@ -131,8 +106,6 @@ export default function MarketProductDetail() {
     if (product.metadata?.previewImages) imgs.push(...product.metadata.previewImages);
     return [...new Set(imgs)];
   }, [product]);
-
-  const currentImage = allImages[selectedIndex] || product?.image || null;
 
   useEffect(() => {
     async function fetchProduct(pid: number) {
@@ -226,8 +199,11 @@ export default function MarketProductDetail() {
       if (!product) return;
       const resp = await marketApi.buyNow(product.id, quantity, pin);
       if (resp?.success) {
-        toast.success("Purchase successful!");
+        toast.success("Order Placed! 🎉", {
+          description: `Successfully acquired ${product.name}`,
+        });
         setAlreadyOwned(true);
+        router.refresh();
       } else {
         toast.error(resp?.message ?? "Purchase failed");
       }
@@ -241,241 +217,391 @@ export default function MarketProductDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-brand-orange" />
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 animate-spin text-brand-orange" />
+        <p className="text-sm font-black uppercase tracking-[0.3em] text-white/20 animate-pulse">Syncing Asset Data...</p>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="p-6 text-white/60">Product not found.</div>
+      <div className="min-h-[80vh] flex flex-col items-center justify-center gap-6">
+        <AlertTriangle className="w-16 h-16 text-brand-orange" />
+        <h2 className="text-2xl font-black text-white tracking-tight">Asset Not Found</h2>
+        <Button variant="outline" asChild className="rounded-xl border-white/10 hover:bg-white/5">
+          <Link href="/market">Return to Market</Link>
+        </Button>
+      </div>
     );
   }
 
   const isOutOfStock = product.stock <= 0;
   const isLowStock = product.stock > 0 && product.stock <= 5;
-  const sellerName = product.creator
-    ? `${product.creator.userDetails?.firstName || product.creator.username}`
-    : "Unknown Seller";
+  const sellerDetails = product.creator?.userDetails;
+  const sellerName = sellerDetails?.firstName ? `${sellerDetails.firstName} ${sellerDetails.lastName || ""}` : product.creator?.username || "Verified Scholar";
+  const sellerAvatar = sellerDetails?.avatar || "";
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <Link href="/market" className="inline-flex items-center gap-2 text-white/50 hover:text-white transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Back to Market</span>
-        </Link>
+    <div className="min-h-screen bg-transparent animate-in fade-in duration-700">
+      {/* MOBILE HEADER (Floating) */}
+      <div className="md:hidden sticky top-0 z-50 px-4 py-3 flex items-center justify-between bg-background/60 backdrop-blur-xl border-b border-white/5">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-xl bg-white/5 hover:bg-white/10 text-white">
+          <ChevronLeft className="w-6 h-6" />
+        </Button>
+        <span className="font-bold text-sm tracking-tight text-white/70">Product Details</span>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="rounded-xl bg-white/5 hover:bg-white/10 text-white">
+            <Heart className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" className="rounded-xl bg-white/5 hover:bg-white/10 text-white">
+            <Share2 className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-        <div className="space-y-4">
-          <div
-            className="relative w-full aspect-square rounded-2xl overflow-hidden bg-black/20 cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => allImages.length > 1 && setLightboxOpen(true)}
-          >
-            {currentImage ? (
-              <Image src={currentImage} alt={product.name} fill className="object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Package className="w-20 h-20 text-white/10" />
-              </div>
-            )}
-          </div>
-          {allImages.length > 1 && (
-            <div className="grid grid-cols-4 gap-2">
-              {allImages.map((src, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedIndex(idx)}
-                  className={`relative w-full aspect-square rounded-xl overflow-hidden border-2 transition-all ${selectedIndex === idx ? "border-brand-orange ring-2 ring-brand-orange/20" : "border-white/10 hover:border-white/30"}`}
-                >
-                  <Image src={src} alt={`thumb-${idx}`} fill className="object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 md:py-12">
+        {/* DESKTOP BREADCRUMB */}
+        <div className="hidden md:flex items-center gap-4 mb-10 translate-x-[-8px]">
+          <Link href="/market">
+            <Button variant="ghost" className="rounded-2xl h-12 px-5 hover:bg-white/5 text-white/40 hover:text-white group">
+              <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+              Back to Marketplace
+            </Button>
+          </Link>
+          <div className="h-1 w-1 rounded-full bg-white/10" />
+          <span className="text-sm font-bold text-white/20 uppercase tracking-widest">Asset Details</span>
         </div>
 
-        <div className="space-y-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={product.productType === 'digital' ? 'default' : 'secondary'} className="text-[10px] font-black uppercase tracking-widest px-3 py-1">
-                {product.productType || 'physical'}
-              </Badge>
-              {isOutOfStock ? (
-                <Badge variant="destructive" className="text-[10px] font-black uppercase tracking-widest">Out of Stock</Badge>
-              ) : isLowStock ? (
-                <div className="flex items-center gap-1 text-amber-400">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span className="text-xs font-bold">Only {product.stock} left</span>
-                </div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-16 items-start">
+          {/* GALLERY PANEL (Col: 7/12 on LG) */}
+          <div className="md:col-span-7 space-y-6">
+            <div className="relative aspect-[4/5] md:aspect-square rounded-[2rem] md:rounded-[3rem] overflow-hidden bg-white/[0.03] border border-white/5 group shadow-2xl">
+              {allImages[selectedIndex] ? (
+                <Image 
+                  src={encodeImageUrl(allImages[selectedIndex])} 
+                  alt={product.name} 
+                  fill 
+                  className="object-cover transition-transform duration-1000 group-hover:scale-105" 
+                  priority
+                />
               ) : (
-                <div className="flex items-center gap-1 text-green-400">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span className="text-xs font-bold">In Stock</span>
+                <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                  <Package className="w-20 h-20 text-white/5" />
+                  <span className="text-xs font-black uppercase tracking-widest text-white/20">No Preview Available</span>
                 </div>
               )}
-            </div>
-
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">{product.name}</h1>
-
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className={`w-4 h-4 ${star <= Math.round(product.rating || 0) ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
+              {/* Image Indicators (Mobile style) */}
+              <div className="md:hidden absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md">
+                {allImages.map((_, idx) => (
+                  <div key={idx} className={cn("h-1.5 rounded-full transition-all duration-300", selectedIndex === idx ? "w-6 bg-brand-orange" : "w-1.5 bg-white/30")} />
                 ))}
               </div>
-              <span className="text-sm font-bold text-white">{product.rating ? product.rating.toFixed(1) : "0.0"}</span>
-              <span className="text-sm text-white/40">({product.reviewCount || 0} reviews)</span>
             </div>
 
-            <p className="text-sm text-white/50">Sold by <span className="text-white/70 font-medium">{sellerName}</span></p>
-          </div>
-
-          <div className="text-4xl font-black text-brand-orange">
-            {product.price} <span className="text-lg text-white/30 font-bold">B-Coins</span>
-          </div>
-
-          {product.description && (
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-              <p className="text-sm text-white/70 leading-relaxed">{product.description}</p>
+            {/* Thumbnails (Desktop) */}
+            {allImages.length > 1 && (
+              <div className="hidden md:grid grid-cols-5 gap-4">
+                {allImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedIndex(idx)}
+                    className={cn(
+                      "relative aspect-square rounded-2xl overflow-hidden border-2 transition-all duration-500",
+                      selectedIndex === idx ? "border-brand-orange scale-95 shadow-lg shadow-brand-orange/20" : "border-transparent opacity-40 hover:opacity-100"
+                    )}
+                  >
+                    <Image src={encodeImageUrl(img)} alt={`Thumb ${idx}`} fill className="object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* MOBILE SELLER PILL */}
+            <div className="md:hidden flex items-center justify-between p-4 rounded-3xl bg-white/[0.04] border border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden bg-brand-orange/10 flex items-center justify-center border border-white/10">
+                  {sellerAvatar ? <Image src={sellerAvatar} alt={sellerName} fill className="object-cover" /> : <Star className="w-5 h-5 text-brand-orange" />}
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Vendor</p>
+                  <p className="text-sm font-bold text-white">{sellerName}</p>
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" className="rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-widest h-9 px-4">Visit Store</Button>
             </div>
-          )}
-
-          {alreadyOwned && product.productType === 'digital' && (
-            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-              <p className="text-sm font-bold text-green-400 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                Already in your Library
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="default"
-              className="flex-1 h-12 rounded-xl bg-white/5 hover:bg-brand-orange text-white border border-white/10 hover:border-brand-orange font-bold transition-all"
-              onClick={addToCart}
-              disabled={isOutOfStock || (alreadyOwned && product.productType === 'digital')}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
-            </Button>
-            <Button
-              variant="default"
-              className="flex-1 h-12 rounded-xl bg-brand-orange hover:bg-brand-orange/90 text-white font-bold"
-              onClick={buyNow}
-              disabled={isOutOfStock || (alreadyOwned && product.productType === 'digital')}
-            >
-              Buy Now
-            </Button>
           </div>
 
-          {reviewStats && (
-            <div className="pt-6 border-t border-white/10">
-              <h3 className="text-lg font-bold text-white mb-4">Customer Reviews</h3>
-              <div className="flex items-center gap-4 mb-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                <div className="text-center">
-                  <div className="text-3xl font-black text-white">{reviewStats.averageRating.toFixed(1)}</div>
-                  <div className="flex gap-0.5 justify-center my-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className={`w-3 h-3 ${star <= Math.round(reviewStats.averageRating) ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
+          {/* INFO PANEL (Col: 5/12 on LG) */}
+          <div className="md:col-span-5 space-y-8 md:sticky md:top-24">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-brand-orange/10 text-brand-orange border-brand-orange/20 text-[10px] font-black uppercase tracking-widest px-3 py-1 h-7 rounded-lg">
+                  Premium Selection
+                </Badge>
+                <div className="hidden md:flex items-center gap-2">
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 hover:bg-white/10">
+                    <Heart className="w-5 h-5 text-white/40" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 hover:bg-white/10">
+                    <Share2 className="w-5 h-5 text-white/40" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">{product.name}</h1>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className={cn("w-4 h-4", s <= Math.round(product.rating || 0) ? "text-brand-orange fill-brand-orange" : "text-white/10")} />
                     ))}
+                    <span className="text-sm font-black text-white ml-2">{product.rating?.toFixed(1) || "0.0"}</span>
                   </div>
-                  <div className="text-xs text-white/50">{reviewStats.totalReviews} reviews</div>
-                </div>
-                <div className="flex-1 space-y-1">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const count = reviewStats.ratingCounts[star] || 0;
-                    const pct = reviewStats.totalReviews > 0 ? (count / reviewStats.totalReviews) * 100 : 0;
-                    return (
-                      <div key={star} className="flex items-center gap-2 text-xs">
-                        <span className="w-3">{star}</span>
-                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="w-6 text-white/50">{count}</span>
-                      </div>
-                    );
-                  })}
+                  <div className="h-1 w-1 rounded-full bg-white/20" />
+                  <span className="text-sm font-bold text-white/30">{product.reviewCount || 0} Verifications</span>
                 </div>
               </div>
 
-              {canReview && !showReviewForm && (
-                <Button size="sm" onClick={() => setShowReviewForm(true)} className="mb-4 bg-brand-orange hover:bg-brand-orange/80">Write a Review</Button>
-              )}
+              <div className="flex items-center gap-3">
+                {isOutOfStock ? (
+                  <Badge variant="destructive" className="rounded-lg h-7 font-black uppercase text-[10px] tracking-widest px-3">OUT OF STOCK</Badge>
+                ) : (
+                  <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-lg border border-emerald-500/20">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">In Stock & Verified</span>
+                  </div>
+                )}
+                {isLowStock && !isOutOfStock && <span className="text-xs font-bold text-amber-500 animate-pulse">Low Stock: {product.stock} left</span>}
+              </div>
 
-              {showReviewForm && (
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-white/70">Your Rating:</span>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button key={star} onClick={() => setNewRating(star)} className="p-1">
-                          <Star className={`w-6 h-6 ${star <= newRating ? "text-yellow-400 fill-yellow-400" : "text-white/30"}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <textarea
-                    className="w-full h-24 p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 text-sm resize-none"
-                    placeholder="Write your review..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSubmitReview} disabled={newRating === 0 || !newComment.trim() || submittingReview} className="bg-brand-orange">
-                      {submittingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit"}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setShowReviewForm(false); setNewRating(0); setNewComment(""); }}>Cancel</Button>
-                  </div>
+              <div className="p-8 rounded-[2rem] bg-white/[0.04] border border-white/5 shadow-inner flex flex-col gap-1 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange/5 blur-3xl rounded-full translate-x-16 -translate-y-16 group-hover:bg-brand-orange/10 transition-colors" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Asset Value</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-6xl font-black text-white tracking-tighter tabular-nums">{product.price}</span>
+                  <span className="text-lg font-black text-brand-orange uppercase tracking-widest">B-Coins</span>
+                </div>
+              </div>
+
+              {alreadyOwned && product.productType === 'digital' && (
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
+                   <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                   <p className="text-xs font-bold text-emerald-500 tracking-tight">You already own this digital asset. It is accessible in your Inventory.</p>
                 </div>
               )}
 
-              <div className="space-y-3">
-                {reviews.length === 0 ? (
-                  <p className="text-sm text-white/40">No reviews yet.</p>
-                ) : (
-                  reviews.map((review) => (
-                    <div key={review.id} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-brand-orange/20 flex items-center justify-center text-xs font-bold text-brand-orange">
-                          {review.user?.userDetails?.firstName?.[0] || review.user?.username?.[0] || "U"}
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-white">
-                            {review.user?.userDetails?.firstName ? `${review.user.userDetails.firstName} ${review.user.userDetails.lastName || ""}` : review.user?.username || "User"}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star key={star} className={`w-3 h-3 ${star <= review.rating ? "text-yellow-400 fill-yellow-400" : "text-white/20"}`} />
-                            ))}
-                            <span className="text-xs text-white/40 ml-1">{new Date(review.createdAt).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-sm text-white/80">{review.comment}</p>
-                    </div>
-                  ))
-                )}
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center bg-white/5 rounded-2xl border border-white/10 p-1">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-12 w-12 rounded-xl text-white/40 hover:bg-white/5 hover:text-white" 
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        disabled={quantity <= 1}
+                    >
+                      <X className="w-3 h-3 rotate-45 scale-150" /> {/* Minus alternative */}
+                    </Button>
+                    <span className="w-12 text-center text-lg font-black text-white">{quantity}</span>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-12 w-12 rounded-xl text-white/40 hover:bg-white/5 hover:text-white" 
+                        onClick={() => setQuantity(quantity + 1)}
+                        disabled={quantity >= (product.stock || 99)}
+                    >
+                      <Plus className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  <div className="flex-1">
+                     <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-1 ml-1">Subtotal</p>
+                     <p className="text-xl font-black text-white tracking-tight">{product.price * quantity} B-Coins</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-24 md:pb-0">
+                  <Button
+                    onClick={addToCart}
+                    disabled={isOutOfStock || (alreadyOwned && product.productType === 'digital')}
+                    className="h-16 rounded-[1.25rem] bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest border border-white/10 shadow-lg transition-transform active:scale-95"
+                  >
+                    <ShoppingCart className="w-5 h-5 mr-3" /> Add to Cart
+                  </Button>
+                  <Button
+                    onClick={buyNow}
+                    disabled={isOutOfStock || (alreadyOwned && product.productType === 'digital')}
+                    className="h-16 rounded-[1.25rem] bg-brand-orange hover:bg-brand-orange/90 text-white font-black uppercase tracking-widest shadow-2xl shadow-brand-orange/20 transition-transform active:scale-95"
+                  >
+                    Buy Now
+                  </Button>
+                </div>
+              </div>
+
+              {/* FEATURES BENTO */}
+              <div className="grid grid-cols-2 gap-4">
+                 <div className="p-4 rounded-[1.5rem] bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                    <Truck className="w-5 h-5 text-brand-orange" />
+                    <p className="text-xs font-black text-white/80 uppercase tracking-widest">Instant Delivery</p>
+                    <p className="text-[10px] text-white/30 leading-relaxed">Asset will be transferred immediately upon authorization.</p>
+                 </div>
+                 <div className="p-4 rounded-[1.5rem] bg-white/[0.02] border border-white/5 flex flex-col gap-3">
+                    <RefreshCcw className="w-5 h-5 text-emerald-500" />
+                    <p className="text-xs font-black text-white/80 uppercase tracking-widest">Verified Trade</p>
+                    <p className="text-[10px] text-white/30 leading-relaxed">Every transaction is cryptographic and strictly peer-to-peer verified.</p>
+                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
+
+        {/* DESCRIPTION & REVIEWS SECTION */}
+        <div className="mt-20 lg:mt-32 border-t border-white/5 pt-20">
+           <div className="max-w-4xl space-y-16">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                    <div className="h-8 w-1.5 rounded-full bg-brand-orange" />
+                    <h2 className="text-3xl font-black text-white tracking-tight">About this Item</h2>
+                </div>
+                <div className="text-lg text-white/50 leading-relaxed font-medium">
+                   {product.description || "No specific details provided by the scholar for this asset."}
+                </div>
+              </div>
+
+              {/* REVIEWS */}
+              <div className="space-y-10">
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="h-8 w-1.5 rounded-full bg-brand-orange" />
+                        <h2 className="text-3xl font-black text-white tracking-tight">Verifications</h2>
+                    </div>
+                    {canReview && !showReviewForm && (
+                        <Button variant="outline" className="rounded-xl border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white font-bold" onClick={() => setShowReviewForm(true)}>
+                            Post Verification
+                        </Button>
+                    )}
+                 </div>
+
+                 {reviewStats && (
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center p-8 md:p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/5">
+                        <div className="md:col-span-4 text-center md:text-left space-y-2">
+                             <div className="text-6xl font-black text-white tracking-tighter">{reviewStats.averageRating.toFixed(1)}</div>
+                             <div className="flex items-center justify-center md:justify-start gap-1 pb-2">
+                                {[1, 2, 3, 4, 5].map(s => <Star key={s} className={cn("w-4 h-4", s <= Math.round(reviewStats.averageRating) ? "text-brand-orange fill-brand-orange" : "text-white/10")} />)}
+                             </div>
+                             <p className="text-sm font-black text-white/30 uppercase tracking-widest">{reviewStats.totalReviews} Global Rankings</p>
+                        </div>
+                        <div className="md:col-span-8 flex flex-col gap-2.5">
+                            {[5, 4, 3, 2, 1].map((star) => {
+                                const count = reviewStats.ratingCounts[star] || 0;
+                                const pct = reviewStats.totalReviews > 0 ? (count / reviewStats.totalReviews) * 100 : 0;
+                                return (
+                                    <div key={star} className="flex items-center gap-4">
+                                        <span className="w-3 text-xs font-black text-white/40">{star}</span>
+                                        <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden">
+                                            <div className="h-full bg-brand-orange rounded-full transition-all duration-1000" style={{ width: `${pct}%` }} />
+                                        </div>
+                                        <span className="w-8 text-xs font-bold text-white/20">{Math.round(pct)}%</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                 )}
+
+                 {showReviewForm && (
+                    <div className="p-8 rounded-[2rem] bg-white/[0.04] border-2 border-brand-orange/20 animate-in slide-in-from-top-4 duration-500 space-y-6">
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-black uppercase tracking-widest text-white/50">Rating</span>
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4, 5].map(s => (
+                                    <button key={s} onClick={() => setNewRating(s)} className="group">
+                                        <Star className={cn("w-8 h-8 transition-all", s <= newRating ? "text-brand-orange fill-brand-orange scale-110" : "text-white/10 group-hover:text-white/30")} />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <textarea
+                            className="w-full h-32 p-6 rounded-2xl bg-black/20 border border-white/10 text-white placeholder:text-white/20 text-lg font-medium outline-none focus:border-brand-orange/50 transition-colors resize-none"
+                            placeholder="Share your verification details..."
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                        />
+                        <div className="flex gap-4">
+                            <Button size="lg" onClick={handleSubmitReview} disabled={newRating === 0 || !newComment.trim() || submittingReview} className="rounded-xl bg-brand-orange px-8 font-black uppercase tracking-widest shadow-lg active:scale-95">
+                                {submittingReview ? <Loader2 className="w-5 h-5 animate-spin" /> : "Post Verdict"}
+                            </Button>
+                            <Button variant="ghost" onClick={() => { setShowReviewForm(false); setNewRating(0); setNewComment(""); }} className="rounded-xl px-8 font-bold text-white/40">Cancel</Button>
+                        </div>
+                    </div>
+                 )}
+
+                 <div className="space-y-6">
+                    {reviews.length === 0 ? (
+                        <div className="py-20 text-center space-y-4">
+                             <Star className="w-12 h-12 text-white/5 mx-auto" />
+                             <p className="text-white/20 font-black uppercase tracking-widest text-sm">No verdicts posted for this asset yet</p>
+                        </div>
+                    ) : (
+                        reviews.map((rev) => (
+                            <div key={rev.id} className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.03] transition-all group">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-lg font-black text-brand-orange border border-white/10">
+                                            {rev.user?.userDetails?.firstName?.[0] || rev.user?.username?.[0] || "?"}
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white tracking-tight">{rev.user?.userDetails?.firstName ? `${rev.user.userDetails.firstName} ${rev.user.userDetails.lastName || ""}` : rev.user?.username || "Verified Agent"}</p>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex">
+                                                    {[1,2,3,4,5].map(s => <Star key={s} className={cn("w-3 h-3", s <= rev.rating ? "text-brand-orange fill-brand-orange" : "text-white/10")} />)}
+                                                </div>
+                                                <div className="w-1 h-1 rounded-full bg-white/20" />
+                                                <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="opacity-0 group-hover:opacity-100 transition-opacity border-white/10 text-white/40 uppercase font-black tracking-widest text-[10px]">Verified Rank</Badge>
+                                </div>
+                                <p className="text-lg text-white/60 leading-relaxed font-medium">{rev.comment}</p>
+                            </div>
+                        ))
+                    )}
+                 </div>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* MOBILE FIXED BOTTOM ACTION BAR */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/40 backdrop-blur-3xl border-t border-white/5 flex gap-3">
+          <Button
+            onClick={addToCart}
+            disabled={isOutOfStock || (alreadyOwned && product.productType === 'digital')}
+            variant="outline"
+            className="flex-1 h-16 rounded-2xl bg-white/5 border-white/10 text-white font-black uppercase tracking-widest text-xs"
+          >
+            Add to Cart
+          </Button>
+          <Button
+            onClick={buyNow}
+            disabled={isOutOfStock || (alreadyOwned && product.productType === 'digital')}
+            className="flex-1 h-16 rounded-2xl bg-brand-orange text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-brand-orange/20"
+          >
+            Buy Now
+          </Button>
       </div>
 
       <PinDialog open={showPin} onOpenChange={setShowPin} onConfirm={handlePinSubmit} isProcessing={isProcessing} />
 
-      {lightboxOpen && allImages.length > 1 && (
-        <ImageLightbox
-          images={allImages}
-          currentIndex={selectedIndex}
-          onClose={() => setLightboxOpen(false)}
-          onNext={() => setSelectedIndex((i) => (i + 1) % allImages.length)}
-          onPrev={() => setSelectedIndex((i) => (i - 1 + allImages.length) % allImages.length)}
-        />
-      )}
+      {/* ADD PLUS & MINUS ICON ALTERNATIVES FOR UI CONSISTENCY */}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,122,122,0.1); border-radius: 10px; }
+      `}</style>
     </div>
   );
 }
+
+const Plus = ({ className }: { className?: string }) => <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;

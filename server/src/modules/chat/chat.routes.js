@@ -3,6 +3,7 @@ import verifyToken from "../../middleware/auth.middleware.js";
 import {
     getChatMembers,
     getChatMessages,
+    searchChatMessages,
     getMyChatProfile,
     createChatMessage,
     updateChatMessageById,
@@ -12,6 +13,7 @@ import {
 const router = express.Router();
 
 router.get("/messages", verifyToken, getChatMessages);
+router.get("/messages/search", verifyToken, searchChatMessages);
 router.post("/messages", verifyToken, createChatMessage);
 router.put("/messages/:id", verifyToken, updateChatMessageById);
 router.delete("/messages/:id", verifyToken, deleteChatMessageById);

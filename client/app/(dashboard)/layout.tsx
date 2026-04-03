@@ -31,6 +31,7 @@ type LayoutUserXP = {
 }
 
 type LayoutDBUser = {
+    id?: string | null;
     type?: string | null;
     username?: string | null;
     createdAt?: string | null;
@@ -127,7 +128,7 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
         roles: allRoles,
         level: userXp.level,
         xp: userXp.xp,
-        createdAt: dbUser?.createdAt,
+        createdAt: dbUser?.createdAt || undefined,
     };
 
     return (
@@ -139,7 +140,7 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <SidebarInset className="md:ml-2 flex flex-col h-full overflow-hidden min-w-0 w-full">
                         <MainNavbar user={formattedUser} />
 
-                        <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-bottom-nav md:pb-0">
+                        <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-0 md:pb-0">
                              {children}
                         </main>
                         <MobileBottomNav user={formattedUser} />

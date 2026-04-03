@@ -1,7 +1,6 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import prisma from "../../utils/prisma.js";
-import { insertChatMessage, getMessageById, updateChatMessage, deleteChatMessage } from '../../lib/supabase-chat.js';
 
 let activeUsers = {};
 const mentionPattern = /@([a-zA-Z0-9_]+)/g;
@@ -132,6 +131,26 @@ const emitPresence = (io, roomName) => {
     io.to(roomName).emit("chat:presence", getPresenceForRoom(roomName));
 };
 
+const toSocketMessage = (message) => {
+    if (!message) return null;
+
+    return {
+        id: message.id,
+        chatId: message.chatId,
+        userId: message.userId,
+        username: message.username,
+        displayName: message.displayName,
+        avatar: message.avatar,
+        role: message.role,
+        content: message.content,
+        mentions: message.mentions || [],
+        replyToMessageId: message.replyTo || null,
+        attachments: message.attachments || [],
+        createdAt: message.createdAt,
+        updatedAt: message.updatedAt || null,
+    };
+};
+
 let ioInstance = null;
 export const getChatSocket = () => ioInstance;
 
@@ -184,7 +203,7 @@ export const initChatSocket = (server) => {
 
                 socket.join(roomName);
                 socket.data.roomName = roomName;
-                activeUsers[socket.id] = { ...identity, socketId: socket.id, roomName };
+                activeUsers[socket.id] = { ...socket.data.user, socketId: socket.id, roomName };
                 emitPresence(io, roomName);
             } catch (error) {
                 console.error("chat:join failed", error);
@@ -208,17 +227,22 @@ export const initChatSocket = (server) => {
                 if (!content) return;
 
                 const payloadToStore = {
-                    chat_id: roomName,
-                    user_id: identity.userId,
+                    chatId: roomName,
+                    userId: identity.userId,
                     username: identity.username,
                     displayName: identity.displayName,
                     avatar: identity.avatar,
                     role: identity.type,
                     content,
                     mentions: extractMentions(content),
+                    attachments: payload.attachments || [],
+                    replyTo: null,
                 }
                 if (payload.replyToMessageId) {
-                    const original = await getMessageById(payload.replyToMessageId);
+                    const original = await prisma.chatMessage.findUnique({
+                        where: { id: String(payload.replyToMessageId) },
+                        select: { id: true, chatId: true },
+                    });
                     if (original) {
                         if (original.chatId !== roomName) {
                             socket.emit("chat:error", { message: "Replies must stay within the same chat room" });
@@ -229,9 +253,11 @@ export const initChatSocket = (server) => {
                     }
                 }
 
-                const message = await insertChatMessage(payloadToStore);
+                const message = await prisma.chatMessage.create({
+                    data: payloadToStore,
+                });
                 if (message) {
-                    io.to(roomName).emit("chat:new", message);
+                    io.to(roomName).emit("chat:new", toSocketMessage(message));
                 } else {
                     socket.emit("chat:error", { message: "Failed to save message" });
                 }
@@ -250,7 +276,10 @@ export const initChatSocket = (server) => {
 
                 if (!identity || !roomName || !messageId || !content) return;
 
-                const existingMessage = await getMessageById(messageId);
+                const existingMessage = await prisma.chatMessage.findUnique({
+                    where: { id: messageId },
+                    select: { id: true, chatId: true, userId: true },
+                });
                 if (!existingMessage || existingMessage.chatId !== roomName) {
                     socket.emit("chat:error", { message: "Message not found in the active chat room" });
                     return;
@@ -261,12 +290,16 @@ export const initChatSocket = (server) => {
                     return;
                 }
 
-                const updated = await updateChatMessage(messageId, {
-                    content,
-                    mentions: extractMentions(content),
+                const updated = await prisma.chatMessage.update({
+                    where: { id: messageId },
+                    data: {
+                        content,
+                        mentions: extractMentions(content),
+                        updatedAt: new Date(),
+                    },
                 });
                 if (updated) {
-                    io.to(roomName).emit("chat:edited", updated);
+                    io.to(roomName).emit("chat:edited", toSocketMessage(updated));
                 } else {
                     socket.emit("chat:error", { message: "Failed to edit message" });
                 }
@@ -283,7 +316,10 @@ export const initChatSocket = (server) => {
                 const messageId = String(payload.messageId || "");
                 if (!identity || !roomName || !messageId) return;
 
-                const existingMessage = await getMessageById(messageId);
+                const existingMessage = await prisma.chatMessage.findUnique({
+                    where: { id: messageId },
+                    select: { id: true, chatId: true, userId: true },
+                });
                 if (!existingMessage || existingMessage.chatId !== roomName) {
                     socket.emit("chat:error", { message: "Message not found in the active chat room" });
                     return;
@@ -294,8 +330,10 @@ export const initChatSocket = (server) => {
                     return;
                 }
 
-                const ok = await deleteChatMessage(messageId);
-                if (ok) {
+                await prisma.chatMessage.delete({
+                    where: { id: messageId },
+                });
+                if (true) {
                     io.to(roomName).emit("chat:deleted", { messageId });
                 } else {
                     socket.emit("chat:error", { message: "Failed to delete message" });

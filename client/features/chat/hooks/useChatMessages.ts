@@ -81,6 +81,8 @@ export function useChatMessages() {
     const [hasMore, setHasMore] = useState(true)
     const [isConnected, setIsConnected] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<string>('')
+    const [searchResults, setSearchResults] = useState<ChatMessageDisplay[]>([])
+    const [isSearching, setIsSearching] = useState(false)
 
     const fetchMessages = useCallback(async () => {
         try {
@@ -132,6 +134,27 @@ export function useChatMessages() {
             setLoadingMore(false);
         }
     }, [messages, loadingMore, hasMore]);
+
+    const searchMessages = useCallback(async (query: string) => {
+        if (!query.trim()) {
+            setSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+        
+        try {
+            setIsSearching(true);
+            const response = await chatApi.searchMessages(query, 50);
+            if (response.success && response.data) {
+                const formatted = response.data.map(formatMessage);
+                setSearchResults(formatted);
+            }
+        } catch (error) {
+            console.error('Failed to search messages:', error);
+        } finally {
+            setIsSearching(false);
+        }
+    }, []);
 
     const sendMessage = async (content: string, attachments: any[] = [], mentions: string[] = [], replyToId?: string) => {
         try {
@@ -220,6 +243,9 @@ export function useChatMessages() {
         deleteMessage,
         editMessage,
         refresh: fetchMessages,
-        loadMore
+        loadMore,
+        searchMessages,
+        searchResults,
+        isSearching
     }
 }

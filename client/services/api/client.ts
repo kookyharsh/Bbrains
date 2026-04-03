@@ -1305,5 +1305,11 @@ export const chatApi = {
   },
   editMessage: async (id: string, content: string, mentions: string[] = []): Promise<ApiResponse<ChatMessageRecord>> => {
     return api.put<ChatMessageRecord>(`/chat/messages/${id}`, { content, mentions });
+  },
+  searchMessages: async (query: string, limit = 50): Promise<ApiResponse<any[]>> => {
+    const params = new URLSearchParams();
+    params.append('q', query);
+    params.append('limit', String(limit));
+    return api.get<any[]>(`/chat/messages/search?${params.toString()}`);
   }
 };

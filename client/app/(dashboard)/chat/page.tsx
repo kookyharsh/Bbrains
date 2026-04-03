@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Hash } from "lucide-react";
+import { Loader2, Hash, Search } from "lucide-react";
 import { toast } from "sonner";
 
 // Hooks
@@ -35,7 +35,13 @@ export default function ChatPage() {
     sendMessage, 
     deleteMessage, 
     editMessage, 
-    currentUserId 
+    currentUserId,
+    loadingMore,
+    hasMore,
+    loadMore,
+    searchMessages,
+    searchResults,
+    isSearching
   } = useChatMessages();
   
   const { markAllRead } = useNotifications();
@@ -43,14 +49,9 @@ export default function ChatPage() {
 
   // State
   const [message, setMessage] = useState("");
-  const [showMembers, setShowMembers] = useState(false);
-  
-  // Open members by default only on larger screens
-  useEffect(() => {
-    if (window.innerWidth >= 768) {
-      setShowMembers(true);
-    }
-  }, []);
+  const [showMembers, setShowMembers] = useState(() => 
+    typeof window !== "undefined" ? window.innerWidth >= 768 : false
+  );
   const [profileUser, setProfileUser] = useState<Member | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
@@ -60,9 +61,13 @@ export default function ChatPage() {
   const [membersList, setMembersList] = useState<Member[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<{ file: File; previewUrl: string }[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
 
   // Current user's username for mention highlighting
   const currentUsername = useMemo(() => {
@@ -302,7 +307,7 @@ export default function ChatPage() {
     toast.success("Copied to clipboard");
   }, []);
 
-  const onEmojiSelect = useCallback((emoji: any) => setMessage(prev => prev + emoji.emoji), []);
+  const onEmojiSelect = useCallback((emoji: { emoji: string }) => setMessage(prev => prev + emoji.emoji), []);
   const onCancelEdit = useCallback(() => {
     setEditingMsgId(null);
     setMessage("");
@@ -315,59 +320,150 @@ export default function ChatPage() {
     setShowMembers(false);
   }, [handleOpenProfile]);
 
+  const onSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      setIsSearchMode(true);
+      searchMessages(query);
+    } else {
+      setIsSearchMode(false);
+    }
+  }, [searchMessages]);
+
+  const onClearSearch = useCallback(() => {
+    setSearchQuery("");
+    setIsSearchMode(false);
+  }, []);
+
+  const onOpenMobileSearch = useCallback(() => {
+    setIsMobileSearchOpen(prev => !prev);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (scrollViewportRef.current && hasMore && !loadingMore && !isSearchMode) {
+      if (scrollViewportRef.current.scrollTop === 0) {
+        loadMore();
+      }
+    }
+  }, [hasMore, loadingMore, loadMore, isSearchMode]);
+
+  useEffect(() => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport) return;
+    
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-card pb-bottom-nav md:pb-0 md:rounded-xl md:border md:shadow-sm">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card md:rounded-xl md:border md:shadow-sm">
       <ChannelHeader 
         channelName="Global Chat"
         showMembers={showMembers}
         messageCount={messages.length}
         isConnected={isConnected}
         onToggleMembers={onToggleMembers}
+        onSearch={onSearch}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        onClearSearch={onClearSearch}
+        searchQuery={searchQuery}
+        onOpenSearch={onOpenMobileSearch}
+        isSearchOpen={isMobileSearchOpen}
       />
 
       <div className="flex flex-1 min-h-0">
         <div className="flex-1 flex flex-col min-w-0">
-          <ScrollArea className="flex-1 p-4 pb-28 md:pb-4">
-            <div className="space-y-1">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground text-sm">Loading messages...</span>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Hash className="w-10 h-10 mb-2" />
-                  <p className="text-sm font-medium">No messages yet</p>
-                  <p className="text-xs">Be the first to say something!</p>
-                </div>
-              ) : (
-                groupedMessages.map((group) => (
-                  <div key={group.label}>
-                    <div className="flex items-center gap-3 my-2">
-                      <Separator className="flex-1" />
-                      <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{group.label}</span>
-                      <Separator className="flex-1" />
+          <ScrollArea className="flex-1 p-4 pb-4" containerRef={scrollViewportRef}>
+            <div
+              className={
+                loading || messages.length === 0
+                  ? "min-h-full"
+                  : "min-h-full flex flex-col justify-end"
+              }
+            >
+              <div className="space-y-1">
+                {isSearchMode ? (
+                  isSearching ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-muted-foreground text-sm">Searching...</span>
                     </div>
-                    <div className="space-y-1">
-                        {group.messages.map((msg) => (
-                            <MessageItem 
-                                key={msg.id}
-                                msg={msg}
-                                currentUserId={currentUserId}
-                                currentUsername={currentUsername}
-                                onReply={handleReply}
-                                onCopy={handleCopy}
-                                onEdit={handleEdit}
-                                onDelete={deleteMessage}
-                                onOpenProfile={handleOpenProfile}
-                            />
-                        ))}
+                  ) : searchResults.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <Search className="w-10 h-10 mb-2" />
+                      <p className="text-sm font-medium">No results found</p>
+                      <p className="text-xs">Try a different search term</p>
                     </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Search className="w-4 h-4" />
+                        <span>{searchResults.length} results for "{searchQuery}"</span>
+                      </div>
+                      {searchResults.map((msg) => (
+                        <MessageItem 
+                          key={msg.id}
+                          msg={msg}
+                          currentUserId={currentUserId}
+                          currentUsername={currentUsername}
+                          onReply={handleReply}
+                          onCopy={handleCopy}
+                          onEdit={handleEdit}
+                          onDelete={deleteMessage}
+                          onOpenProfile={handleOpenProfile}
+                        />
+                      ))}
+                    </div>
+                  )
+                ) : loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-muted-foreground text-sm">Loading messages...</span>
                   </div>
-                ))
-              )}
+                ) : messages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Hash className="w-10 h-10 mb-2" />
+                    <p className="text-sm font-medium">No messages yet</p>
+                    <p className="text-xs">Be the first to say something!</p>
+                  </div>
+                ) : (
+                  <>
+                    {loadingMore && (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-muted-foreground text-xs">Loading older messages...</span>
+                      </div>
+                    )}
+                    {groupedMessages.map((group) => (
+                      <div key={group.label}>
+                        <div className="flex items-center gap-3 my-2">
+                          <Separator className="flex-1" />
+                          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{group.label}</span>
+                          <Separator className="flex-1" />
+                        </div>
+                        <div className="space-y-1">
+                            {group.messages.map((msg) => (
+                                <MessageItem 
+                                    key={msg.id}
+                                    msg={msg}
+                                    currentUserId={currentUserId}
+                                    currentUsername={currentUsername}
+                                    onReply={handleReply}
+                                    onCopy={handleCopy}
+                                    onEdit={handleEdit}
+                                    onDelete={deleteMessage}
+                                    onOpenProfile={handleOpenProfile}
+                                />
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+              <div ref={messagesEndRef} className="h-px w-full" />
             </div>
-            <div ref={messagesEndRef} className="h-px w-full" />
           </ScrollArea>
 
           <MessageInput 
@@ -410,7 +506,7 @@ export default function ChatPage() {
 
             <div className="md:hidden">
               <div 
-                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90] animate-in fade-in duration-300"
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-90 animate-in fade-in duration-300"
                 onClick={onMembersSidebarClose}
               />
               <Memberssidebar

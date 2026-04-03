@@ -21,18 +21,28 @@ export const statusLabels: Record<UserStatus, string> = {
 }
 
 interface UserProfileCardProps {
-    user: any;
+    user: {
+        firstName?: string;
+        lastName?: string;
+        fullName?: string;
+        username?: string;
+        imageUrl?: string;
+        level?: number;
+        xp?: number;
+        bio?: string;
+        createdAt?: string | Date;
+    } | null;
     userStatus: UserStatus;
     setUserStatus: (status: UserStatus) => void;
 }
 
 export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfileCardProps) {
     return (
-        <div className="absolute bottom-20 left-6 w-[340px] bg-background-light dark:bg-[#221610] rounded-xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.24)] border border-gray-200 dark:border-gray-800 z-50">
-            <div className="relative h-24 bg-gradient-to-r from-brand-purple to-purple-400">
+        <div className="absolute bottom-20 left-6 w-85 bg-background-light dark:bg-[#221610] rounded-xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.24)] border border-gray-200 dark:border-gray-800 z-50">
+            <div className="relative h-24 bg-linear-to-r from-brand-purple to-purple-400">
                 <div className="absolute top-2 right-2 flex gap-1.5">
                     <button className="bg-black/20 hover:bg-black/40 text-white p-1.5 rounded-full transition-colors flex items-center justify-center">
-                        <Settings className="h-[18px] w-[18px]" />
+                        <Settings className="h-4.5 w-4.5" />
                     </button>
                 </div>
             </div>
@@ -48,7 +58,7 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                                 </AvatarFallback>
                             </Avatar>
                         </div>
-                        <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-[4px] border-background-light dark:border-[#221610] ${statusColors[userStatus]}`}></div>
+                        <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-4 border-background-light dark:border-[#221610] ${statusColors[userStatus]}`}></div>
                     </div>
                 </div>
                 
@@ -68,7 +78,7 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                     </div>
                 </div>
                 
-                <div className="space-y-3 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-3 max-h-50 overflow-y-auto pr-1 custom-scrollbar">
                     <div className="space-y-1.5">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Set Status</h3>
                         <div className="flex flex-wrap gap-2">
@@ -94,7 +104,7 @@ export function UserProfileCard({ user, userStatus, setUserStatus }: UserProfile
                     
                     <div className="space-y-1">
                         <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">About Me</h3>
-                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed min-h-[1.25rem]">
+                        <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed min-h-5">
                             {user?.bio || <span className="text-gray-400 italic text-xs">No bio yet...</span>}
                         </p>
                     </div>

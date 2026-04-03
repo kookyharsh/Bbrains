@@ -1,5 +1,4 @@
 import prisma from "../../utils/prisma.js";
-import { getMessageById, insertChatMessage, updateChatMessage, deleteChatMessage } from "../../lib/supabase-chat.js";
 import { sendError, sendSuccess } from "../../utils/response.js";
 import { z } from "zod";
 
@@ -79,6 +78,29 @@ const normalizeProfile = (user) => {
     };
 };
 
+const normalizeMessageRecord = (msg) => {
+    const user = msg.user;
+    const details = user?.userDetails || {};
+    const firstName = details.firstName || "";
+    const lastName = details.lastName || "";
+    const liveDisplayName = `${firstName} ${lastName}`.trim() || user?.username;
+
+    return {
+        id: msg.id,
+        userId: msg.userId,
+        username: user?.username || msg.username,
+        displayName: liveDisplayName || msg.displayName,
+        avatar: details.avatar || msg.avatar,
+        role: user?.type || msg.role,
+        content: msg.content,
+        mentions: msg.mentions,
+        replyToMessageId: msg.replyTo,
+        attachments: msg.attachments,
+        createdAt: msg.createdAt,
+        updatedAt: msg.updatedAt
+    };
+};
+
 export const getChatMessages = async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10), 1), 500);
@@ -118,33 +140,57 @@ export const getChatMessages = async (req, res) => {
         messages.reverse();
 
         // Normalize for frontend - use live user data if available, fallback to denormalized
-        const normalized = messages.map(msg => {
-            const user = msg.user;
-            const details = user?.userDetails || {};
-            const firstName = details.firstName || "";
-            const lastName = details.lastName || "";
-            const liveDisplayName = `${firstName} ${lastName}`.trim() || user?.username;
-            
-            return {
-                id: msg.id,
-                userId: msg.userId,
-                username: user?.username || msg.username,
-                displayName: liveDisplayName || msg.displayName,
-                avatar: details.avatar || msg.avatar,
-                role: user?.type || msg.role,
-                content: msg.content,
-                mentions: msg.mentions,
-                replyToMessageId: msg.replyTo,
-                attachments: msg.attachments,
-                createdAt: msg.createdAt,
-                updatedAt: msg.updatedAt
-            };
-        });
+        const normalized = messages.map(normalizeMessageRecord);
 
         return sendSuccess(res, normalized);
     } catch (error) {
         console.error("Failed to fetch chat messages:", error);
         return sendError(res, "Failed to fetch chat messages", 500);
+    }
+};
+
+export const searchChatMessages = async (req, res) => {
+    try {
+        const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10), 1), 100);
+        const chatId = normalizeChatId(req.query.chatId);
+        const query = String(req.query.q || "").trim();
+
+        if (!query) {
+            return sendSuccess(res, []);
+        }
+
+        const messages = await prisma.chatMessage.findMany({
+            where: {
+                chatId,
+                OR: [
+                    { content: { contains: query, mode: "insensitive" } },
+                    { username: { contains: query, mode: "insensitive" } },
+                    { displayName: { contains: query, mode: "insensitive" } },
+                ],
+            },
+            include: {
+                user: {
+                    select: {
+                        username: true,
+                        type: true,
+                        userDetails: {
+                            select: {
+                                avatar: true,
+                                firstName: true,
+                                lastName: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: "desc" },
+            take: limit
+        });
+
+        return sendSuccess(res, messages.reverse().map(normalizeMessageRecord));
+    } catch (error) {
+        console.error("Failed to search chat messages:", error);
+        return sendError(res, "Failed to search chat messages", 500);
     }
 };
 
@@ -212,7 +258,13 @@ export const createChatMessage = async (req, res) => {
         const profile = normalizeProfile(user);
 
         if (replyTo) {
-            const parentMessage = await getMessageById(replyTo);
+            const parentMessage = await prisma.chatMessage.findUnique({
+                where: { id: replyTo },
+                select: {
+                    id: true,
+                    chatId: true,
+                },
+            });
             if (!parentMessage) return sendError(res, "Reply target was not found", 404);
             if (parentMessage.chatId !== chatId) {
                 return sendError(res, "Replies must stay within the same chat room", 400);
@@ -257,14 +309,26 @@ export const updateChatMessageById = async (req, res) => {
 
         if (!messageId) return sendError(res, "Message ID is required", 400);
 
-        const existingMessage = await getMessageById(messageId);
+        const existingMessage = await prisma.chatMessage.findUnique({
+            where: { id: messageId },
+            select: {
+                id: true,
+                userId: true,
+            },
+        });
         if (!existingMessage) return sendError(res, "Message not found", 404);
         if (existingMessage.userId !== req.user.id) {
             return sendError(res, "You can only edit your own messages", 403);
         }
 
-        const updated = await updateChatMessage(messageId, { content: validated.content, mentions });
-        if (!updated) return sendError(res, "Failed to update message", 500);
+        const updated = await prisma.chatMessage.update({
+            where: { id: messageId },
+            data: {
+                content: validated.content,
+                mentions,
+                updatedAt: new Date(),
+            },
+        });
 
         return sendSuccess(res, updated, "Message updated");
     } catch (error) {
@@ -286,14 +350,21 @@ export const deleteChatMessageById = async (req, res) => {
         const messageId = String(req.params.id || "");
         if (!messageId) return sendError(res, "Message ID is required", 400);
 
-        const existingMessage = await getMessageById(messageId);
+        const existingMessage = await prisma.chatMessage.findUnique({
+            where: { id: messageId },
+            select: {
+                id: true,
+                userId: true,
+            },
+        });
         if (!existingMessage) return sendError(res, "Message not found", 404);
         if (existingMessage.userId !== req.user.id) {
             return sendError(res, "You can only delete your own messages", 403);
         }
 
-        const removed = await deleteChatMessage(messageId);
-        if (!removed) return sendError(res, "Failed to delete message", 500);
+        await prisma.chatMessage.delete({
+            where: { id: messageId },
+        });
 
         return sendSuccess(res, null, "Message deleted");
     } catch (error) {
