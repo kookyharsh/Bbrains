@@ -13,7 +13,7 @@ import { Brain, Star, Wallet, Store, LineChart, ArrowRight, CheckCircle } from "
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-hand-paper bg-paper-texture bg-[length:24px_24px] text-hand-pencil overflow-x-hidden selection:bg-hand-yellow selection:text-hand-pencil">
+    <div className="min-h-screen bg-hand-paper bg-paper-texture bg-size-[24px_24px] text-hand-pencil overflow-x-hidden selection:bg-hand-yellow selection:text-hand-pencil">
       {/* Navigation */}
       <nav className="border-b-[3px] border-hand-pencil border-dashed bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -40,7 +40,7 @@ export default function FeaturesPage() {
         <h1 className="font-kalam text-5xl md:text-7xl font-bold leading-[1.1] text-hand-pencil mb-6">
           Platform <span className="relative inline-block px-2 group cursor-default">
             <span className="relative z-10 text-hand-blue">Features</span>
-            <span className="absolute inset-0 bg-hand-yellow -rotate-1 -z-0"></span>
+            <span className="absolute inset-0 bg-hand-yellow -rotate-1 z-0"></span>
           </span>
         </h1>
         <p className="font-patrick text-xl md:text-2xl text-hand-pencil/80 max-w-2xl mx-auto leading-relaxed">

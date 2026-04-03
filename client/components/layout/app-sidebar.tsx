@@ -80,15 +80,15 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                                 <SidebarMenuButton asChild tooltip={item.title}>
                                                     <Link
                                                         href={item.url}
-                                                        className={`flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-xl transition-all duration-200
-                                                            ${isCollapsed ? "!size-11 !min-h-0 !p-0 !gap-0 justify-center mx-auto" : ""}
+                                                        className={`flex items-center gap-3 px-4 py-3 min-h-12 rounded-xl transition-all duration-200
+                                                            ${isCollapsed ? "size-11! min-h-0! p-0! gap-0! justify-center mx-auto" : ""}
                                                             ${isActive
                                                                 ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm font-semibold"
                                                                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent/10"
                                                             }`}
                                                     >
                                                         <div className="relative">
-                                                            <item.icon className={`${isCollapsed ? "h-[22px] w-[22px]" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
+                                                            <item.icon className={`${isCollapsed ? "h-5.5 w-5.5" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
                                                             {isChat && unreadCount > 0 && isCollapsed && (
                                                                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
                                                             )}

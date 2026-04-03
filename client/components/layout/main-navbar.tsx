@@ -10,6 +10,7 @@ import {
     LayoutDashboard,
     LogOut,
     User,
+    Coins,
 } from "lucide-react"
 import { getBaseUrl, setAuthToken } from "@/services/api/client"
 import { NotificationsBell } from "@/components/shell/NotificationsBell"
@@ -32,6 +33,8 @@ type NavbarUser = {
     fullName?: string
     username?: string
     type?: string
+    collegeName?: string
+    coins?: number
 }
 
 function toTitleCase(value: string) {
@@ -98,8 +101,8 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
 
     if (!mounted) {
         return (
-            <nav className="sticky top-0 z-[var(--z-nav)] border-b border-border/60 bg-background/85 backdrop-blur-xl">
-                <div className="mx-auto flex h-[76px] items-center gap-3 px-4 md:px-6">
+            <nav className="sticky top-0 z-(--z-nav) border-b border-border/60 bg-background/85 backdrop-blur-xl">
+                <div className="mx-auto flex h-19 items-center gap-3 px-4 md:px-6">
                     <div className="h-11 w-11 rounded-2xl border border-border/70 bg-muted/40" />
                     <div className="min-w-0 flex-1 space-y-2">
                         <div className="h-4 w-40 rounded-full bg-muted/50" />
@@ -113,19 +116,16 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
     }
 
     return (
-        <nav className="sticky top-0 z-[var(--z-nav)] border-b border-border/60 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/65">
-            <div className="mx-auto flex h-[76px] items-center gap-3 px-4 md:px-6">
+        <nav className="sticky top-0 z-(--z-nav) border-b border-border/60 bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/65">
+            <div className="mx-auto flex h-19 items-center gap-3 px-4 md:px-6">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                     <SidebarTrigger className="hidden md:flex h-11 w-11 rounded-2xl border border-border/70 bg-card/80 text-foreground shadow-sm transition hover:bg-card" />
 
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-[0_12px_30px_rgba(20,184,166,0.28)]">
-                            <BarChart3 className="h-5 w-5" />
-                        </div>
 
                         <div className="min-w-0">
                             <div className="hidden items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:flex">
-                                <span>{getRoleLabel(user?.type)}</span>
+                                <span>{user?.collegeName || "Bbrains Academy"}</span>
                                 <span className="h-1 w-1 rounded-full bg-muted-foreground/50" />
                                 <span>{todayLabel}</span>
                             </div>
@@ -134,31 +134,23 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                                 <h1 className="truncate text-lg font-bold tracking-tight text-foreground md:text-xl">
                                     {pageTitle}
                                 </h1>
-                                <div className="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 md:flex dark:text-emerald-300">
-                                    <LayoutDashboard className="h-3.5 w-3.5" />
-                                    Live Workspace
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="hidden min-w-0 flex-[1.2] items-center justify-center xl:flex">
-                    <div className="flex max-w-xl items-center gap-2 overflow-hidden rounded-2xl border border-border/70 bg-card/65 px-4 py-2.5 shadow-sm">
-                        {breadcrumbLabels.map((label, index) => (
-                            <React.Fragment key={`${label}-${index}`}>
-                                {index > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                                <span
-                                    className={`truncate text-sm ${
-                                        index === breadcrumbLabels.length - 1
-                                            ? "font-semibold text-foreground"
-                                            : "text-muted-foreground"
-                                    }`}
-                                >
-                                    {label}
-                                </span>
-                            </React.Fragment>
-                        ))}
+                <div className="hidden items-center justify-end flex-1 xl:flex mr-4">
+                     <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-linear-to-br from-emerald-500/5 to-cyan-500/5 px-4 py-2 shadow-sm ring-1 ring-emerald-500/10">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-br from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/20">
+                            <Coins className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Balance</span>
+                            <span className="text-sm font-bold text-foreground tabular-nums">
+                                {Number(user?.coins || 0).toLocaleString()}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -181,7 +173,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                         <DropdownMenuTrigger asChild>
                             <button className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-card/80 px-2.5 py-2 shadow-sm transition hover:bg-card focus:outline-none focus:ring-2 focus:ring-ring">
                                 <div className="hidden text-right md:block">
-                                    <p className="max-w-[140px] truncate text-sm font-semibold text-foreground">
+                                    <p className="max-w-35 truncate text-sm font-semibold text-foreground">
                                         {user?.fullName || user?.username || "Anonymous User"}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
@@ -191,7 +183,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
 
                                 <Avatar className="h-9 w-9 rounded-2xl border border-border/70 shadow-sm md:h-10 md:w-10">
                                     <AvatarImage src={user?.imageUrl || undefined} />
-                                    <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
+                                    <AvatarFallback className="bg-linear-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
                                         {user?.firstName?.[0] || ""}
                                         {user?.lastName?.[0] || user?.username?.[0] || "U"}
                                     </AvatarFallback>
@@ -204,7 +196,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10 rounded-2xl border border-border/70">
                                         <AvatarImage src={user?.imageUrl || undefined} />
-                                        <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
+                                        <AvatarFallback className="bg-linear-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
                                             {user?.firstName?.[0] || ""}
                                             {user?.lastName?.[0] || user?.username?.[0] || "U"}
                                         </AvatarFallback>
@@ -241,7 +233,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                 </div>
             </div>
 
-            <div className="border-t border-border/40 bg-gradient-to-r from-emerald-500/10 via-transparent to-cyan-500/10 px-4 py-2 md:hidden">
+            <div className="border-t border-border/40 bg-linear-to-r from-emerald-500/10 via-transparent to-cyan-500/10 px-4 py-2 md:hidden">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5" />
                     <span>{breadcrumbLabels.join(" / ")}</span>

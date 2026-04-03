@@ -49,7 +49,6 @@ const baseSidebarItems: SidebarItem[] = [
             { title: "Payment History", url: "/wallet/payments", icon: CreditCard },
         ],
     },
-    { title: "Calendar", url: "/calendar", icon: Calendar },
     {
         title: "Market",
         url: "/market",

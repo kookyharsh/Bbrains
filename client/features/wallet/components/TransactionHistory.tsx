@@ -53,7 +53,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
 
   return (
     <>
-      <Card className="border-0 shadow-none bg-transparent">
+
         <CardHeader className="px-0 pt-0">
           <div className="flex flex-col gap-3">
             <CardTitle className="text-lg">Recent Transactions</CardTitle>
@@ -97,7 +97,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                 const credit = isCredit(txn.type);
                 const user = txn.relatedUser || txn.user;
                 const username = user?.username || "System";
-                const avatar = user?.userDetails?.avatar;
+                const avatarUrl = (user as { avatar?: string })?.avatar;
                 const note = txn.note || txn.description;
 
                 return (
@@ -111,7 +111,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3 min-w-0">
                             <Avatar className="w-10 h-10 border border-muted ring-offset-background group-hover:ring-2 group-hover:ring-primary/20 transition-all">
-                              {avatar && <AvatarImage src={avatar} alt={username} />}
+                              {avatarUrl && <AvatarImage src={avatarUrl} alt={username} />}
                               <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
                                 {username.substring(0, 2).toUpperCase()}
                               </AvatarFallback>
@@ -153,7 +153,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                           <div className="flex items-start gap-2 bg-muted/30 rounded-lg p-2.5 border border-muted/50 group-hover:bg-muted/50 transition-colors">
                             <MessageSquare className="w-3 h-3 mt-0.5 text-muted-foreground shrink-0" />
                             <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 italic">
-                              "{note}"
+                             &quot;{note}&quot;
                             </p>
                           </div>
                         )}
@@ -165,7 +165,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
             </div>
           )}
         </CardContent>
-      </Card>
+
 
       {/* Embedded Transaction Receipt Dialog */}
       <Dialog open={!!showTxnReceipt} onOpenChange={() => setShowTxnReceipt(null)}>
@@ -209,7 +209,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                 <div className="pt-2 border-t border-muted">
                   <span className="text-muted-foreground block mb-1">Note</span>
                   <p className="text-foreground text-xs bg-background/50 p-2 rounded-md italic">
-                    "{showTxnReceipt.note || showTxnReceipt.description}"
+                    &quot;{showTxnReceipt.note || showTxnReceipt.description}&quot;
                   </p>
                 </div>
               )}

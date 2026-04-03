@@ -341,11 +341,11 @@ export default function PaymentHistoryPage() {
                     placeholder="Search payments..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 h-9 w-full sm:w-[200px]"
+                    className="pl-9 h-9 w-full sm:w-50"
                   />
                 </div>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-[130px] h-9">
+                  <SelectTrigger className="w-32.5 h-9">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -356,7 +356,7 @@ export default function PaymentHistoryPage() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[130px] h-9">
+                  <SelectTrigger className="w-32.5 h-9">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -415,7 +415,7 @@ export default function PaymentHistoryPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground text-sm truncate max-w-[200px]">
+                        <p className="font-medium text-foreground text-sm truncate max-w-50">
                           {payment.description}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">

@@ -39,6 +39,12 @@ type LayoutDBUser = {
     userDetails?: LayoutUserDetails | null;
     xp?: LayoutUserXP | null;
     avatar?: string | null;
+    college?: {
+        name?: string | null;
+    } | null;
+    wallet?: {
+        balance?: number | null;
+    } | null;
 }
 
 async function fetchUserFromAPI(token: string): Promise<LayoutDBUser | null> {
@@ -130,6 +136,8 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
         level: userXp.level,
         xp: userXp.xp,
         createdAt: dbUser?.createdAt || undefined,
+        collegeName: dbUser?.college?.name || "Bbrains Academy",
+        coins: dbUser?.wallet?.balance || 0,
     };
 
     return (

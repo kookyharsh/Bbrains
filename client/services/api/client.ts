@@ -323,6 +323,7 @@ export interface Announcement {
   title: string;
   description: string;
   category: string;
+  image?: string;
   createdAt: string;
   user?: {
     id: string;
@@ -334,6 +335,14 @@ export interface Announcement {
       lastName: string;
     };
   };
+  acknowledgedBy?: {
+    userId: string;
+    userDetails?: {
+      firstName: string;
+      lastName: string;
+    };
+    createdAt: string;
+  }[];
 }
 
 
@@ -759,11 +768,18 @@ export const announcementApi = {
     title: string;
     description: string;
     category?: string;
+    image?: string;
   }): Promise<ApiResponse<Announcement>> => {
     return api.post<Announcement>('/announcements', data);
   },
   deleteAnnouncement: async (id: string): Promise<ApiResponse<void>> => {
     return api.delete<void>(`/announcements/${id}`);
+  },
+  acknowledgeAnnouncement: async (id: string): Promise<ApiResponse<Announcement>> => {
+    return api.post<Announcement>(`/announcements/${id}/acknowledge`, {});
+  },
+  getAcknowledgedUsers: async (id: string): Promise<ApiResponse<{ userId: string; userDetails?: { firstName: string; lastName: string }; createdAt: string }[]>> => {
+    return api.get<{ userId: string; userDetails?: { firstName: string; lastName: string }; createdAt: string }[]>(`/announcements/${id}/acknowledged`);
   },
 };
 

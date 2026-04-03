@@ -60,6 +60,7 @@ model User {
   assessments        Assessment[]         @relation("AssessmentCreator")
   assessmentResults  AssessmentResult[]   @relation("AssessmentStudent")
   reviews            Review[]
+  acknowledged      Acknowledged[]
 
   @@map("user")
 }
@@ -437,8 +438,21 @@ model Announcement {
   image       String?
   createdAt   DateTime @default(now()) @map("created_at")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  acknowledged Acknowledged[]
 
   @@map("announcement")
+}
+
+model Acknowledged {
+  id             Int         @id @default(autoincrement())
+  announcementId Int         @map("announcement_id")
+  userId         String      @map("user_id")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@map("acknowledged")
 }
 
 model AuditLog {
