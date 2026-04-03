@@ -141,7 +141,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 {user && (
                     <div className="flex flex-col gap-4">
                         <Link
-                            href="/profile"
+                            href="/settings"
                             className={`flex items-center gap-3 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/10 transition-colors ${isCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"}`}
                             title="Settings"
                         >
