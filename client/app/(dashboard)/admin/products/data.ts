@@ -34,6 +34,10 @@ export interface ProductsData {
     pending: ApiProduct[];
 }
 
+export function fmtCurrency(n: number | string): string {
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(n));
+}
+
 export async function fetchProducts(): Promise<ApiProduct[]> {
     const [all, pending] = await Promise.all([
         fetchWithAuth<ApiProduct[]>("/market/products"),
