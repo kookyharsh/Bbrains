@@ -93,7 +93,10 @@ export interface ApiAuditLog {
     change?: Record<string, unknown>
     reason?: string
     createdAt: string
-    user?: { username: string }
+    user?: {
+        username: string
+        avatar?: string | null
+    }
 }
 
 export interface ApiTransaction {

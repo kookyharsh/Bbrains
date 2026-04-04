@@ -29,7 +29,10 @@ export default function RolesPage() {
               const rawPermissions = Array.isArray(roleObj.permissions) ? roleObj.permissions : []
 
               return {
-                id: roleObj.id ?? Math.random().toString(),
+                id:
+                  typeof roleObj.id === "string" || typeof roleObj.id === "number"
+                    ? roleObj.id
+                    : Math.random().toString(),
                 name: typeof roleObj.name === 'string' ? roleObj.name : 'Unknown',
                 description: typeof roleObj.description === 'string' ? roleObj.description : '',
                 users:

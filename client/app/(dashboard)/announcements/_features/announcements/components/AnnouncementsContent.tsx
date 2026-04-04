@@ -69,7 +69,7 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
   const [deleting, setDeleting] = useState(false);
   
   const [acknowledgeDialogOpen, setAcknowledgeDialogOpen] = useState(false);
-  const [acknowledgedUsers, setAcknowledgedUsers] = useState<{ userId: string; userDetails?: { firstName: string; lastName: string }; createdAt: string }[]>([]);
+  const [acknowledgedUsers, setAcknowledgedUsers] = useState<{ userId: string; userDetails?: { firstName: string; lastName: string; avatar?: string | null }; createdAt: string }[]>([]);
   const [currentAnnouncementId, setCurrentAnnouncementId] = useState<string | null>(null);
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
 
@@ -122,7 +122,10 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
     }
   };
 
-  const isStaff = currentUser?.type === "admin" || currentUser?.type === "teacher" || currentUser?.type === "manager";
+  const hasManagerRole = currentUser?.roles?.some((entry) =>
+    entry.role?.name?.toLowerCase().includes("manager")
+  ) ?? false;
+  const isStaff = currentUser?.type === "admin" || currentUser?.type === "teacher" || hasManagerRole;
 
   const handleDeleteClick = (id: string) => {
     setAnnouncementToDelete(id);

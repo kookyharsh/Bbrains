@@ -1,5 +1,5 @@
 export interface Role {
-    id: number
+    id: string | number
     name: string
     description?: string
     users: number

@@ -40,8 +40,7 @@ export function RolesClient({ initialRoles, initialUsers }: RolesClientProps) {
 
     const handleEditUser = (user: UserWithRoles) => {
         setEditUser(user)
-        const userRoleNames = (user.roles || []).map((r: string | {role?: string}) => typeof r === 'string' ? r : r.role || '')
-        setSelectedRoles(userRoleNames)
+        setSelectedRoles(user.roles || [])
         setShowUserDialog(true)
     }
 

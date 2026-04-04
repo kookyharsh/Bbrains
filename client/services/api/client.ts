@@ -376,11 +376,20 @@ export interface StreakData {
 
 export interface Achievement {
   id: string;
-  title: string;
-  description: string;
-  icon?: string;
-  unlocked: boolean;
-  unlockedAt?: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  tier: number;
+  rewardXP: number;
+  rewardCoins: number;
+  category?: string | null;
+}
+
+export interface UserAchievement {
+  userId: string;
+  achievementId: string;
+  unlockedAt: string;
+  achievement: Achievement;
 }
 
 export interface Course {
@@ -430,12 +439,15 @@ export interface ClassTimetableEntry {
 
 export interface Grade {
   id: string;
+  assignmentId: string | number;
   assignmentName: string;
   courseName: string;
-  grade: number;
+  grade: number | string;
   maxGrade: number;
   feedback?: string;
   submittedAt: string;
+  gradedAt: string;
+  gradedBy: string;
 }
 
 export interface AssessmentStudent {
@@ -811,8 +823,8 @@ export const eventApi = {
 };
 
 export const achievementApi = {
-  getMyAchievements: async (): Promise<ApiResponse<Achievement[]>> => {
-    return api.get<Achievement[]>('/achievements/me');
+  getMyAchievements: async (): Promise<ApiResponse<UserAchievement[]>> => {
+    return api.get<UserAchievement[]>('/achievements/me');
   },
   getAchievements: async (): Promise<ApiResponse<Achievement[]>> => {
     return api.get<Achievement[]>('/achievements');

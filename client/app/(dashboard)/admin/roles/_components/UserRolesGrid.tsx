@@ -69,7 +69,7 @@ export function UserRolesGrid({ users, onEdit }: UserRolesGridProps) {
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-1">
                                     {(user.roles || []).map((r) => {
-                                        const roleName = typeof r === 'string' ? r : r.role
+                                        const roleName = r
                                         return (
                                             <Badge
                                                 key={roleName}
