@@ -4,6 +4,7 @@ import React from 'react'
 import Link from "next/link"
 import { Pencil } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { usePermissions } from "@/hooks/use-permissions"
 
 interface UserProfileCardProps {
     user: {
@@ -20,6 +21,7 @@ interface UserProfileCardProps {
 }
 
 export function UserProfileCard({ user }: UserProfileCardProps) {
+    const { roles } = usePermissions();
     const joinedDate = user?.createdAt ? new Date(user.createdAt) : null
     const hasJoinedDate = Boolean(joinedDate && !Number.isNaN(joinedDate.getTime()))
     const displayName =
@@ -67,7 +69,25 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
                     </h1>
                     <p className="text-sm font-medium text-slate-600 dark:text-slate-400">@{user?.username || "user"}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                        <span className="rounded bg-slate-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">Student</span>
+                        {roles && roles.length > 0 ? (
+                            roles.map((role) => (
+                                <span 
+                                    key={role.id} 
+                                    className="rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider border"
+                                    style={{ 
+                                        backgroundColor: `${role.color || '#949ba4'}15`, 
+                                        borderColor: `${role.color || '#949ba4'}40`,
+                                        color: role.color || '#dbdee1'
+                                    }}
+                                >
+                                    {role.name}
+                                </span>
+                            ))
+                        ) : (
+                            <span className="rounded bg-slate-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                User
+                            </span>
+                        )}
                         <span className="rounded bg-slate-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:bg-slate-800 dark:text-slate-300">Lvl {user?.level || 1}</span>
                         {user?.xp !== undefined && (
                             <span className="rounded bg-brand-purple/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand-purple">

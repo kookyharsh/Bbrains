@@ -8,9 +8,10 @@ interface AcademicsControlsProps {
   search: string;
   onSearchChange: (value: string) => void;
   onAddClick: () => void;
+  canAdd?: boolean;
 }
 
-export function AcademicsControls({ tab, search, onSearchChange, onAddClick }: AcademicsControlsProps) {
+export function AcademicsControls({ tab, search, onSearchChange, onAddClick, canAdd = true }: AcademicsControlsProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <TabsList>
@@ -28,7 +29,7 @@ export function AcademicsControls({ tab, search, onSearchChange, onAddClick }: A
             className="pl-9" 
           />
         </div>
-        <Button onClick={onAddClick}>
+        <Button onClick={onAddClick} disabled={!canAdd}>
           <Plus className="w-4 h-4 mr-1" /> Add {tab === "courses" ? "Course" : tab === "students" ? "Student" : "Assignment"}
         </Button>
       </div>

@@ -25,8 +25,46 @@ async function safeDeleteMany(model: { deleteMany: () => Promise<any> }, name: s
   } catch (e: any) {
     if (e?.code === 'P2021') {
       console.warn(`  ⚠️  Skipping ${name} — table does not exist yet.`);
+    } else if (e?.code === 'EACCES') {
+      console.warn(`  Skipping ${name} - access denied for current DB user (EACCES).`);
     } else {
       throw e;
+    }
+  }
+}
+
+async function ensureRoleSchema() {
+  console.log("ðŸ”§ Ensuring Role schema...");
+
+  const statements: string[] = [
+    'ALTER TABLE "role" ADD COLUMN IF NOT EXISTS "college_id" INTEGER;',
+    'ALTER TABLE "role" ADD COLUMN IF NOT EXISTS "color" VARCHAR(7);',
+    'ALTER TABLE "role" ADD COLUMN IF NOT EXISTS "is_default" BOOLEAN NOT NULL DEFAULT false;',
+    'ALTER TABLE "role" ADD COLUMN IF NOT EXISTS "is_system" BOOLEAN NOT NULL DEFAULT false;',
+    'ALTER TABLE "role" ADD COLUMN IF NOT EXISTS "position" INTEGER NOT NULL DEFAULT 0;',
+    'DROP INDEX IF EXISTS "role_name_key";',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "role_name_college_id_key" ON "role"("name", "college_id");',
+    `DO $$
+BEGIN
+  ALTER TABLE "role"
+    ADD CONSTRAINT "role_college_id_fkey"
+    FOREIGN KEY ("college_id") REFERENCES "college"("college_id")
+    ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;`,
+  ];
+
+  for (const statement of statements) {
+    try {
+      await prisma.$executeRawUnsafe(statement);
+    } catch (e: any) {
+      const message = String(e?.message ?? e);
+      if (message.includes('relation \"role\" does not exist') || message.includes('relation \"role\" does not exist')) {
+        console.warn('  âš ï¸  Skipping Role schema checks â€” \"role\" table does not exist yet.');
+        return;
+      }
+      console.warn(`  âš ï¸  Role schema step failed (continuing): ${message}`);
     }
   }
 }
@@ -79,6 +117,8 @@ async function main() {
     await safeDeleteMany(prisma.xp,          'Xp');
     await safeDeleteMany(prisma.wallet,      'Wallet');
     await safeDeleteMany(prisma.userDetails, 'UserDetails');
+    await safeDeleteMany(prisma.rolePermission, 'RolePermission');
+    await safeDeleteMany(prisma.permission,  'Permission');
     await safeDeleteMany(prisma.userRoles,   'UserRoles');
     await safeDeleteMany(prisma.role,        'Role');
 
@@ -139,21 +179,137 @@ async function main() {
     }
     console.log(`✅ ${colleges.length} Colleges created.`);
 
+    console.log("🔐 Seeding Permissions Matrix...");
+    const permissionData = [
+      // Content
+      { key: 'post_announcements', label: 'Post Announcements', description: 'Allows posting announcements to the college feed', category: 'Content' },
+      { key: 'create_courses', label: 'Create Courses', description: 'Allows creating new courses', category: 'Content' },
+      { key: 'edit_courses', label: 'Edit Courses', description: 'Allows editing existing courses', category: 'Content' },
+      { key: 'delete_courses', label: 'Delete Courses', description: 'Allows deleting courses', category: 'Content' },
+      { key: 'upload_materials', label: 'Upload Materials', description: 'Allows uploading course materials and documents', category: 'Content' },
+      // Users
+      { key: 'view_students', label: 'View Students', description: 'Allows viewing student profiles and lists', category: 'Users' },
+      { key: 'manage_students', label: 'Manage Students', description: 'Allows editing student data and enrollments', category: 'Users' },
+      { key: 'assign_roles', label: 'Assign Roles', description: 'Allows assigning roles to users', category: 'Users' },
+      { key: 'remove_members', label: 'Remove Members', description: 'Allows removing users from the college', category: 'Users' },
+      // Grades & Reports
+      { key: 'view_grades', label: 'View Grades', description: 'Allows viewing student grades', category: 'Grades & Reports' },
+      { key: 'edit_grades', label: 'Edit Grades', description: 'Allows modifying student grades', category: 'Grades & Reports' },
+      { key: 'view_reports', label: 'View Reports', description: 'Allows viewing academic and financial reports', category: 'Grades & Reports' },
+      { key: 'export_reports', label: 'Export Reports', description: 'Allows exporting reports to CSV/PDF', category: 'Grades & Reports' },
+      // Settings
+      { key: 'manage_roles', label: 'Manage Roles', description: 'Allows creating and editing roles and permissions', category: 'Settings' },
+      { key: 'manage_school_settings', label: 'Manage School Settings', description: 'Allows editing college profile and configuration', category: 'Settings' },
+      { key: 'view_audit_logs', label: 'View Audit Logs', description: 'Allows viewing system audit logs', category: 'Settings' },
+      // General
+      { key: 'administrator', label: 'Administrator', description: 'Bypasses all permission checks. Grants full access.', category: 'General' },
+      // Products
+      { key: 'create_product', label: 'Create Product', description: 'Create new products in the marketplace. Users can manage their own products.', category: 'Products' },
+      { key: 'manage_product', label: 'Manage All Products', description: 'Approve, reject, and manage any product in the marketplace.', category: 'Products' },
+      // User Management
+      { key: 'manage_student', label: 'Manage Students', description: 'Modify existing student accounts.', category: 'Users' },
+      { key: 'manage_teacher', label: 'Manage Teachers', description: 'Modify existing teacher accounts.', category: 'Users' },
+      { key: 'create_student', label: 'Create Student', description: 'Create new student accounts.', category: 'Users' },
+      { key: 'create_teacher', label: 'Create Teacher', description: 'Create new teacher accounts.', category: 'Users' },
+      { key: 'create_user', label: 'Create User', description: 'Create new user accounts of any type.', category: 'Users' },
+      { key: 'manage_user', label: 'Manage User', description: 'Modify any user account.', category: 'Users' },
+      // Courses
+      { key: 'create_course', label: 'Create Course', description: 'Create new courses.', category: 'Courses' },
+      { key: 'manage_course', label: 'Manage Course', description: 'Edit and manage existing courses.', category: 'Courses' },
+      // Roles
+      { key: 'create_role', label: 'Create Role', description: 'Create new roles.', category: 'Roles' },
+      { key: 'manage_role', label: 'Manage Role', description: 'Edit and delete roles.', category: 'Roles' },
+      // Institution
+      { key: 'manage_institution', label: 'Manage Institution', description: 'Change college config like XP multiplier, rewards for assignment completion.', category: 'Institution' },
+      // Events
+      { key: 'create_event', label: 'Create Event', description: 'Create new events.', category: 'Events' },
+      { key: 'manage_event', label: 'Manage Event', description: 'Edit and manage existing events.', category: 'Events' },
+      // Announcements
+      { key: 'create_announcement', label: 'Create Announcement', description: 'Create new announcements.', category: 'Announcements' },
+      { key: 'manage_announcement', label: 'Manage Announcement', description: 'Edit and manage existing announcements.', category: 'Announcements' },
+      // Suggestions
+      { key: 'manage_suggestions', label: 'Manage Suggestions', description: 'Review and manage user suggestions.', category: 'Suggestions' },
+      // XP & Rewards
+      { key: 'manage_xp', label: 'Manage XP & Coins', description: 'Add or remove user XP and coins/money.', category: 'XP & Rewards' },
+    ];
+
+    const permissions = [];
+    for (const p of permissionData) {
+      const perm = await prisma.permission.create({ data: p });
+      permissions.push(perm);
+    }
+    console.log(`✅ ${permissions.length} Permissions created.`);
+
     console.log("👥 Seeding Roles...");
-    const roles = await Promise.all([
-      prisma.role.create({ data: { name: 'Student', description: 'Student role' } }),
-      prisma.role.create({ data: { name: 'Teacher', description: 'Instructor role' } }),
-      prisma.role.create({ data: { name: 'Admin', description: 'System Administrator' } }),
-      prisma.role.create({ data: { name: 'Super Admin', description: 'BBrains Super Administrator' } }),
-    ]);
-    console.log("✅ 4 Roles created.");
+    await ensureRoleSchema();
+    const roleSeeds = [
+      { name: 'SuperAdmin', description: 'BBrains Super Administrator', color: '#e91e63', is_default: false, is_system: true, position: 1 },
+      { name: 'Admin', description: 'College Administrator', color: '#f1c40f', is_default: false, is_system: true, position: 2 },
+      { name: 'Manager', description: 'College Manager', color: '#2ecc71', is_default: false, is_system: true, position: 3 },
+      { name: 'Teacher', description: 'Instructor role', color: '#5865f2', is_default: false, is_system: true, position: 4 },
+      { name: 'Student', description: 'Default student role', color: '#99aab5', is_default: true, is_system: true, position: 100 },
+    ];
+
+    const roles = [];
+    for (const r of roleSeeds) {
+      const role = await prisma.role.create({ 
+        data: {
+          name: r.name,
+          description: r.description,
+          color: r.color,
+          isDefault: r.is_default,
+          isSystem: r.is_system,
+          position: r.position
+        }
+      });
+      roles.push(role);
+    }
+    console.log(`✅ ${roles.length} Roles created.`);
+
+    console.log("🔗 Linking Permissions to Roles...");
+    const adminRoleObj = roles.find(r => r.name === 'Admin');
+    const managerRoleObj = roles.find(r => r.name === 'Manager');
+    const teacherRoleObj = roles.find(r => r.name === 'Teacher');
+    const studentRoleObj = roles.find(r => r.name === 'Student');
+
+    // Admin and Manager get almost everything
+    for (const perm of permissions) {
+      await prisma.rolePermission.create({
+        data: { roleId: adminRoleObj.id, permissionId: perm.id, enabled: true }
+      });
+      await prisma.rolePermission.create({
+        data: { roleId: managerRoleObj.id, permissionId: perm.id, enabled: true }
+      });
+    }
+
+    // Teacher gets content and grades
+    const teacherPermKeys = ['post_announcements', 'create_announcement', 'manage_announcement', 'edit_courses', 'upload_materials', 'view_students', 'view_grades', 'edit_grades', 'view_reports'];
+    for (const perm of permissions) {
+      if (teacherPermKeys.includes(perm.key)) {
+        await prisma.rolePermission.create({
+          data: { roleId: teacherRoleObj.id, permissionId: perm.id, enabled: true }
+        });
+      }
+    }
+
+    // Student gets minimal
+    const studentPermKeys = ['view_students', 'view_grades'];
+    for (const perm of permissions) {
+      if (studentPermKeys.includes(perm.key)) {
+        await prisma.rolePermission.create({
+          data: { roleId: studentRoleObj.id, permissionId: perm.id, enabled: true }
+        });
+      }
+    }
+    console.log("✅ Permission mappings created.");
 
     console.log("👥 Seeding Users...");
 
-    const studentRole = roles[0];
-    const teacherRole = roles[1];
-    const adminRole = roles[2];
-    const superAdminRole = roles[3];
+    const studentRole = roles.find(r => r.name === 'Student');
+    const teacherRole = roles.find(r => r.name === 'Teacher');
+    const adminRole = roles.find(r => r.name === 'Admin');
+    const managerRole = roles.find(r => r.name === 'Manager');
+    const superAdminRole = roles.find(r => r.name === 'SuperAdmin');
     const superAdmins: any[] = [];
     const admins: any[] = [];
     const teachers: any[] = [];

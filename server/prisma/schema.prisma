@@ -20,6 +20,7 @@ model College {
   courses   Course[]
   events    Event[]
   features  Json?    @default("{}")
+  roles     Role[]
 
   @@map("college")
 }
@@ -226,12 +227,43 @@ model AssessmentResult {
 }
 
 model Role {
-  id          Int         @id @default(autoincrement()) @map("role_id")
-  name        String      @unique @db.VarChar(50)
-  description String?     @db.VarChar(255)
+  id          Int               @id @default(autoincrement()) @map("role_id")
+  collegeId   Int?              @map("college_id")
+  name        String            @db.VarChar(50)
+  description String?           @db.VarChar(255)
+  color       String?           @db.VarChar(7)
+  isDefault   Boolean           @default(false) @map("is_default")
+  isSystem    Boolean           @default(false) @map("is_system")
+  position    Int               @default(0)
   users       UserRoles[]
+  permissions RolePermission[]
+  college     College?          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
+  @@unique([name, collegeId])
   @@map("role")
+}
+
+model Permission {
+  id          Int               @id @default(autoincrement()) @map("permission_id")
+  key         String            @unique @db.VarChar(100)
+  label       String            @db.VarChar(100)
+  description String?           @db.VarChar(255)
+  category    String            @db.VarChar(50)
+  roles       RolePermission[]
+
+  @@map("permission")
+}
+
+model RolePermission {
+  roleId       Int         @map("role_id")
+  permissionId Int         @map("permission_id")
+  enabled      Boolean     @default(false)
+  
+  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
 }
 
 model UserRoles {

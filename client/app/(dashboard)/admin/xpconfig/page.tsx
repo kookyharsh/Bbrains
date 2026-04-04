@@ -1,14 +1,16 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Lock } from "lucide-react"
 import { xpApi } from "@/services/api/client"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { DataTable } from "@/features/admin/components/DataTable"
 import { CrudModal } from "@/features/admin/components/CrudModal"
 import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 export default function XpConfigPage() {
+    const canManageInstitution = useHasPermission("manage_institution")
     const [levels, setLevels] = useState<any[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -16,6 +18,16 @@ export default function XpConfigPage() {
     const [selectedLevel, setSelectedLevel] = useState<any>(null)
     const [submitting, setSubmitting] = useState(false)
     const [formData, setFormData] = useState({ levelNumber: "", requiredXp: "" })
+
+    if (!canManageInstitution) {
+        return (
+            <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Lock className="size-10 opacity-40" />
+                <p className="text-sm font-medium">Access Denied</p>
+                <p className="text-xs">You need the "Manage Institution" permission to view this page.</p>
+            </div>
+        )
+    }
 
     const fetchLevels = async () => {
         setIsLoading(true)

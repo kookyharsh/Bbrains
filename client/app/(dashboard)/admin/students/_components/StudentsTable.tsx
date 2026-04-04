@@ -7,7 +7,7 @@ interface StudentsTableProps {
     loading: boolean
     data: ApiUser[]
     onEdit?: (student: ApiUser) => void
-    onDelete: (student: ApiUser) => void
+    onDelete?: (student: ApiUser) => void
 }
 
 export function StudentsTable({ loading, data, onEdit, onDelete }: StudentsTableProps) {

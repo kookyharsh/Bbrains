@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react"
 import { getAuthedClient } from "@/services/api/client"
-import { Loader2 } from "lucide-react"
+import { Loader2, Lock } from "lucide-react"
 import { DataTable } from "@/features/admin/components/DataTable"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
@@ -10,6 +10,7 @@ import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
 import { FormInput } from "@/features/admin/components/form/FormInput"
 import { FormTextarea } from "@/features/admin/components/form/FormTextarea"
 import type { ApiAnnouncement } from "@/lib/types/api"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 
 function fmtDate(s: string) {
@@ -20,6 +21,10 @@ interface AnnForm { title: string; description: string }
 const emptyAnnForm: AnnForm = { title: "", description: "" }
 
 export default function AnnouncementsPage() {
+    const canCreate = useHasPermission("create_announcement")
+    const canManage = useHasPermission("manage_announcement")
+    const hasAccess = canCreate || canManage
+
     const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
@@ -37,7 +42,21 @@ export default function AnnouncementsPage() {
         } catch (e) { console.error(e) } finally { setLoading(false) }
     }, [])
 
-    useEffect(() => { load() }, [load])
+    useEffect(() => { 
+        if (hasAccess) {
+            load() 
+        }
+    }, [load, hasAccess])
+
+    if (!hasAccess) {
+        return (
+            <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Lock className="size-10 opacity-40" />
+                <p className="text-sm font-medium">Access Denied</p>
+                <p className="text-xs text-center px-6">You need "Create Announcement" or "Manage Announcement" permission to access this page.</p>
+            </div>
+        )
+    }
 
     async function handleSubmit() {
         if (!form.title.trim()) return

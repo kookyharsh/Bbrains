@@ -21,8 +21,10 @@ import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import Image from "next/image";
 import { DashboardContent } from "@/components/dashboard-content";
 import { cn } from "@/lib/utils";
+import { useHasPermission } from "@/components/providers/permissions-provider";
 
 export default function MyProductsPage() {
+  const canCreateProduct = useHasPermission("create_product");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -185,12 +187,14 @@ export default function MyProductsPage() {
             </h1>
             <p className="text-muted-foreground text-sm font-medium mt-1">Manage and track your campus marketplace listings</p>
           </div>
-          <Button 
-            onClick={() => { resetForm(); setShowAddDialog(true); }}
-            className="bg-brand-orange hover:bg-brand-orange/90 text-white font-bold rounded-xl h-12 px-6 shadow-lg shadow-brand-orange/20 transition-all hover:scale-105"
-          >
-            <Plus className="w-5 h-5 mr-2" /> List New Product
-          </Button>
+          {canCreateProduct && (
+            <Button 
+              onClick={() => { resetForm(); setShowAddDialog(true); }}
+              className="bg-brand-orange hover:bg-brand-orange/90 text-white font-bold rounded-xl h-12 px-6 shadow-lg shadow-brand-orange/20 transition-all hover:scale-105"
+            >
+              <Plus className="w-5 h-5 mr-2" /> List New Product
+            </Button>
+          )}
         </div>
 
         {loading ? (
@@ -206,9 +210,11 @@ export default function MyProductsPage() {
               </div>
               <h3 className="text-xl font-bold mb-2">No Products Found</h3>
               <p className="text-muted-foreground max-w-sm mb-8">You haven't listed any products yet. Start selling to the campus community today!</p>
-              <Button variant="outline" onClick={() => setShowAddDialog(true)} className="rounded-xl border-2 font-bold px-8">
-                Create Your First Listing
-              </Button>
+              {canCreateProduct && (
+                <Button variant="outline" onClick={() => setShowAddDialog(true)} className="rounded-xl border-2 font-bold px-8">
+                  Create Your First Listing
+                </Button>
+              )}
             </div>
           </Card>
         ) : (

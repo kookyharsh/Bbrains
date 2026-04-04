@@ -13,8 +13,11 @@ import { courseApi, userApi, assignmentApi } from "@/services/api/client";
 import { Course, AdminAssignment, Student } from "./_types";
 import { BookOpen, ClipboardList, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { useHasPermission } from "@/components/providers/permissions-provider";
 
 export default function AcademicsPage() {
+  const canCreateCourse = useHasPermission("create_course");
+  const canManageCourse = useHasPermission("manage_course");
   const [tab, setTab] = useState("courses");
   const [search, setSearch] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -55,6 +58,11 @@ export default function AcademicsPage() {
     if (tab === "courses") setDialogType("course");
     else if (tab === "students") setDialogType("student");
     else setDialogType("assignment");
+    setShowDialog(true);
+  };
+
+  const handleEditClick = (course: Course) => {
+    setDialogType("course");
     setShowDialog(true);
   };
 
@@ -129,6 +137,7 @@ export default function AcademicsPage() {
             search={search}
             onSearchChange={setSearch}
             onAddClick={handleAddClick}
+            canAdd={canCreateCourse || canManageCourse}
           />
         </div>
 
@@ -139,6 +148,7 @@ export default function AcademicsPage() {
                 courses={courses}
                 search={search}
                 onDelete={setDeleteId}
+                onEdit={canManageCourse ? handleEditClick : undefined}
               />
             </CardContent>
           </Card>

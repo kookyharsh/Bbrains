@@ -11,12 +11,14 @@ import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/app/(dashboard)/market/approvals/_features/market/types"
 import { fetchPendingProducts, approveRejectProduct } from "@/app/(dashboard)/market/approvals/_features/market/data"
 import { dashboardApi, type User as ApiUser } from "@/services/api/client"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 interface PendingProduct extends Product {
     creatorName: string
 }
 
 export default function ApprovalsPage() {
+    const canManageProduct = useHasPermission("manage_product")
     const [user, setUser] = useState<ApiUser | null>(null)
     const [products, setProducts] = useState<PendingProduct[]>([])
     const [loading, setLoading] = useState(true)
@@ -40,7 +42,7 @@ export default function ApprovalsPage() {
     }, [])
 
     const userRole = user?.type ?? "student"
-    const hasAccess = userRole === "admin" || userRole === "teacher" || (user as any)?.role === "admin"
+    const hasAccess = canManageProduct || userRole === "admin" || userRole === "teacher" || (user as any)?.role === "admin"
 
     useEffect(() => {
         if (loadingAuth || !hasAccess) {

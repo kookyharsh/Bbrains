@@ -15,9 +15,10 @@ interface CoursesTableProps {
   courses: Course[];
   search: string;
   onDelete: (id: string | number) => void;
+  onEdit?: (course: Course) => void;
 }
 
-export function CoursesTable({ courses, search, onDelete }: CoursesTableProps) {
+export function CoursesTable({ courses, search, onDelete, onEdit }: CoursesTableProps) {
   const filteredCourses = courses.filter(c => 
     !search ||
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,12 +51,17 @@ export function CoursesTable({ courses, search, onDelete }: CoursesTableProps) {
               <TableCell><Badge variant="secondary">{course._count?.enrollments || course.enrolledStudents || 0}</Badge></TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="w-3.5 h-3.5" /></Button>
+                  {onEdit && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(course)}>
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     className="h-8 w-8 text-destructive" 
                     onClick={() => onDelete(course.id)}
+                    disabled={!onEdit}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>

@@ -1,30 +1,65 @@
 import { useEffect, useState } from "react"
 
-import { User } from "@/services/api/client"
+import { dashboardApi, User } from "@/services/api/client"
 
-// Mock user hook - replace with actual auth implementation
+type NormalizedUser = User & { collegeId?: number }
+
+function normalizeUser(user: User | (User & { collegeId?: number })): NormalizedUser {
+  const anyUser = user as any
+  return {
+    ...user,
+    collegeId: anyUser.collegeId ?? user.college?.id,
+  }
+}
+
 export function useUser() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<NormalizedUser | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Replace with actual auth implementation
-    // For now, check if we have a user in localStorage or from auth provider
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
+    let mounted = true
+
+    const init = async () => {
       try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        console.error('Failed to parse user from localStorage', e)
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser) as User
+            if (mounted) setUser(normalizeUser(parsed))
+          } catch (e) {
+            console.error('Failed to parse user from localStorage', e)
+          }
+        }
+
+        const userResp = await dashboardApi.getUser()
+        if (!mounted) return
+
+        if (userResp.success && userResp.data) {
+          const normalized = normalizeUser(userResp.data)
+          setUser(normalized)
+          localStorage.setItem('user', JSON.stringify(normalized))
+        } else {
+          // If backend session is gone, clear stale local user
+          localStorage.removeItem('user')
+          setUser(null)
+        }
+      } finally {
+        if (mounted) setLoading(false)
       }
     }
-    setLoading(false)
+
+    init()
+
+    return () => {
+      mounted = false
+    }
   }, [])
 
   // Mock login function for development
   const login = (userData: any) => {
-    localStorage.setItem('user', JSON.stringify(userData))
-    setUser(userData)
+    const normalized = normalizeUser(userData)
+    localStorage.setItem('user', JSON.stringify(normalized))
+    setUser(normalized)
   }
 
   // Mock logout function

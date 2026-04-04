@@ -11,12 +11,15 @@ import { StudentsTable } from "./_components/StudentsTable"
 import { StudentForm } from "./_components/StudentForm"
 import { fetchStudents } from "./data"
 import { emptyStudentForm, initStudentForm, type ApiUser, type StudentForm as StudentFormType } from "./_types"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 interface StudentsClientProps {
     initialStudents: ApiUser[]
 }
 
 export function StudentsClient({ initialStudents }: StudentsClientProps) {
+    const canCreateStudent = useHasPermission("create_student")
+    const canManageStudent = useHasPermission("manage_student")
     const [students, setStudents] = useState<ApiUser[]>(initialStudents)
     const [courses, setCourses] = useState<Course[]>([])
     const [loading, setLoading] = useState(false)
@@ -147,14 +150,14 @@ export function StudentsClient({ initialStudents }: StudentsClientProps) {
             <SectionHeader
                 title="Students"
                 subtitle={`${students.length} total students enrolled`}
-                action={{
+                action={canCreateStudent || canManageStudent ? {
                     label: "Add Student",
                     icon: <GraduationCap className="size-4" />,
                     onClick: openCreate,
-                }}
+                } : undefined}
             />
 
-            <StudentsTable loading={loading} data={students} onEdit={openEdit} onDelete={setDeleteTarget} />
+            <StudentsTable loading={loading} data={students} onEdit={canManageStudent ? openEdit : undefined} onDelete={canManageStudent ? setDeleteTarget : undefined} />
 
             <CrudDrawer
                 open={modalOpen}

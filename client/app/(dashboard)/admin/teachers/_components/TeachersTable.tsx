@@ -8,8 +8,8 @@ import { fullName, type ApiUser } from "../_types"
 interface TeachersTableProps {
     loading: boolean
     data: ApiUser[]
-    onEdit: (teacher: ApiUser) => void
-    onDelete: (teacher: ApiUser) => void
+    onEdit?: (teacher: ApiUser) => void
+    onDelete?: (teacher: ApiUser) => void
 }
 
 export function TeachersTable({ loading, data, onEdit, onDelete }: TeachersTableProps) {
