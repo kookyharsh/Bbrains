@@ -1,13 +1,11 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
-    BarChart3,
+    
     CalendarDays,
-    ChevronRight,
-    LayoutDashboard,
     LogOut,
     User,
     Coins,
@@ -70,11 +68,6 @@ function getRoleLabel(type?: string) {
 export function MainNavbar({ user }: { user?: NavbarUser | null }) {
     const router = useRouter()
     const pathname = usePathname()
-    const [mounted, setMounted] = useState(false)
-
-    useEffect(() => {
-        setMounted(true)
-    }, [])
 
     const breadcrumbLabels = useMemo(() => buildPathLabels(pathname), [pathname])
     const pageTitle = useMemo(() => getPrimaryTitle(pathname), [pathname])
@@ -97,22 +90,6 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
         setAuthToken(null)
         router.push("/auth/login")
         router.refresh()
-    }
-
-    if (!mounted) {
-        return (
-            <nav className="sticky top-0 z-(--z-nav) border-b border-border/60 bg-background/85 backdrop-blur-xl">
-                <div className="mx-auto flex h-19 items-center gap-3 px-4 md:px-6">
-                    <div className="h-11 w-11 rounded-2xl border border-border/70 bg-muted/40" />
-                    <div className="min-w-0 flex-1 space-y-2">
-                        <div className="h-4 w-40 rounded-full bg-muted/50" />
-                        <div className="h-3 w-24 rounded-full bg-muted/40" />
-                    </div>
-                    <div className="h-11 w-24 rounded-2xl border border-border/70 bg-muted/40" />
-                    <div className="h-11 w-11 rounded-2xl border border-border/70 bg-muted/40" />
-                </div>
-            </nav>
-        )
     }
 
     return (

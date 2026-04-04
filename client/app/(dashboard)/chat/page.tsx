@@ -49,9 +49,15 @@ export default function ChatPage() {
 
   // State
   const [message, setMessage] = useState("");
-  const [showMembers, setShowMembers] = useState(() => 
-    typeof window !== "undefined" ? window.innerWidth >= 768 : false
-  );
+  const [showMembers, setShowMembers] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    if (window.innerWidth >= 768) {
+      setShowMembers(true);
+    }
+  }, []);
   const [profileUser, setProfileUser] = useState<Member | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
@@ -67,7 +73,7 @@ export default function ChatPage() {
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null!);
 
   // Current user's username for mention highlighting
   const currentUsername = useMemo(() => {
@@ -313,7 +319,8 @@ export default function ChatPage() {
     setMessage("");
   }, []);
   const onCancelReply = useCallback(() => setReplyingMsg(null), []);
-  const onToggleMembers = useCallback(() => setShowMembers(!showMembers), [showMembers]);
+const onToggleMembers = useCallback(() => setShowMembers(!showMembers), [showMembers]);
+
   const onMembersSidebarClose = useCallback(() => setShowMembers(false), []);
   const onMembersSidebarOpenProfile = useCallback((userId: string) => {
     handleOpenProfile(userId);
@@ -399,7 +406,7 @@ export default function ChatPage() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Search className="w-4 h-4" />
-                        <span>{searchResults.length} results for "{searchQuery}"</span>
+                        <span>{searchResults.length} results for &quot;{searchQuery}&quot;</span>
                       </div>
                       {searchResults.map((msg) => (
                         <MessageItem 
@@ -439,7 +446,9 @@ export default function ChatPage() {
                       <div key={group.label}>
                         <div className="flex items-center gap-3 my-2">
                           <Separator className="flex-1" />
-                          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{group.label}</span>
+                          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                            {isMounted ? group.label : "Loading..."}
+                          </span>
                           <Separator className="flex-1" />
                         </div>
                         <div className="space-y-1">
@@ -493,7 +502,7 @@ export default function ChatPage() {
           />
         </div>
 
-        {showMembers && (
+        {isMounted && showMembers && (
           <>
             <ChatSidebarRight 
               members={membersList} 
