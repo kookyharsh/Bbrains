@@ -15,14 +15,18 @@ const createAssignment = async (teacherId, courseId, data) => {
     });
 };
 
-const getAssignments = async (courseId) => {
-    const where = Number.isInteger(courseId) ? { courseId } : {};
+const getAssignments = async (courseId, collegeId) => {
+    const where = Number.isInteger(courseId) 
+        ? { courseId } 
+        : (collegeId ? { course: { collegeId } } : {});
+        
     return await prisma.assignment.findMany({
         where,
         include: {
             course: {
                 select: {
-                    name: true
+                    name: true,
+                    collegeId: true
                 }
             }
         },

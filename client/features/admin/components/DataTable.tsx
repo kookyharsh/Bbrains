@@ -53,7 +53,7 @@ export function DataTable<T extends { id: number | string }>({
     const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 p-2">
             {searchable && (
                 <div className="relative max-w-xs">
                     <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />

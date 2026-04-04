@@ -21,7 +21,7 @@ export const getOrder = async (req, res) => {
         if (isNaN(id)) return sendError(res, 'Invalid order ID', 400);
 
         const order = await getOrderById(id, req.user.type === 'admin' ? null : req.user.id);
-        if (!order) return sendError(res, 'Order not found', 404);
+        if (!order || order.user?.collegeId !== req.user.collegeId) return sendError(res, 'Order not found', 404);
 
         return sendSuccess(res, order);
     } catch (error) {
@@ -36,7 +36,7 @@ export const listAllOrders = async (req, res) => {
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const status = req.query.status || null;
 
-        const { orders, total } = await getAllOrders((page - 1) * limit, limit, status);
+        const { orders, total } = await getAllOrders((page - 1) * limit, limit, status, req.user.collegeId);
         return sendPaginated(res, orders, { page, limit, total });
     } catch (error) {
         return sendError(res, 'Failed to fetch orders', 500);

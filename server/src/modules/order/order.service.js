@@ -54,6 +54,7 @@ export const getOrderById = async (id, userId = null) => {
                 select: {
                     id: true,
                     username: true,
+                    collegeId: true,
                     userDetails: {
                         select: { firstName: true, lastName: true, avatar: true }
                     }
@@ -63,8 +64,11 @@ export const getOrderById = async (id, userId = null) => {
     });
 };
 
-export const getAllOrders = async (skip = 0, take = 20, status = null) => {
-    const where = status ? { status } : {};
+export const getAllOrders = async (skip = 0, take = 20, status = null, collegeId) => {
+    const where = {
+        ...(status ? { status } : {}),
+        ...(collegeId ? { user: { collegeId } } : {})
+    };
     const [orders, total] = await prisma.$transaction([
         prisma.order.findMany({
             where,

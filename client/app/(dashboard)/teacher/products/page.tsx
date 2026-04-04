@@ -21,6 +21,7 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
+    VisuallyHidden,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
@@ -203,6 +204,9 @@ export default function ProductsApprovalPage() {
 
             <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                 <SheetContent className="w-full sm:max-w-md border-l-0 shadow-2xl p-0 flex flex-col h-full overflow-hidden bg-background">
+                    <SheetTitle>
+                      <VisuallyHidden>Product Details</VisuallyHidden>
+                    </SheetTitle>
                     {selectedProduct && (() => {
                         const pData = selectedProduct as any;
                         const metadata = pData.metadata || {};

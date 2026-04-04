@@ -80,6 +80,11 @@ export const getTransaction = async (req, res) => {
         const transaction = await getTransactionById(id);
         if (!transaction) return sendError(res, 'Transaction not found', 404);
 
+        // Check college boundary
+        if (transaction.user?.collegeId !== req.user.collegeId) {
+            return sendError(res, 'Transaction not found', 404);
+        }
+
         // Check ownership
         if (
             transaction.userId !== req.user.id &&
@@ -125,6 +130,15 @@ export const createManualTransaction = async (req, res) => {
 // GET /transactions/user/:userId (admin only)
 export const getUserTransactionsList = async (req, res) => {
     try {
+        const targetUser = await prisma.user.findUnique({
+            where: { id: req.params.userId },
+            select: { collegeId: true }
+        });
+
+        if (!targetUser || targetUser.collegeId !== req.user.collegeId) {
+            return sendError(res, 'User not found or inaccessible', 404);
+        }
+
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const filters = {

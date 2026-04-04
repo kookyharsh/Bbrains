@@ -132,9 +132,12 @@ const buildCourseVisibilityWhere = (currentUser, search = '') => {
         ? { classTeacherId: currentUser.id }
         : {};
 
+    const collegeScoped = currentUser?.collegeId ? { collegeId: currentUser.collegeId } : {};
+
     return {
         ...searchWhere,
         ...teacherScoped,
+        ...collegeScoped,
     };
 };
 

@@ -276,10 +276,11 @@ const getUserDataHandler = async (req, res) => {
     }
 };
 
-const getUsersByRole = async (roleName) => {
+const getUsersByRole = async (roleName, collegeId) => {
     return await prisma.user.findMany({
         where: {
-            type: roleName // 'student' or 'teacher' from enum
+            type: roleName, // 'student' or 'teacher' from enum
+            ...(collegeId ? { collegeId } : {})
         },
         select: userSummarySelect,
         orderBy: {
@@ -289,8 +290,9 @@ const getUsersByRole = async (roleName) => {
 
 };
 
-const getAllUsersWithRoles = async () => {
+const getAllUsersWithRoles = async (collegeId) => {
     return await prisma.user.findMany({
+        where: collegeId ? { collegeId } : {},
         select: userSummarySelect,
         orderBy: {
             createdAt: 'desc'
@@ -298,13 +300,14 @@ const getAllUsersWithRoles = async () => {
     });
 };
 
-const getUserByName = async (name) => {
+const getUserByName = async (name, collegeId) => {
     return await prisma.user.findFirst({
         where: {
             username: {
                 contains: name,
                 mode: 'insensitive'
-            }
+            },
+            ...(collegeId ? { collegeId } : {})
         },
         select: {
             id: true,

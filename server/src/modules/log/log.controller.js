@@ -30,7 +30,9 @@ export const getAllLogs = async (req, res) => {
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
         const skip = (page - 1) * limit;
 
-        const where = {};
+        const where = {
+            user: { collegeId: req.user.collegeId }
+        };
         if (req.query.category) where.category = req.query.category;
         if (req.query.action) where.action = req.query.action;
         if (req.query.userId) where.userId = req.query.userId;
@@ -65,10 +67,10 @@ export const getLogById = async (req, res) => {
 
         const log = await prisma.auditLog.findUnique({
             where: { id },
-            include: { user: { select: { username: true } } }
+            include: { user: { select: { username: true, collegeId: true } } }
         });
 
-        if (!log) return sendError(res, 'Log not found', 404);
+        if (!log || log.user?.collegeId !== req.user.collegeId) return sendError(res, 'Log not found', 404);
         return sendSuccess(res, log);
     } catch (error) {
         return sendError(res, 'Failed to fetch log', 500);
@@ -78,14 +80,17 @@ export const getLogById = async (req, res) => {
 // GET /logs/stats
 export const getLogStats = async (req, res) => {
     try {
+        const where = { user: { collegeId: req.user.collegeId } };
         const [totalLogs, byCategory, byAction] = await Promise.all([
-            prisma.auditLog.count(),
+            prisma.auditLog.count({ where }),
             prisma.auditLog.groupBy({
                 by: ['category'],
+                where,
                 _count: { _all: true }
             }),
             prisma.auditLog.groupBy({
                 by: ['action'],
+                where,
                 _count: { _all: true },
                 orderBy: { _count: { action: 'desc' } },
                 take: 10

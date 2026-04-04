@@ -139,6 +139,7 @@ async function getCustomRoleNames(userId) {
 export const getAdminOverview = async (req, res) => {
     try {
         const adminId = req.user.id;
+        const collegeId = req.user.collegeId;
 
         const [
             adminUser,
@@ -195,7 +196,10 @@ export const getAdminOverview = async (req, res) => {
                 },
             }),
             prisma.user.findMany({
-                where: { type: 'student' },
+                where: { 
+                    type: 'student',
+                    collegeId
+                },
                 select: {
                     id: true,
                     wallet: {
@@ -210,20 +214,24 @@ export const getAdminOverview = async (req, res) => {
                     },
                 },
             }),
-            prisma.user.count({ where: { type: 'teacher' } }),
-            prisma.user.count({ where: { type: 'staff' } }),
+            prisma.user.count({ where: { type: 'teacher', collegeId } }),
+            prisma.user.count({ where: { type: 'staff', collegeId } }),
             prisma.role.findMany({
+                where: { collegeId },
                 select: {
                     name: true,
                     _count: {
                         select: {
-                            users: true,
+                            users: {
+                                where: { user: { collegeId } }
+                            },
                         },
                     },
                 },
             }),
             prisma.systemConfig.findMany(),
             prisma.course.findMany({
+                where: { college: { id: collegeId } },
                 select: {
                     feePerStudent: true,
                     _count: {
@@ -238,6 +246,7 @@ export const getAdminOverview = async (req, res) => {
                     amount: true,
                 },
                 where: {
+                    user: { collegeId },
                     type: 'credit',
                     status: 'success',
                     OR: buildTransactionSignalFilters('fee', feeNoteKeywords),
@@ -245,6 +254,7 @@ export const getAdminOverview = async (req, res) => {
             }),
             prisma.transactionHistory.findMany({
                 where: {
+                    user: { collegeId },
                     status: 'success',
                     OR: [
                         {
@@ -366,6 +376,7 @@ export const getAdminOverview = async (req, res) => {
 export const getManagerOverview = async (req, res) => {
     try {
         const managerId = req.user.id;
+        const collegeId = req.user.collegeId;
         const customRoleNames = await getCustomRoleNames(managerId);
         const hasManagerRole = customRoleNames.some((role) => role.toLowerCase().includes('manager'));
 
@@ -432,7 +443,10 @@ export const getManagerOverview = async (req, res) => {
                 },
             }),
             prisma.user.findMany({
-                where: { type: 'student' },
+                where: { 
+                    type: 'student',
+                    collegeId
+                },
                 select: {
                     id: true,
                     userDetails: {
@@ -442,15 +456,16 @@ export const getManagerOverview = async (req, res) => {
                     },
                 },
             }),
-            prisma.user.count({ where: { type: 'teacher' } }),
-            prisma.user.count({ where: { type: 'staff' } }),
-            prisma.course.count(),
+            prisma.user.count({ where: { type: 'teacher', collegeId } }),
+            prisma.user.count({ where: { type: 'staff', collegeId } }),
+            prisma.course.count({ where: { college: { id: collegeId } } }),
             prisma.systemConfig.findMany(),
             prisma.transactionHistory.aggregate({
                 _sum: {
                     amount: true,
                 },
                 where: {
+                    user: { collegeId },
                     type: 'credit',
                     status: 'success',
                     OR: buildTransactionSignalFilters('fee', feeNoteKeywords),
@@ -461,6 +476,7 @@ export const getManagerOverview = async (req, res) => {
                     amount: true,
                 },
                 where: {
+                    user: { collegeId },
                     type: 'debit',
                     status: 'success',
                     OR: buildTransactionSignalFilters('salary', salaryNoteKeywords),
@@ -468,6 +484,7 @@ export const getManagerOverview = async (req, res) => {
             }),
             prisma.transactionHistory.count({
                 where: {
+                    user: { collegeId },
                     type: 'debit',
                     status: 'success',
                     OR: buildTransactionSignalFilters('salary', salaryNoteKeywords),
@@ -495,10 +512,9 @@ export const getManagerOverview = async (req, res) => {
             prisma.attendance.findMany({
                 where: {
                     user: {
-                        is: {
-                            type: {
-                                in: ['teacher', 'staff'],
-                            },
+                        collegeId,
+                        type: {
+                            in: ['teacher', 'staff'],
                         },
                     },
                 },
@@ -514,10 +530,9 @@ export const getManagerOverview = async (req, res) => {
             prisma.attendance.findFirst({
                 where: {
                     user: {
-                        is: {
-                            type: {
-                                in: ['teacher', 'staff'],
-                            },
+                        collegeId,
+                        type: {
+                            in: ['teacher', 'staff'],
                         },
                     },
                 },
@@ -916,14 +931,18 @@ function calculateStreak(claims) {
 async function teacherDashboard(currentUser, res) {
     try {
         const userId = currentUser.id;
+        const collegeId = currentUser.collegeId;
         const [user, totalStudents, totalCourses, recentSubmissions, totalSubmissions, totalGrades, xp] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
                 select: { id: true, username: true, email: true, type: true, userDetails: true }
             }),
-            prisma.user.count({ where: { type: 'student' } }),
-            prisma.course.count(),
+            prisma.user.count({ where: { type: 'student', collegeId } }),
+            prisma.course.count({ where: { college: { id: collegeId } } }),
             prisma.submission.findMany({
+                where: {
+                    user: { collegeId }
+                },
                 include: {
                     user: { select: { username: true } },
                     assignment: { select: { title: true } }
@@ -931,8 +950,12 @@ async function teacherDashboard(currentUser, res) {
                 take: 10,
                 orderBy: { submittedAt: 'desc' }
             }),
-            prisma.submission.count(),
-            prisma.grade.count(), // Assuming one grade per submission, simplified count
+            prisma.submission.count({
+                where: { user: { collegeId } }
+            }),
+            prisma.grade.count({
+                where: { user: { collegeId } }
+            }), // Assuming one grade per submission, simplified count
             prisma.xp.findUnique({ where: { userId } }),
         ]);
 
@@ -964,25 +987,28 @@ async function teacherDashboard(currentUser, res) {
 async function adminDashboard(currentUser, res) {
     try {
         const userId = currentUser.id;
+        const collegeId = currentUser.collegeId;
         const [user, totalUsers, totalStudents, totalTeachers, totalCourses, totalProducts, totalOrders, recentLogs, systemStats] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
                 select: { id: true, username: true, email: true, type: true, userDetails: true }
             }),
-            prisma.user.count(),
-            prisma.user.count({ where: { type: 'student' } }),
-            prisma.user.count({ where: { type: 'teacher' } }),
-            prisma.course.count(),
-            prisma.product.count(),
-            prisma.order.count(),
+            prisma.user.count({ where: { collegeId } }),
+            prisma.user.count({ where: { type: 'student', collegeId } }),
+            prisma.user.count({ where: { type: 'teacher', collegeId } }),
+            prisma.course.count({ where: { college: { id: collegeId } } }),
+            prisma.product.count({ where: { creator: { collegeId } } }),
+            prisma.order.count({ where: { user: { collegeId } } }),
             prisma.auditLog.findMany({
+                where: { user: { collegeId } },
                 take: 10,
                 orderBy: { createdAt: 'desc' },
                 include: { user: { select: { username: true } } }
             }),
             prisma.wallet.aggregate({
                 _sum: { balance: true },
-                _count: { _all: true }
+                _count: { _all: true },
+                where: { user: { collegeId } }
             })
         ]);
 

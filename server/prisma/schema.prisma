@@ -17,6 +17,8 @@ model College {
   address   Address? @relation(fields: [addressId], references: [id])
   users     User[]
   announcements Announcement[]
+  courses   Course[]
+  events    Event[]
   features  Json?    @default("{}")
 
   @@map("college")
@@ -105,6 +107,7 @@ model Address {
 
 model Course {
   id              Int                 @id @default(autoincrement()) @map("course_id")
+  collegeId       Int?                @map("college_id")
   name            String              @db.VarChar(100)
   description     String?             @db.VarChar(255)
   standard        String?             @db.VarChar(50)
@@ -121,6 +124,7 @@ model Course {
   enrollments     Enrollment[]
   classTeacher    User?               @relation("CourseClassTeacher", fields: [classTeacherId], references: [id], onDelete: SetNull)
   assessments     Assessment[]
+  college         College?            @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@map("course")
 }
@@ -541,6 +545,7 @@ enum AssessmentType {
 
 model Event {
   id          Int      @id @default(autoincrement())
+  collegeId   Int?     @map("college_id")
   title       String   @db.VarChar(100)
   description String?
   banner      String?
@@ -551,6 +556,7 @@ model Event {
   type        String?  @db.VarChar(50)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  college     College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@map("event")
 }

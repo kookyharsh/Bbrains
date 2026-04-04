@@ -130,7 +130,10 @@ export const getUserByUsername = async (req, res) => {
     try {
         const { username } = req.params;
         const user = await prisma.user.findUnique({
-            where: { username },
+            where: { 
+                username,
+                collegeId: req.user.collegeId
+            },
             select: {
                 id: true,
                 username: true,
@@ -161,7 +164,7 @@ export const getUserByUsername = async (req, res) => {
 // GET /users/students
 export const getStudents = async (req, res) => {
     try {
-        const result = await getUsersByRole('student');
+        const result = await getUsersByRole('student', req.user.collegeId);
         return sendSuccess(res, result);
     } catch (error) {
         return sendError(res, 'Failed to fetch students', 500);
@@ -171,7 +174,7 @@ export const getStudents = async (req, res) => {
 // GET /users/teachers
 export const getTeachers = async (req, res) => {
     try {
-        const result = await getUsersByRole('teacher');
+        const result = await getUsersByRole('teacher', req.user.collegeId);
         return sendSuccess(res, result);
     } catch (error) {
         return sendError(res, 'Failed to fetch teachers', 500);
@@ -181,7 +184,7 @@ export const getTeachers = async (req, res) => {
 // GET /users/staff
 export const getStaff = async (req, res) => {
     try {
-        const result = await getUsersByRole('staff');
+        const result = await getUsersByRole('staff', req.user.collegeId);
         return sendSuccess(res, result);
     } catch (error) {
         return sendError(res, 'Failed to fetch staff', 500);
@@ -193,6 +196,7 @@ export const getManagers = async (req, res) => {
     try {
         const managers = await prisma.user.findMany({
             where: {
+                collegeId: req.user.collegeId,
                 roles: {
                     some: {
                         role: {
@@ -260,7 +264,11 @@ export const getManagers = async (req, res) => {
 export const getStudentByUsername = async (req, res) => {
     try {
         const user = await prisma.user.findFirst({
-            where: { username: req.params.username, type: 'student' },
+            where: { 
+                username: req.params.username, 
+                type: 'student',
+                collegeId: req.user.collegeId
+            },
             select: {
                 id: true, username: true, email: true, type: true,
                 userDetails: true,
@@ -293,7 +301,11 @@ export const getTeacherByUsername = async (req, res) => {
         }
 
         const user = await prisma.user.findFirst({
-            where: { username: req.params.username, type: 'teacher' },
+            where: { 
+                username: req.params.username, 
+                type: 'teacher',
+                collegeId: req.user.collegeId
+            },
             select: selectFields
         });
         if (!user) return sendError(res, 'Teacher not found', 404);
@@ -550,7 +562,7 @@ export const searchUser = async (req, res) => {
         const { name } = req.query;
         if (!name) return sendError(res, "Name query parameter required", 400);
 
-        const result = await getUserByName(name);
+        const result = await getUserByName(name, req.user.collegeId);
         if (!result) return sendError(res, "User not found", 404);
         return sendSuccess(res, result);
     } catch (error) {

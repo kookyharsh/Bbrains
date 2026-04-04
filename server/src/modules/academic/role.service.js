@@ -4,8 +4,9 @@ export const createRoleRecord = async (data) => {
     return await prisma.role.create({ data });
 };
 
-export const getAllRoles = async () => {
+export const getAllRoles = async (collegeId) => {
     return await prisma.role.findMany({
+        where: collegeId ? { collegeId } : {},
         include: { _count: { select: { users: true } } }
     });
 };
@@ -40,8 +41,9 @@ export const getUserRoles = async (userId) => {
     });
 };
 
-export const getUsersWithRoles = async () => {
+export const getUsersWithRoles = async (collegeId) => {
     return await prisma.user.findMany({
+        where: collegeId ? { collegeId } : {},
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,

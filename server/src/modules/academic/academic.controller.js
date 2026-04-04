@@ -48,7 +48,7 @@ export const createAssignmentHandler = async (req, res) => {
 export const getAssignmentsHandler = async (req, res) => {
     try {
         const courseId = req.query.courseId ? parseInt(req.query.courseId) : null;
-        const assignments = await getAssignments(courseId);
+        const assignments = await getAssignments(courseId, req.user.collegeId);
         return sendSuccess(res, assignments);
     } catch (error) {
         return sendError(res, 'Failed to fetch assignments', 500);
@@ -63,12 +63,12 @@ export const getAssignmentHandler = async (req, res) => {
         const assignment = await prisma.assignment.findUnique({
             where: { id },
             include: {
-                course: { select: { name: true } },
+                course: { select: { name: true, collegeId: true } },
                 submissions: { include: { user: { select: { username: true } } } },
                 _count: { select: { submissions: true } }
             }
         });
-        if (!assignment) return sendError(res, 'Assignment not found', 404);
+        if (!assignment || assignment.course?.collegeId !== req.user.collegeId) return sendError(res, 'Assignment not found', 404);
         return sendSuccess(res, assignment);
     } catch (error) {
         return sendError(res, 'Failed to fetch assignment', 500);
@@ -80,6 +80,15 @@ export const updateAssignmentHandler = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid ID', 400);
+
+        const existing = await prisma.assignment.findUnique({
+            where: { id },
+            include: { course: { select: { collegeId: true } } }
+        });
+
+        if (!existing || existing.course?.collegeId !== req.user.collegeId) {
+            return sendError(res, 'Assignment not found', 404);
+        }
 
         const updateSchema = z.object({
             title: z.string().min(1).max(100).optional(),
@@ -121,6 +130,16 @@ export const deleteAssignmentHandler = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid ID', 400);
+
+        const existing = await prisma.assignment.findUnique({
+            where: { id },
+            include: { course: { select: { collegeId: true } } }
+        });
+
+        if (!existing || existing.course?.collegeId !== req.user.collegeId) {
+            return sendError(res, 'Assignment not found', 404);
+        }
+
         await prisma.assignment.delete({ where: { id } });
         await createAuditLog(req.user.id, 'ACADEMIC', 'DELETE', 'Assignment', id);
         return sendSuccess(res, null, 'Assignment deleted');
@@ -134,6 +153,16 @@ export const deleteAssignmentHandler = async (req, res) => {
 export const submitAssignmentHandler = async (req, res) => {
     try {
         const validated = submissionSchema.parse(req.body);
+
+        const assignment = await prisma.assignment.findUnique({
+            where: { id: validated.assignmentId },
+            include: { course: { select: { collegeId: true } } }
+        });
+
+        if (!assignment || assignment.course?.collegeId !== req.user.collegeId) {
+            return sendError(res, 'Assignment not found', 404);
+        }
+
         const submission = await submitAssignment(req.user.id, validated);
         await createAuditLog(req.user.id, 'ACADEMIC', 'CREATE', 'Submission', submission.id);
         return sendCreated(res, submission, 'Assignment submitted');
@@ -158,6 +187,16 @@ export const getSubmissionsHandler = async (req, res) => {
     try {
         const assignmentId = parseInt(req.params.assignmentId);
         if (isNaN(assignmentId)) return sendError(res, 'Invalid ID', 400);
+
+        const assignment = await prisma.assignment.findUnique({
+            where: { id: assignmentId },
+            include: { course: { select: { collegeId: true } } }
+        });
+
+        if (!assignment || assignment.course?.collegeId !== req.user.collegeId) {
+            return sendError(res, 'Assignment not found', 404);
+        }
+
         const submissions = await getSubmissions(assignmentId);
         return sendSuccess(res, submissions);
     } catch (error) {

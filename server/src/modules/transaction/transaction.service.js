@@ -5,6 +5,7 @@ const transactionUserSelect = {
     id: true,
     username: true,
     type: true,
+    collegeId: true,
     userDetails: {
         select: {
             firstName: true,

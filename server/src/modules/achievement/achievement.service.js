@@ -5,8 +5,11 @@ export const createAchievementRecord = async (data) => {
     return await prisma.achievement.create({ data });
 };
 
-export const getAllAchievements = async () => {
-    return await prisma.achievement.findMany({ orderBy: { tier: 'asc' } });
+export const getAllAchievements = async (collegeId) => {
+    return await prisma.achievement.findMany({ 
+        where: collegeId ? { collegeId } : {},
+        orderBy: { tier: 'asc' } 
+    });
 };
 
 export const getAchievementById = async (id) => {

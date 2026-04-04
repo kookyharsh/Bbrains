@@ -97,7 +97,7 @@ export default function SuggestionsPage() {
                     <p className="text-muted-foreground">Help us improve BBrains by sharing your ideas and reporting issues.</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 ">
                     {/* Submission Form */}
                     <Card className="lg:col-span-1 h-fit border-brand-orange/20 shadow-lg shadow-brand-orange/5">
                         <CardHeader>
@@ -106,7 +106,7 @@ export default function SuggestionsPage() {
                         </CardHeader>
                         <form onSubmit={handleSubmit}>
                             <CardContent className="space-y-4">
-                                <div className="space-y-2">
+                                <div className="space-y-2 pb-3">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Title</label>
                                     <Input 
                                         placeholder="Brief summary..." 
@@ -118,7 +118,7 @@ export default function SuggestionsPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Details</label>
+                                    <label className="pb-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Details</label>
                                     <Textarea 
                                         placeholder="Describe your suggestion in detail..." 
                                         className="rounded-xl min-h-[150px] resize-none"
