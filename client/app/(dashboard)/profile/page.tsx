@@ -414,7 +414,7 @@ export default function ProfilePage() {
                   {user?.userAchievements && user.userAchievements.length > 0 ? (
                     user.userAchievements.map((entry, index) => (
                       <div
-                        key={`${entry.achievement.title}-${index}`}
+                        key={`${entry.achievement.name}-${index}`}
                         className="flex items-center gap-3 rounded-2xl border border-border/10 bg-muted/30 p-3"
                       >
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-mint/10 text-lg">
@@ -422,7 +422,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-foreground">
-                            {entry.achievement.title}
+                            {entry.achievement.name}
                           </p>
                           <p className="truncate text-[10px] text-muted-foreground">
                             {entry.achievement.description}
@@ -505,9 +505,9 @@ export default function ProfilePage() {
                               <Badge
                                 className={cn(
                                   "border-none font-black",
-                                  grade.grade >= 90
+                                  Number(grade.grade) >= 90
                                     ? "bg-green-500/10 text-green-600"
-                                    : grade.grade >= 75
+                                    : Number(grade.grade) >= 75
                                     ? "bg-blue-500/10 text-blue-600"
                                     : "bg-brand-orange/10 text-brand-orange"
                                 )}
@@ -782,7 +782,7 @@ export default function ProfilePage() {
                 {user?.userAchievements && user.userAchievements.length > 0 ? (
                   user.userAchievements.map((entry, index) => (
                     <div
-                      key={`${entry.achievement.title}-${index}`}
+                      key={`${entry.achievement.name}-${index}`}
                       className="rounded-[24px] border-2 border-hand-pencil/15 bg-hand-paper p-4"
                     >
                       <div className="mb-3 flex items-center gap-3">
@@ -791,7 +791,7 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <p className="font-kalam text-2xl font-bold text-hand-pencil">
-                            {entry.achievement.title}
+                            {entry.achievement.name}
                           </p>
                           <p className="font-patrick text-sm uppercase tracking-[0.16em] text-hand-pencil/50">
                             Unlocked achievement
@@ -863,9 +863,9 @@ export default function ProfilePage() {
                             <Badge
                               className={cn(
                                 "border-0 px-3 py-1 font-patrick text-sm",
-                                grade.grade >= 90
+                                Number(grade.grade) >= 90
                                   ? "bg-emerald-100 text-emerald-800"
-                                  : grade.grade >= 75
+                                  : Number(grade.grade) >= 75
                                   ? "bg-blue-100 text-blue-800"
                                   : "bg-amber-100 text-amber-800"
                               )}
