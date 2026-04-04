@@ -50,7 +50,7 @@ export function SendMoneyCard({
                     {selectedRecipient ? (
                         <div className="flex items-center gap-2 bg-muted/50 rounded-2xl px-3 py-2 border border-border">
                             <Avatar className="size-6">
-                                <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+                                <AvatarFallback name={selectedRecipient.id} className="text-[10px] font-bold bg-primary/10 text-primary">
                                     {getInitials(selectedRecipient.name)}
                                 </AvatarFallback>
                             </Avatar>
@@ -81,7 +81,7 @@ export function SendMoneyCard({
                                             onMouseDown={() => onRecipientSelect(u)}
                                         >
                                             <Avatar className="size-6">
-                                                <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+                                                <AvatarFallback name={u.id} className="text-[10px] font-bold bg-primary/10 text-primary">
                                                     {getInitials(u.name)}
                                                 </AvatarFallback>
                                             </Avatar>

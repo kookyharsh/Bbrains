@@ -112,7 +112,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                           <div className="flex items-center gap-3 min-w-0">
                             <Avatar className="w-10 h-10 border border-muted ring-offset-background group-hover:ring-2 group-hover:ring-primary/20 transition-all">
                               {avatarUrl && <AvatarImage src={avatarUrl} alt={username} />}
-                              <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
+                              <AvatarFallback name={username} className="bg-primary/5 text-primary text-xs font-bold">
                                 {username.substring(0, 2).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -218,7 +218,7 @@ export function TransactionHistory({ transactions, loading, error }: Transaction
                   <span className="text-muted-foreground block mb-1">Party Involved</span>
                   <div className="flex items-center gap-2">
                     <Avatar className="w-6 h-6">
-                      <AvatarFallback className="text-[10px]">
+                      <AvatarFallback name={showTxnReceipt.relatedUser?.username || showTxnReceipt.user?.username} className="text-[10px]">
                         {(showTxnReceipt.relatedUser?.username || showTxnReceipt.user?.username || "??").substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>

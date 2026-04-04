@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "radix-ui"
+import { Facehash as FacehashPrimitive } from "facehash"
 
 import { cn } from "@/lib/utils"
 
@@ -17,7 +18,10 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "after:border-border group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
+        "relative flex size-8 shrink-0 rounded-full select-none",
+        "after:border-border after:absolute after:inset-0 after:rounded-[inherit] after:border after:mix-blend-darken",
+        "data-[size=lg]:size-10 data-[size=sm]:size-6",
+        "dark:after:mix-blend-lighten",
         className
       )}
       {...props}
@@ -43,17 +47,92 @@ function AvatarImage({
 
 function AvatarFallback({
   className,
+  name,
+  children,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback> & { name?: string }) {
+  const [rotation, setRotation] = React.useState({ x: 0, y: 0 })
+  const [isHovered, setIsHovered] = React.useState(false)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+
+  // Extract text content from children recursively to use as seed
+  const extractText = (node: React.ReactNode): string => {
+    if (typeof node === "string" || typeof node === "number") {
+      return String(node)
+    }
+    if (Array.isArray(node)) {
+      return node.map(extractText).join("")
+    }
+    if (React.isValidElement(node) && node.props.children) {
+      return extractText(node.props.children)
+    }
+    return ""
+  }
+
+  const seed = (name || extractText(children) || "user").trim()
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+
+    const rotateX = (y - centerY) / 10
+    const rotateY = (centerX - x) / 10
+
+    setRotation({ x: rotateX, y: rotateY })
+  }
+
+  const handleMouseEnter = () => setIsHovered(true)
+  const handleMouseLeave = () => {
+    setIsHovered(false)
+    setRotation({ x: 0, y: 0 })
+  }
+
   return (
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "bg-muted text-muted-foreground flex size-full items-center justify-center rounded-full text-sm group-data-[size=sm]/avatar:text-xs",
+        "bg-muted text-muted-foreground relative flex size-full items-center justify-center overflow-hidden rounded-full text-sm group-data-[size=sm]/avatar:text-xs",
         className
       )}
       {...props}
-    />
+    >
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="flex size-full items-center justify-center overflow-hidden [&_svg]:block [&_svg]:h-full [&_svg]:w-full"
+        style={{ perspective: "1000px", transformStyle: "preserve-3d" }}
+      >
+        <div
+          className="flex size-full items-center justify-center"
+          style={{
+            transform: isHovered
+              ? `perspective(1000px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale3d(1.02, 1.02, 1.02)`
+              : "perspective(1000px) rotateX(0deg) rotateY(0deg)",
+            transition: isHovered ? "transform 0.1s ease-out" : "transform 0.3s ease-out",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <FacehashPrimitive 
+            name={seed} 
+            enableBlink 
+            className="block size-full"
+            size={512}
+            variant="gradient"
+
+            colors={["#6cc9eeff", "#2a9d8f", "#e9c46a", "#ff9f1c", "#ff6b35", "#f7b267", "#80ced6"]} 
+          />
+        </div>
+      </div>
+      {children && (
+        <span className="sr-only">{extractText(children)}</span>
+      )}
+    </AvatarPrimitive.Fallback>
   )
 }
 

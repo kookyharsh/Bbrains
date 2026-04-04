@@ -77,7 +77,10 @@ export const MessageItem = React.memo(function MessageItem({
             <button onClick={() => onOpenProfile(msg.user.id, msg.user.name, msg.user.username)}>
                 <Avatar className="w-9 h-9 shrink-0 mt-0.5 border border-border/50">
                     <AvatarImage src={msg.user.avatar || undefined} className="object-cover" />
-                    <AvatarFallback className="bg-brand-purple/10 text-brand-purple text-xs font-bold uppercase">
+                    <AvatarFallback 
+                        name={msg.user.username}
+                        className="bg-brand-purple/10 text-brand-purple text-xs font-bold uppercase"
+                    >
                         {msg.user.name?.[0] || msg.user.username?.[0] || "U"}
                     </AvatarFallback>
                 </Avatar>

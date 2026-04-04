@@ -8,8 +8,7 @@ import {
     VisuallyHidden,
 } from "@/components/ui/dialog"
 import type { Member } from "@/features/chat/data"
-import { getAvatarColor, getInitials } from "@/features/chat/utils"
-import { Shield, School, Calendar } from "lucide-react"
+import { Calendar, X } from "lucide-react"
 
 interface ProfileDialogProps {
     open: boolean
@@ -30,44 +29,54 @@ export function ProfileDialog({ open, onOpenChange, member }: ProfileDialogProps
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent 
-                className="p-0 border-none bg-transparent shadow-none w-fit max-w-md sm:max-w-md [&>button]:right-5 [&>button]:top-5 [&>button]:text-white [&>button]:hover:bg-white/20 [&>button]:rounded-full [&>button]:p-1.5 [&>button]:z-50 [&>button>svg]:h-5 [&>button>svg]:w-5" 
+                showCloseButton={false}
+                className="w-full max-w-md overflow-hidden border border-[var(--color-ui-light-text-secondary)]/15 bg-[var(--color-ui-light-surface)] p-0 text-[var(--color-ui-light-text-primary)] shadow-[0_24px_64px_rgba(15,23,42,0.28)] dark:border-[var(--color-ui-dark-text-secondary)]/20 dark:bg-[var(--color-ui-dark-surface)] dark:text-[var(--color-ui-dark-text-primary)]" 
             >
                 <DialogTitle>
                     <VisuallyHidden>Profile Details for {member.name}</VisuallyHidden>
                 </DialogTitle>
                 
-                <div className="w-[340px] bg-background-light dark:bg-[#221610] rounded-xl overflow-hidden shadow-[0_8px_16px_rgba(0,0,0,0.24)] border border-gray-200 dark:border-gray-800 relative">
-                    <div className="relative h-24 bg-gradient-to-r from-brand-purple to-purple-400">
-                    </div>
+                <div className="relative w-full">
+                    <button
+                        type="button"
+                        onClick={() => onOpenChange(false)}
+                        aria-label="Close profile dialog"
+                        className="absolute right-4  z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/15 text-white backdrop-blur-sm transition-colors hover:bg-black/25 dark:border-white/10"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+
+                    <div className="relative h-24 bg-gray" />
                     
-                    <div className="px-4 pb-4">
+                    <div className="bg-[var(--color-ui-light-surface)] px-4 pb-4 dark:bg-[var(--color-ui-dark-surface)]">
                         <div className="relative flex justify-between items-end -mt-12 mb-3">
                             <div className="relative">
-                                <div className="h-24 w-24 rounded-full border-[6px] border-background-light dark:border-[#221610] bg-gray-300 overflow-hidden relative">
-                                    <Avatar className="h-full w-full rounded-none">
+                                <div className="relative flex h-24 w-24 items-center justify-between overflow-hidden rounded-full border-[6px] border-[var(--color-ui-light-surface)] bg-gray-300 shadow-sm dark:border-[var(--color-ui-dark-surface)]">
+                                    <Avatar className="h-full w-full rounded-full border-none after:border-none">
                                         <AvatarImage src={member.avatar || undefined} className="object-cover" />
-                                        <AvatarFallback className={`text-2xl font-bold text-white rounded-none flex items-center justify-center ${getAvatarColor(member.name)}`}>
-                                            {getInitials(member.name)}
+                                        <AvatarFallback 
+                                            name={member.username}
+                                            className="text-3xl font-bold text-white rounded-full flex items-center justify-center bg-brand-purple/20"
+                                        >
+                                            {member.username?.[0] || "U"}
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
-                                <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-[4px] border-background-light dark:border-[#221610] ${statusColors[memberStatus] || "bg-gray-400"}`}></div>
+                                <div className={`absolute bottom-1 right-1 h-6 w-6 rounded-full border-[4px] border-[var(--color-ui-light-surface)] ${statusColors[memberStatus] || "bg-gray-400"} dark:border-[var(--color-ui-dark-surface)]`}></div>
                             </div>
-                            
-                            
                         </div>
                         
-                        <div className="bg-gray-100/50 dark:bg-gray-900/50 rounded-xl p-3 mb-3 border border-gray-200/50 dark:border-gray-800/50">
-                            <h1 className="text-gray-900 dark:text-gray-100 text-xl font-bold leading-tight truncate">
+                        <div className="mb-3 rounded-xl border border-black/5 bg-black/[0.035] p-3 dark:border-white/8 dark:bg-white/[0.045]">
+                            <h1 className="truncate text-xl font-bold leading-tight text-[var(--color-ui-light-text-primary)] dark:text-[var(--color-ui-dark-text-primary)]">
                                 {member.name}
                             </h1>
-                            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium truncate">@{member.username}</p>
+                            <p className="truncate text-sm font-medium text-[var(--color-ui-light-text-secondary)] dark:text-[var(--color-ui-dark-text-secondary)]">@{member.username}</p>
                             <div className="mt-2 flex flex-wrap gap-2">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                <span className="rounded bg-black/[0.06] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-ui-light-text-secondary)] dark:bg-white/[0.08] dark:text-[var(--color-ui-dark-text-secondary)]">
                                     {member.pronouns || "Member"}
                                 </span>
                                 {member.grade && (
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">
+                                    <span className="rounded bg-black/[0.06] px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-[var(--color-ui-light-text-secondary)] dark:bg-white/[0.08] dark:text-[var(--color-ui-dark-text-secondary)]">
                                         {member.grade}
                                     </span>
                                 )}
@@ -76,30 +85,30 @@ export function ProfileDialog({ open, onOpenChange, member }: ProfileDialogProps
                         
                         <div className="space-y-4 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
                             <div className="space-y-1.5">
-                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Roles</h3>
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-[var(--color-ui-light-text-secondary)] dark:text-[var(--color-ui-dark-text-secondary)]">Roles</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {member.roles.length > 0 ? (
                                         member.roles.map((role) => (
-                                            <span key={role} className="rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-300 capitalize">
+                                            <span key={role} className="rounded-full border border-black/8 bg-black/[0.035] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--color-ui-light-text-secondary)] dark:border-white/8 dark:bg-white/[0.045] dark:text-[var(--color-ui-dark-text-secondary)]">
                                                 {role}
                                             </span>
                                         ))
                                     ) : (
-                                        <span className="text-gray-500 text-xs capitalize">{member.type}</span>
+                                        <span className="text-xs capitalize text-[var(--color-ui-light-text-secondary)] dark:text-[var(--color-ui-dark-text-secondary)]">{member.type}</span>
                                     )}
                                 </div>
                             </div>
                             
                             <div className="space-y-1.5">
-                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">About Me</h3>
-                                <p className="text-gray-700 dark:text-gray-300 text-[13px] leading-relaxed">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-[var(--color-ui-light-text-secondary)] dark:text-[var(--color-ui-dark-text-secondary)]">About Me</h3>
+                                <p className="text-[13px] leading-relaxed text-[var(--color-ui-light-text-primary)] dark:text-[var(--color-ui-dark-text-primary)]">
                                     A vibrant member of the Bbrains community.
                                 </p>
                             </div>
                             
                             <div className="space-y-1.5">
-                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Bbrains Member Since</h3>
-                                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300 text-xs">
+                                <h3 className="text-[11px] font-bold uppercase tracking-widest text-[var(--color-ui-light-text-secondary)] dark:text-[var(--color-ui-dark-text-secondary)]">Bbrains Member Since</h3>
+                                <div className="flex items-center gap-2 text-xs text-[var(--color-ui-light-text-primary)] dark:text-[var(--color-ui-dark-text-primary)]">
                                     <Calendar className="h-4 w-4" />
                                     <span>Just Recently</span>
                                 </div>

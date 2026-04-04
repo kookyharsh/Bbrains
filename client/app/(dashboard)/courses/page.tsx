@@ -170,7 +170,7 @@ export default function CoursesPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar className="w-6 h-6">
-                      <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                      <AvatarFallback name={course.teacher?.username || course.teacher?.firstName} className="bg-primary/10 text-primary text-[10px]">
                         {getInitials(course.teacher?.firstName || course.teacher?.username)}
                       </AvatarFallback>
                     </Avatar>

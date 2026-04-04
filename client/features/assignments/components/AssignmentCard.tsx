@@ -1,6 +1,7 @@
 "use client"
 
 import { CalendarDays, CheckCircle2, Clock, Code, FileText, FunctionSquare, MoreVertical, TestTube } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export interface PremiumAssignment {
     id: string
@@ -97,11 +98,10 @@ export function AssignmentCard({ assignment }: { assignment: PremiumAssignment }
             <div className="mt-auto space-y-4">
                 <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                        <img
-                            alt={assignment.teacherName}
-                            className="w-6 h-6 rounded-full"
-                            src={assignment.teacherAvatar || `https://ui-avatars.com/api/?name=${assignment.teacherName}&background=random`}
-                        />
+                        <Avatar className="w-6 h-6">
+                            <AvatarImage src={assignment.teacherAvatar} />
+                            <AvatarFallback name={assignment.teacherName} />
+                        </Avatar>
                         <span className="truncate max-w-[120px]">{assignment.teacherName}</span>
                     </div>
                     <div className="flex items-center gap-1 text-gray-900 dark:text-white font-medium shrink-0">

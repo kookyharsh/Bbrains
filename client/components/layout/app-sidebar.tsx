@@ -160,9 +160,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                 <div className="relative">
                                     <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
                                         <AvatarImage src={user?.imageUrl || undefined} />
-                                        <AvatarFallback className="bg-brand-mint/20 text-brand-mint font-bold text-xs uppercase">
-                                            {user?.firstName?.[0]}{user?.lastName?.[0]}
-                                        </AvatarFallback>
+                                        <AvatarFallback name={user?.username} />
                                     </Avatar>
                                     <div className={`absolute -bottom-0.5 -right-0.5 bg-green-500 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800`} />
                                 </div>

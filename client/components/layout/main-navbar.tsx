@@ -160,10 +160,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
 
                                 <Avatar className="h-9 w-9 rounded-2xl border border-border/70 shadow-sm md:h-10 md:w-10">
                                     <AvatarImage src={user?.imageUrl || undefined} />
-                                    <AvatarFallback className="bg-linear-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
-                                        {user?.firstName?.[0] || ""}
-                                        {user?.lastName?.[0] || user?.username?.[0] || "U"}
-                                    </AvatarFallback>
+                                    <AvatarFallback name={user?.username} />
                                 </Avatar>
                             </button>
                         </DropdownMenuTrigger>
@@ -173,10 +170,7 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10 rounded-2xl border border-border/70">
                                         <AvatarImage src={user?.imageUrl || undefined} />
-                                        <AvatarFallback className="bg-linear-to-br from-emerald-500 to-cyan-500 text-xs font-bold uppercase text-white">
-                                            {user?.firstName?.[0] || ""}
-                                            {user?.lastName?.[0] || user?.username?.[0] || "U"}
-                                        </AvatarFallback>
+                                        <AvatarFallback name={user?.username} />
                                     </Avatar>
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-semibold text-foreground">

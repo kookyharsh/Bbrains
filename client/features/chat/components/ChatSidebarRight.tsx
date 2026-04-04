@@ -91,7 +91,7 @@ export function ChatSidebarRight({ members, currentUserId, onSelectUser }: ChatS
                   <div className="relative shrink-0">
                     <Avatar className="w-8 h-8">
                        <AvatarImage src={member.avatar} />
-                       <AvatarFallback className="bg-primary/10 text-primary text-xs">{member.name.charAt(0)}</AvatarFallback>
+                       <AvatarFallback name={member.username} className="bg-primary/10 text-primary text-xs">{member.username?.[0] || "U"}</AvatarFallback>
                     </Avatar>
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full"></div>
                   </div>
@@ -119,7 +119,7 @@ export function ChatSidebarRight({ members, currentUserId, onSelectUser }: ChatS
                   <div className="relative shrink-0">
                     <Avatar className="w-8 h-8">
                        <AvatarImage src={member.avatar} />
-                       <AvatarFallback className="bg-primary/10 text-primary text-xs">{member.name.charAt(0)}</AvatarFallback>
+                       <AvatarFallback name={member.username} className="bg-primary/10 text-primary text-xs">{member.username?.[0] || "U"}</AvatarFallback>
                     </Avatar>
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-gray-400 border-2 border-background rounded-full"></div>
                   </div>

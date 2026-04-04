@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -383,6 +383,9 @@ export default function SettingsPage() {
   const displayName = fullName || user?.username || "User";
   const roleLabel = user?.type ? user.type[0].toUpperCase() + user.type.slice(1) : "Member";
   const avatar = readUserName(user, "avatar");
+  const previewUsername = username.trim() || user?.username || "user";
+  const previewDisplayName = `${firstName.trim()} ${lastName.trim()}`.trim() || previewUsername;
+  const avatarSrc = avatar || undefined;
 
   if (uiMode === "classic") {
     return (
@@ -402,6 +405,8 @@ export default function SettingsPage() {
         activeThemeId={activeThemeId}
         updating={updating}
         avatar={avatar}
+        previewUsername={previewUsername}
+        previewDisplayName={previewDisplayName}
         setUsername={setUsername}
         setFirstName={setFirstName}
         setLastName={setLastName}
@@ -431,8 +436,11 @@ export default function SettingsPage() {
             <div className="flex flex-1 flex-col gap-6 md:flex-row md:items-center">
               <div className="relative">
                 <Avatar className="h-28 w-28 rounded-[30px] border-[4px] border-white bg-white shadow-[8px_8px_0px_0px_rgba(45,45,45,0.12)] md:h-32 md:w-32">
-                  <AvatarImage src={avatar} className="object-cover" />
-                  <AvatarFallback className="bg-hand-blue text-3xl font-bold text-white">
+                  <AvatarImage src={avatar || undefined} className="object-cover" />
+                  <AvatarFallback 
+                    name={user?.username}
+                    className="bg-hand-blue text-3xl font-bold text-white"
+                  >
                     {getInitials(user)}
                   </AvatarFallback>
                 </Avatar>
@@ -547,18 +555,18 @@ export default function SettingsPage() {
                   description="Update the public identity your classmates, staff, and dashboard use."
                   icon={<User className="h-5 w-5" />}
                 >
-                  <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
+                    <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
                     <div className="rounded-[26px] border-2 border-hand-pencil/15 bg-hand-paper p-5 text-center">
-                      <Avatar className="mx-auto h-28 w-28 rounded-[28px] border-[4px] border-white bg-white shadow-[6px_6px_0px_0px_rgba(45,45,45,0.10)]">
-                        <AvatarImage src={avatar} className="object-cover" />
-                        <AvatarFallback className="bg-hand-blue text-3xl font-bold text-white">
+                      <Avatar className="mx-auto h-28 w-28 items-center justify-center rounded-[28px] border-[4px] border-white bg-white shadow-[6px_6px_0px_0px_rgba(45,45,45,0.10)]">
+                        <AvatarImage src={avatarSrc} className="object-cover" />
+                        <AvatarFallback name={previewUsername} className="bg-hand-blue text-3xl font-bold text-white">
                           {getInitials(user)}
                         </AvatarFallback>
                       </Avatar>
                       <p className="mt-4 font-kalam text-3xl font-bold text-hand-pencil">
-                        {displayName}
+                        {previewDisplayName}
                       </p>
-                      <p className="font-patrick text-base text-hand-pencil/65">@{user?.username}</p>
+                      <p className="font-patrick text-base text-hand-pencil/65">@{previewUsername}</p>
                       <label
                         htmlFor="profile-tab-avatar"
                         className="mt-4 inline-flex cursor-pointer items-center rounded-[16px] border-[3px] border-hand-pencil bg-white px-4 py-2 font-patrick text-base text-hand-pencil shadow-hard-sm"
@@ -899,6 +907,8 @@ type SettingsPageClassicViewProps = {
   activeThemeId: string | null;
   updating: boolean;
   avatar: string;
+  previewUsername: string;
+  previewDisplayName: string;
   setUsername: React.Dispatch<React.SetStateAction<string>>;
   setFirstName: React.Dispatch<React.SetStateAction<string>>;
   setLastName: React.Dispatch<React.SetStateAction<string>>;
@@ -931,6 +941,8 @@ function SettingsPageClassicView({
   activeThemeId,
   updating,
   avatar,
+  previewUsername,
+  previewDisplayName,
   setUsername,
   setFirstName,
   setLastName,
@@ -985,12 +997,15 @@ function SettingsPageClassicView({
                     <CardDescription>Manage your public representation across the network</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-10 p-8">
-                    <div className="flex flex-col items-center gap-8 sm:flex-row">
-                      <div className="group relative">
-                        <Avatar className="relative z-10 h-32 w-32 rounded-full border-4 border-background shadow-2xl md:h-40 md:w-40">
+                    <div className="flex flex-col items-center justify-center gap-8 text-center sm:flex-row sm:items-center sm:text-left">
+                      <div className="group relative mx-auto">
+                        <Avatar className="relative z-10 h-32 w-32 items-center justify-center rounded-full border-4 border-background shadow-2xl md:h-40 md:w-40">
                           <AvatarImage src={avatar} className="object-cover" />
-                          <AvatarFallback className="bg-brand-orange text-5xl font-black text-white">
-                            {(firstName?.[0] || user?.username?.[0] || "U").toUpperCase()}
+                          <AvatarFallback 
+                            name={previewUsername}
+                            className="bg-brand-orange text-5xl font-black text-white"
+                          >
+                            {(firstName?.[0] || previewUsername?.[0] || "U").toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                         <label className="absolute bottom-2 right-2 z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-4 border-background bg-brand-orange text-white shadow-xl transition-all hover:scale-110 active:scale-90">
@@ -998,13 +1013,13 @@ function SettingsPageClassicView({
                           <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                         </label>
                       </div>
-                      <div className="flex-1 space-y-4 text-center sm:text-left">
+                      <div className="flex-1 space-y-4">
                         <div>
                           <h3 className="text-xl font-black text-foreground">
-                            {firstName} {lastName}
+                            {previewDisplayName}
                           </h3>
                           <p className="text-sm font-medium text-muted-foreground">
-                            @{user?.username} • {user?.type}
+                            @{previewUsername} • {user?.type}
                           </p>
                         </div>
                         <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
@@ -1063,7 +1078,7 @@ function SettingsPageClassicView({
                         disabled={updating}
                         className="h-12 rounded-xl bg-brand-orange px-8 font-black text-white shadow-lg shadow-brand-orange/20 hover:bg-brand-orange/90"
                       >
-                        {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Commit Profile</>}
+                        {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Update Profile</>}
                       </Button>
                     </div>
                   </CardContent>
@@ -1094,7 +1109,7 @@ function SettingsPageClassicView({
                           value={currentPassword}
                           onChange={(event) => setCurrentPassword(event.target.value)}
                           className="h-12 rounded-xl bg-background font-bold"
-                          placeholder="••••••••"
+                          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1106,7 +1121,7 @@ function SettingsPageClassicView({
                           value={newPassword}
                           onChange={(event) => setNewPassword(event.target.value)}
                           className="h-12 rounded-xl bg-background font-bold"
-                          placeholder="••••••••"
+                          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                         />
                       </div>
                     </div>
@@ -1120,7 +1135,7 @@ function SettingsPageClassicView({
                         value={confirmPassword}
                         onChange={(event) => setConfirmPassword(event.target.value)}
                         className="h-12 rounded-xl bg-background font-bold"
-                        placeholder="••••••••"
+                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       />
                     </div>
 
@@ -1313,3 +1328,5 @@ function ClassicSettingsTabTrigger({
     </TabsTrigger>
   );
 }
+
+

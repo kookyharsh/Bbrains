@@ -89,7 +89,7 @@ export const LeaderboardCard = memo(function LeaderboardCard({ initialLeaderboar
         </div>
         <Avatar className="h-8 w-8 border">
           <AvatarImage src={user.avatar} />
-          <AvatarFallback className="text-[10px] bg-primary/5 text-primary">
+          <AvatarFallback name={user.username} className="text-[10px] bg-primary/5 text-primary">
             {getInitials(user.firstName, user.lastName, user.username)}
           </AvatarFallback>
         </Avatar>

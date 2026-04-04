@@ -349,7 +349,7 @@ export default function ChatView() {
                         >
                           <button onClick={() => setProfileUser({ id: msg.user.id, name: msg.user.name, username: msg.user.username, role: msg.user.badge ?? "student" })}>
                             <Avatar className="w-9 h-9 shrink-0 mt-0.5">
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">{msg.user.avatar || msg.user.name.charAt(0)}</AvatarFallback>
+                              <AvatarFallback name={msg.user.username} className="bg-primary/10 text-primary text-xs">{msg.user.avatar || msg.user.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                           </button>
                           <div className="min-w-0 flex-1">
@@ -525,7 +525,7 @@ export default function ChatView() {
           <div className="bg-primary/10 h-20 -mx-6 -mt-6 rounded-t-lg" />
           <div className="-mt-12 flex flex-col items-center">
             <Avatar className="w-16 h-16 border-4 border-background">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+              <AvatarFallback name={profileUser?.username} className="bg-primary text-primary-foreground text-xl">
                 {profileUser?.name.charAt(0)}
               </AvatarFallback>
             </Avatar>

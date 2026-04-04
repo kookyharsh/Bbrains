@@ -4,6 +4,7 @@ import React, { useMemo } from "react"
 import type { Member } from "@/features/chat/data"
 import { ROLE_ORDER, ROLE_LABELS } from "@/features/chat/data"
 import { Crown, ArrowLeft } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const MemberRow = React.memo(function MemberRow({
     member,
@@ -25,11 +26,12 @@ const MemberRow = React.memo(function MemberRow({
             onClick={() => onOpenProfile(member.id)}
         >
             <div className="relative">
-                <img
-                    alt={`${member.name} avatar`}
-                    className="w-8 h-8 rounded-full object-cover"
-                    src={member.avatar || `https://ui-avatars.com/api/?name=${member.name}&background=random`}
-                />
+                <Avatar className="h-8 w-8 items-center justify-center overflow-hidden">
+                    <AvatarImage src={member.avatar || undefined} className="h-full w-full object-cover" />
+                    <AvatarFallback name={member.username}>
+                        {member.username?.[0] || "U"}
+                    </AvatarFallback>
+                </Avatar>
                 <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 ${statusColor} border-2 border-white dark:border-gray-800 rounded-full`}></div>
             </div>
             <div className="flex flex-col flex-1 min-w-0">

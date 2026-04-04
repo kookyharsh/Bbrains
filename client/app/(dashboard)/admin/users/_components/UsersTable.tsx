@@ -60,7 +60,7 @@ export function UsersTable({ users, loading, onEdit, onDelete, onManageRoles }: 
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            <AvatarFallback name={user.username} className="bg-primary/10 text-primary text-xs">
                               {firstName.charAt(0) || user.username.charAt(0)}
                               {lastName.charAt(0)}
                             </AvatarFallback>

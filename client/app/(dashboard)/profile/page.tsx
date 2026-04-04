@@ -317,7 +317,7 @@ export default function ProfilePage() {
               <div className="group relative">
                 <Avatar className="h-32 w-32 rounded-full border-4 border-card shadow-2xl transition-transform duration-300 group-hover:scale-105">
                   <AvatarImage src={avatar} className="object-cover" />
-                  <AvatarFallback className="bg-brand-purple text-5xl font-bold text-white">
+                  <AvatarFallback name={user?.username} className="bg-brand-purple text-5xl font-bold text-white">
                     {firstName?.[0] ?? user?.username?.[0] ?? "U"}
                   </AvatarFallback>
                 </Avatar>
@@ -556,7 +556,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <Avatar className="h-32 w-32 rounded-[32px] border-[4px] border-white bg-white shadow-[8px_8px_0px_0px_rgba(45,45,45,0.12)] md:h-40 md:w-40">
                   <AvatarImage src={avatar} className="object-cover" />
-                  <AvatarFallback className="bg-hand-blue text-4xl font-bold text-white">
+                  <AvatarFallback name={user?.username} className="bg-hand-blue text-4xl font-bold text-white">
                     {getInitials(user)}
                   </AvatarFallback>
                 </Avatar>
