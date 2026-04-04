@@ -45,7 +45,10 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
                 <div className="relative mb-3 flex justify-center -mt-12">
                     <div className="relative">
                         <div className="object-cover relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-[6px] border-slate-50 bg-slate-200 shadow-sm dark:border-slate-950 dark:bg-slate-800">
-                            <Avatar className="h-full w-full rounded-full object-cover">
+                            <Avatar 
+                                key={user?.imageUrl}
+                                className="h-full w-full rounded-full object-cover"
+                            >
                                 <AvatarImage src={user?.imageUrl || undefined} className="object-cover" />
                                 <AvatarFallback
                                     name={user?.username}

@@ -256,6 +256,15 @@ export default function MyProductsPage() {
                       <span className="text-lg font-black text-white/80">{product.stock}</span>
                     </div>
                   </div>
+                  
+                  {product.approval === 'rejected' && product.metadata?.rejectionReason && (
+                    <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-1">Reason for Rejection</p>
+                      <p className="text-xs font-medium text-rose-400/90 leading-relaxed">
+                        {product.metadata.rejectionReason}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

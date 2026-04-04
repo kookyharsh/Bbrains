@@ -21,7 +21,9 @@ import { assignmentApi, dashboardApi, gradeApi, type Assignment } from "@/servic
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload"
 import { Calendar, CheckCircle2, Clock, Download, Eye, FileText, Loader2, Search, Upload, X } from "lucide-react"
 import { toast } from "sonner"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TeacherAssignmentManager } from "@/features/assignments/components/TeacherAssignmentManager"
+import { TeacherGradingView } from "@/features/grading/components/TeacherGradingView"
 import { ChatImagePreview } from "@/components/chat-image-preview"
 
 function fmtDate(value: string) {
@@ -167,7 +169,26 @@ export default function AssignmentsPage() {
   if (userRole === "teacher") {
     return (
       <DashboardContent className="space-y-6">
-        <TeacherAssignmentManager />
+        <Tabs defaultValue="manage" className="flex-col space-y-6">
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Assignments</h1>
+              <p className="text-muted-foreground">
+                Manage assignments and grade student submissions.
+              </p>
+            </div>
+            <TabsList>
+              <TabsTrigger value="manage">Manage</TabsTrigger>
+              <TabsTrigger value="grade">Grade</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="manage">
+            <TeacherAssignmentManager />
+          </TabsContent>
+          <TabsContent value="grade">
+            <TeacherGradingView />
+          </TabsContent>
+        </Tabs>
       </DashboardContent>
     )
   }
@@ -332,7 +353,7 @@ export default function AssignmentsPage() {
       )}
 
       <Dialog open={!!viewAssignment} onOpenChange={() => setViewAssignment(null)}>
-        <DialogContent className="rounded-[32px] sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="rounded-[32px] sm:max-w-140 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{viewAssignment?.title}</DialogTitle>
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -477,7 +498,7 @@ export default function AssignmentsPage() {
         }}
       >
         <DrawerContent className="p-0 data-[vaul-drawer-direction=right]:w-full data-[vaul-drawer-direction=right]:sm:max-w-xl before:inset-0 before:rounded-none before:border-white/10 before:bg-background sm:p-0 sm:before:rounded-l-[2rem]">
-          <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
+          <div className="flex h-dvh max-h-dvh flex-col overflow-hidden">
             <DrawerHeader className="border-b border-border/60 p-6 text-left">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">

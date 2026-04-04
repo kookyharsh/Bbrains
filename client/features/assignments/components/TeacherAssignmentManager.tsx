@@ -1,10 +1,12 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Loader2, Camera } from "lucide-react"
+import { Loader2, Camera, Calendar, FileText, Pencil, Trash2, Search, BookOpen } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { DataTable } from "@/features/admin/components/DataTable"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
 import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
@@ -49,6 +51,7 @@ export function TeacherAssignmentManager() {
   const [form, setForm] = useState<AssignmentForm>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const { uploadFile, isUploading } = useCloudinaryUpload()
 
@@ -97,7 +100,7 @@ export function TeacherAssignmentManager() {
     if (!file) return
 
     try {
-      const url = await uploadFile(file)
+      const url = await uploadFile(file, { folder: "assignments" })
       if (url) {
         setForm((current) => ({ ...current, file: url }))
         toast.success("File uploaded successfully")
@@ -167,6 +170,25 @@ export function TeacherAssignmentManager() {
     }
   }
 
+  const filteredAssignments = assignments.filter((a) => {
+    if (!searchQuery.trim()) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      a.title.toLowerCase().includes(query) ||
+      a.course?.name?.toLowerCase().includes(query) ||
+      a.description?.toLowerCase().includes(query)
+    )
+  })
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading assignments...
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader
@@ -176,19 +198,76 @@ export function TeacherAssignmentManager() {
         actionLabel="New Assignment"
       />
 
-      <DataTable<ApiAssignment>
-        loading={loading}
-        data={assignments}
-        searchKeys={["title"]}
-        columns={[
-          { key: "title", label: "Title" },
-          { key: "course", label: "Course", render: (record) => record.course?.name ?? "-" },
-          { key: "dueDate", label: "Due", render: (record) => (record.dueDate ? fmtDate(record.dueDate) : "-") },
-          { key: "_count", label: "Submissions", render: (record) => String(record._count?.submissions ?? 0) },
-        ]}
-        onEdit={openEdit}
-        onDelete={setDeleteTarget}
-      />
+      <div className="relative w-full max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="rounded-xl pl-9"
+          placeholder="Search assignments..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {filteredAssignments.length === 0 ? (
+        <Card className="border-dashed border-border/70">
+          <CardContent className="flex flex-col items-center justify-center py-10 text-center text-sm text-muted-foreground">
+            <BookOpen className="size-8 mb-2 opacity-40" />
+            {searchQuery ? "No assignments match your search." : "No assignments yet. Create one to get started."}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredAssignments.map((assignment) => (
+            <Card key={assignment.id} className="border-border/60 transition-shadow hover:shadow-md">
+              <CardContent className="flex flex-col gap-3 p-4">
+                <div className="space-y-2 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {assignment.course?.name || "General"}
+                    </Badge>
+                    {assignment._count?.submissions != null && (
+                      <Badge variant="outline" className="text-xs">
+                        <FileText className="mr-1 size-3" />
+                        {assignment._count.submissions} submission{assignment._count.submissions !== 1 ? "s" : ""}
+                      </Badge>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-foreground line-clamp-2">{assignment.title}</h3>
+                  {assignment.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{assignment.description}</p>
+                  )}
+                  {assignment.dueDate && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Calendar className="size-3.5" />
+                      Due {fmtDate(assignment.dueDate)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5 text-xs"
+                    onClick={() => openEdit(assignment)}
+                  >
+                    <Pencil className="size-3.5" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeleteTarget(assignment)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <CrudDrawer
         open={modalOpen}

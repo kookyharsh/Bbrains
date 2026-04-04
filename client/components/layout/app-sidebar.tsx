@@ -158,7 +158,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                 className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"} w-full ${isCollapsed ? "" : "hover:bg-sidebar-accent/10 rounded-xl p-2 -mx-2"} transition-colors`}
                             >
                                 <div className="relative">
-                                    <Avatar className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}>
+                                    <Avatar 
+                                        key={user?.imageUrl}
+                                        className={`${isCollapsed ? "h-8 w-8" : "h-10 w-10"} rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-800 shrink-0 transition-all duration-200`}
+                                    >
                                         <AvatarImage src={user?.imageUrl || undefined} />
                                         <AvatarFallback name={user?.username} />
                                     </Avatar>

@@ -18,7 +18,7 @@ import {
 import { announcementApi, Announcement, User as ProfileUser } from "@/services/api/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import Image from "next/image";
 import {
@@ -222,6 +222,7 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-12 w-12 border-2 border-primary/20">
+                        <AvatarImage src={announcement.user?.userDetails?.avatar || undefined} className="object-cover" />
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">
                           {(announcement.user?.userDetails?.firstName?.[0]) || 'S'}
                         </AvatarFallback>
@@ -430,6 +431,9 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
                 {acknowledgedUsers.map((user) => (
                   <div key={user.userId} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
                     <Avatar className="h-8 w-8">
+                      {user.userDetails?.avatar && (
+                        <AvatarImage src={user.userDetails.avatar} className="object-cover" />
+                      )}
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                         {user.userDetails?.firstName?.[0] || 'U'}
                       </AvatarFallback>

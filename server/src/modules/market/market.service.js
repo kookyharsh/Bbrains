@@ -3,10 +3,15 @@ import { awardAchievement } from "../achievement/achievement.service.js";
 import bcrypt from "bcrypt";
 import { randomUUID } from "crypto";
 
-const getAllProducts = async (skip = 0, take = 10) => {
+const getAllProducts = async (skip = 0, take = 10, collegeId) => {
+    const whereClause = { approval: "approved" };
+    if (collegeId) {
+        whereClause.creator = { collegeId };
+    }
+
     const [products, total] = await prisma.$transaction([
         prisma.product.findMany({
-            where: { approval: "approved" },
+            where: whereClause,
             skip: parseInt(skip),
             take: parseInt(take),
             orderBy: { createdAt: 'desc' },
@@ -25,7 +30,7 @@ const getAllProducts = async (skip = 0, take = 10) => {
                 }
             }
         }),
-        prisma.product.count({ where: { approval: "approved" } })
+        prisma.product.count({ where: whereClause })
     ]);
 
     const productsWithStats = products.map(p => {
@@ -52,6 +57,7 @@ const getProductWithDetails = async (id) => {
                 select: {
                     id: true,
                     username: true,
+                    collegeId: true,
                     userDetails: {
                         select: { firstName: true, lastName: true, avatar: true }
                     }
@@ -108,15 +114,21 @@ const deleteProduct = async (id) => {
     });
 };
 
-const findProductByName = async (name) => {
+const findProductByName = async (name, collegeId) => {
+    const whereClause = {
+        name: {
+            contains: name,
+            mode: 'insensitive'
+        },
+        approval: "approved"
+    };
+
+    if (collegeId) {
+        whereClause.creator = { collegeId };
+    }
+
     return await prisma.product.findMany({
-        where: {
-            name: {
-                contains: name,
-                mode: 'insensitive'
-            },
-            approval: "approved"
-        }
+        where: whereClause
     });
 };
 

@@ -1,8 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import {
   AlertCircle,
   Camera,
@@ -162,6 +161,7 @@ function FieldGroup({
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { uiMode } = useUiMode();
   const [user, setUser] = useState<SettingsUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -239,6 +239,7 @@ export default function SettingsPage() {
       if (profileRes.success && detailsRes.success) {
         toast.success("Profile updated successfully");
         loadData();
+        router.refresh();
       } else {
         toast.error(profileRes.message || detailsRes.message || "Update failed");
       }
@@ -358,6 +359,7 @@ export default function SettingsPage() {
       if (response.success) {
         toast.success("Avatar updated", { id: "avatar-upload" });
         loadData();
+        router.refresh();
       } else {
         toast.error("Failed to save avatar", { id: "avatar-upload" });
       }

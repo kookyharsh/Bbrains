@@ -9,7 +9,8 @@ import { z } from 'zod';
 import prisma from "../../utils/prisma.js";
 
 const approvalSchema = z.object({
-  status: z.enum(['approved', 'rejected'])
+  status: z.enum(['approved', 'rejected']),
+  reason: z.string().optional()
 });
 
 const productSchema = z.object({
@@ -41,7 +42,7 @@ export const getAllProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-    const result = await getProductsList((page - 1) * limit, limit);
+    const result = await getProductsList((page - 1) * limit, limit, req.user.collegeId);
     return sendPaginated(res, result.products, { page, limit, total: result.total });
   } catch (error) {
     console.error('[getAllProducts] Error:', error);
@@ -56,6 +57,11 @@ export const getProduct = async (req, res) => {
         if (isNaN(id)) return sendError(res, 'Invalid product ID', 400);
         const product = await getProductWithDetails(id);
         if (!product) return sendError(res, 'Product not found', 404);
+        
+        if (product.creator?.collegeId !== req.user.collegeId) {
+            return sendError(res, 'Product not found', 404);
+        }
+
         if (product.approval !== 'approved') {
             const isCreator = product.creatorId === req.user?.id;
             const isAdmin = req.user?.type === 'admin' || req.user?.type === 'teacher';
@@ -63,6 +69,8 @@ export const getProduct = async (req, res) => {
                 return sendError(res, 'Product not found', 404);
             }
         }
+        
+        delete product.creator.collegeId;
         return sendSuccess(res, product);
     } catch (error) {
         return sendError(res, 'Failed to fetch product', 500);
@@ -255,7 +263,7 @@ export const searchProductsHandler = async (req, res) => {
   try {
     const { query } = req.query;
     if (!query) return sendError(res, 'Search query required', 400);
-    const products = await findProductByName(query);
+    const products = await findProductByName(query, req.user.collegeId);
     return sendSuccess(res, products);
   } catch (error) {
     console.error('[searchProductsHandler] Error:', error);
@@ -324,7 +332,10 @@ export const getSales = async (req, res) => {
 export const getPendingProducts = async (req, res) => {
   try {
     const products = await prisma.product.findMany({
-      where: { approval: 'pending' },
+      where: { 
+        approval: 'pending',
+        creator: { collegeId: req.user.collegeId }
+      },
       orderBy: { createdAt: 'desc' },
       include: { creator: { select: { id: true, username: true } } }
     });
@@ -347,20 +358,32 @@ export const approveProduct = async (req, res) => {
     const product = await prisma.product.findUnique({ where: { id } });
     if (!product) return sendError(res, 'Product not found', 404);
 
+    const metadata = product.metadata || {};
+    if (validated.status === 'rejected' && validated.reason) {
+      metadata.rejectionReason = validated.reason;
+    } else if (validated.status === 'approved') {
+      delete metadata.rejectionReason;
+    }
+
     const updated = await prisma.product.update({
       where: { id },
-      data: { approval: validated.status }
+      data: { 
+        approval: validated.status,
+        metadata 
+      }
     });
 
     await createAuditLog(
       req.user.id, 'MARKET',
       validated.status === 'approved' ? 'APPROVE_PRODUCT' : 'REJECT_PRODUCT',
-      'Product', id
+      'Product', id,
+      null,
+      validated.reason || null
     );
 
     return sendSuccess(res, updated, `Product ${validated.status}`);
   } catch (error) {
-    if (error.name === 'ZodError') return sendError(res, 'Invalid status. Must be "approved" or "rejected".', 400);
+    if (error.name === 'ZodError') return sendError(res, 'Invalid validation.', 400);
     return sendError(res, 'Failed to update product approval', 500);
   }
 };
@@ -459,6 +482,7 @@ export const getAllThemes = async (req, res) => {
       prisma.product.findMany({
         where: {
           approval: 'approved',
+          creator: { collegeId: req.user.collegeId },
           metadata: {
             contains: { category: 'theme' }
           }
@@ -475,6 +499,7 @@ export const getAllThemes = async (req, res) => {
       prisma.product.count({
         where: {
           approval: 'approved',
+          creator: { collegeId: req.user.collegeId },
           metadata: {
             contains: { category: 'theme' }
           }
@@ -499,6 +524,7 @@ export const getTheme = async (req, res) => {
       where: {
         id,
         approval: 'approved',
+        creator: { collegeId: req.user.collegeId },
         metadata: {
           contains: { category: 'theme' }
         }

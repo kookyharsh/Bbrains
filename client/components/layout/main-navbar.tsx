@@ -158,7 +158,10 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                                     </p>
                                 </div>
 
-                                <Avatar className="h-9 w-9 rounded-2xl border border-border/70 shadow-sm md:h-10 md:w-10">
+                                <Avatar 
+                                    key={user?.imageUrl}
+                                    className="h-9 w-9 rounded-2xl border border-border/70 shadow-sm md:h-10 md:w-10"
+                                >
                                     <AvatarImage src={user?.imageUrl || undefined} />
                                     <AvatarFallback name={user?.username} />
                                 </Avatar>
@@ -168,7 +171,10 @@ export function MainNavbar({ user }: { user?: NavbarUser | null }) {
                         <DropdownMenuContent align="end" className="mt-2 w-64 rounded-2xl border-border/70 p-2">
                             <DropdownMenuLabel className="px-3 py-2">
                                 <div className="flex items-center gap-3">
-                                    <Avatar className="h-10 w-10 rounded-2xl border border-border/70">
+                                    <Avatar 
+                                        key={user?.imageUrl}
+                                        className="h-10 w-10 rounded-2xl border border-border/70"
+                                    >
                                         <AvatarImage src={user?.imageUrl || undefined} />
                                         <AvatarFallback name={user?.username} />
                                     </Avatar>

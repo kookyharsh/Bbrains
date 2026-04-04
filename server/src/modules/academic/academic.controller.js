@@ -80,12 +80,38 @@ export const updateAssignmentHandler = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid ID', 400);
-        const validated = assignmentSchema.partial().parse(req.body);
-        const assignment = await prisma.assignment.update({ where: { id }, data: validated });
+
+        const updateSchema = z.object({
+            title: z.string().min(1).max(100).optional(),
+            description: z.string().max(255).optional().nullable(),
+            courseId: z.number().int().positive().optional(),
+            dueDate: z.string().optional().nullable(),
+            file: z.string().url().optional().nullable()
+        });
+
+        const validated = updateSchema.parse(req.body);
+        const data = { ...validated };
+
+        if (data.dueDate) {
+            data.dueDate = new Date(data.dueDate);
+        }
+
+        if (data.description === null) delete data.description;
+        if (data.dueDate === null) delete data.dueDate;
+        if (data.file === null) delete data.file;
+
+        const assignment = await prisma.assignment.update({
+            where: { id },
+            data,
+            include: { course: { select: { name: true } } }
+        });
+
         await createAuditLog(req.user.id, 'ACADEMIC', 'UPDATE', 'Assignment', id, { after: validated });
         return sendSuccess(res, assignment, 'Assignment updated');
     } catch (error) {
+        if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
         if (error.code === 'P2025') return sendError(res, 'Assignment not found', 404);
+        if (error.code === 'P2003') return sendError(res, 'Invalid course ID', 400);
         return sendError(res, 'Failed to update assignment', 500);
     }
 };
