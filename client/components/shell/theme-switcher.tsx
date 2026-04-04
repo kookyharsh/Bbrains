@@ -7,10 +7,19 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Moon, Sun } from "lucide-react"
 
 export function ThemeSwitcher() {
+  const [mounted, setMounted] = React.useState(false)
   const { themes, hasThemeAccess, currentTheme, setTheme } = useTheme()
   
-  if (!themes) {
-    return <div>Loading themes...</div>
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  if (!mounted || !themes) {
+    return (
+      <Button variant="outline" size="icon" aria-label="Theme switcher">
+        <Sun className="opacity-0" />
+      </Button>
+    )
   }
 
   const handleThemeChange = (themeId: string) => {

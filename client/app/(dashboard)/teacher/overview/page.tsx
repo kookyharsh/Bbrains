@@ -151,6 +151,7 @@ export default function OverviewPage() {
   const [incomeReceived, setIncomeReceived] = useState(0);
   const [teacherSchedule, setTeacherSchedule] = useState<WeeklyScheduleDay[]>([]);
   const [chapterProgressDraft, setChapterProgressDraft] = useState<SubjectChapterProgress[]>([]);
+  const [collegeId, setCollegeId] = useState<string | number | undefined>();
 
   useEffect(() => {
     async function loadOverview() {
@@ -188,6 +189,7 @@ export default function OverviewPage() {
         const partialFailures: string[] = [];
 
         setTeacherName(fullName || teacherProfile?.username || "Teacher");
+        setCollegeId((teacherProfile as any)?.collegeId);
         setTeacherSubjects(Array.isArray(profileUser?.teacherSubjects) ? profileUser.teacherSubjects : []);
         setCourses(nextCourses);
         setAnnouncements(
@@ -618,9 +620,8 @@ export default function OverviewPage() {
           description="Generated from the current course list because teacher timetable records are not stored yet."
           emptyMessage="No teaching slots generated yet."
         />
-        <AnnouncementsCard initialAnnouncements={announcements} />
+        <AnnouncementsCard initialAnnouncements={announcements} collegeId={collegeId} />
       </div>
     </DashboardContent>
   );
 }
-

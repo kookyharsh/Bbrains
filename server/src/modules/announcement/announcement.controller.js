@@ -5,21 +5,29 @@ import { z } from 'zod';
 const createAnnouncementSchema = z.object({
     title: z.string().trim().min(1, 'Title is required').max(100, 'Title must be at most 100 characters'),
     description: z.string().optional(),
-    image: z.string().optional()
+    image: z.string().optional(),
+    isGlobal: z.boolean().optional().default(false),
+    collegeId: z.number().optional(),
+    category: z.string().optional()
 });
 
 export const createAnnouncement = async (req, res, next) => {
     try {
-        const { title, description, image } = createAnnouncementSchema.parse(req.body ?? {});
+        const { title, description, image, isGlobal, collegeId: bodyCollegeId } = createAnnouncementSchema.parse(req.body ?? {});
         const userId = req.user?.id; // from auth middleware
+        const userCollegeId = req.user?.collegeId;
+        const collegeId = isGlobal ? null : (bodyCollegeId || userCollegeId);
 
         if (!userId) {
             return res.status(401).json({ success: false, message: "Unauthorized missing user id" });
         }
-console.log("Creating announcement with:", { userId, title, description, image });
+        
+        console.log("Creating announcement with:", { userId, collegeId, title, description, image, isGlobal });
         const announcement = await prisma.announcement.create({
             data: {
                 userId,
+                collegeId,
+                isGlobal,
                 title,
                 description,
                 image
@@ -51,8 +59,16 @@ console.log("Creating announcement with:", { userId, title, description, image }
 
 export const getAllAnnouncements = async (req, res, next) => {
     try {
-        console.log("getAllAnnouncements called");
+        const collegeId = req.user?.collegeId;
+        console.log("getAllAnnouncements called for collegeId:", collegeId);
+        
         const announcements = await prisma.announcement.findMany({
+            where: {
+                OR: [
+                    { collegeId: collegeId },
+                    { isGlobal: true }
+                ]
+            },
             include: {
                 user: {
                     select: {
@@ -206,17 +222,19 @@ export const acknowledgeAnnouncement = async (req, res, next) => {
             }
         });
 
-        res.status(200).json({ success: true, data: {
-            ...updatedAnnouncement,
-            acknowledgedBy: updatedAnnouncement.acknowledged.map(ack => ({
-                userId: ack.userId,
-                userDetails: ack.user.userDetails ? {
-                    firstName: ack.user.userDetails.firstName,
-                    lastName: ack.user.userDetails.lastName
-                } : undefined,
-                createdAt: ack.createdAt.toISOString()
-            }))
-        }});
+        res.status(200).json({
+            success: true, data: {
+                ...updatedAnnouncement,
+                acknowledgedBy: updatedAnnouncement.acknowledged.map(ack => ({
+                    userId: ack.userId,
+                    userDetails: ack.user.userDetails ? {
+                        firstName: ack.user.userDetails.firstName,
+                        lastName: ack.user.userDetails.lastName
+                    } : undefined,
+                    createdAt: ack.createdAt.toISOString()
+                }))
+            }
+        });
     } catch (error) {
         next(error);
     }

@@ -24,7 +24,9 @@ const submissionSchema = z.object({
 
 const announcementSchema = z.object({
     title: z.string().min(1).max(255),
-    content: z.string().min(1),
+    description: z.string().optional(),
+    image: z.string().url().optional(),
+    isGlobal: z.boolean().optional(),
     courseId: z.number().int().positive().optional()
 });
 
@@ -140,9 +142,16 @@ export const getSubmissionsHandler = async (req, res) => {
 // POST /academic/announcements
 export const createAnnouncementHandler = async (req, res) => {
     try {
-        const validated = announcementSchema.parse(req.body);
-        const announcement = await createAnnouncement(req.user.id, validated);
-        await createAuditLog(req.user.id, 'ACADEMIC', 'CREATE', 'Announcement', announcement.id);
+        const validated = announcementSchema.parse(req.body ?? {});
+        const userId = req.user?.id;
+        const collegeId = req.user?.collegeId; // Ensure your auth middleware attaches collegeId to req.user
+
+        if (!userId || !collegeId) {
+            return res.status(401).json({ success: false, message: "Unauthorized missing user or college id" });
+        }
+
+        const announcement = await createAnnouncement(userId, validated, collegeId);
+        await createAuditLog(userId, 'ACADEMIC', 'CREATE', 'Announcement', announcement.id);
         return sendCreated(res, announcement, 'Announcement created');
     } catch (error) {
         if (error.name === 'ZodError') return sendError(res, 'Validation failed', 400, error.errors.map(e => ({ field: e.path.join('.'), message: e.message })));
@@ -153,7 +162,7 @@ export const createAnnouncementHandler = async (req, res) => {
 // GET /academic/announcements
 export const getAnnouncementsHandler = async (req, res) => {
     try {
-        const announcements = await getAnnouncements();
+        const announcements = await getAnnouncements(req.user?.collegeId);
         return sendSuccess(res, announcements);
     } catch (error) {
         return sendError(res, 'Failed to fetch announcements', 500);

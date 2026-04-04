@@ -14,6 +14,7 @@ export interface AnnouncementUser {
 export interface AnnouncementFromAPI {
     id: number
     userId: string
+    collegeId: string
     title: string
     description?: string
     image?: string

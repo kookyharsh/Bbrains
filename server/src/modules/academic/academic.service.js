@@ -76,13 +76,19 @@ const getMySubmissions = async (userId) => {
 
 // --- Announcements ---
 
-const createAnnouncement = async (userId, data) => {
+const createAnnouncement = async (userId, data, authCollegeId) => {
+    // If not global, use the author's collegeId
+    const collegeId = data.isGlobal ? null : authCollegeId;
+    const isGlobal = data.isGlobal === true;
+    
     const announcement = await prisma.announcement.create({
         data: {
             userId,
             title: data.title,
             description: data.description,
-            image: data.image
+            image: data.image,
+            collegeId,
+            isGlobal
         }
     });
 
@@ -100,8 +106,16 @@ const createAnnouncement = async (userId, data) => {
     return announcement;
 };
 
-const getAnnouncements = async () => {
+const getAnnouncements = async (collegeId = null) => {
+    const whereClause = collegeId ? {
+        OR: [
+            { isGlobal: true },
+            { collegeId: collegeId }
+        ]
+    } : { isGlobal: true };
+
     return await prisma.announcement.findMany({
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         include: { user: { select: { username: true } } }
     });

@@ -149,6 +149,11 @@ export interface User {
   firstName?: string;
   lastName?: string;
   type: "student" | "teacher" | "admin" | "staff";
+  college?: {
+    id: number;
+    name: string;
+    regNo?: string;
+  };
   teacherSubjects?: string[];
   roles?: {
     role?: {
@@ -323,6 +328,8 @@ export interface Announcement {
   title: string;
   description: string;
   category: string;
+  collegeId?: number | null;
+  isGlobal?: boolean;
   image?: string;
   createdAt: string;
   user?: {
@@ -769,6 +776,8 @@ export const announcementApi = {
     description: string;
     category?: string;
     image?: string;
+    collegeId?: number;
+    isGlobal?: boolean;
   }): Promise<ApiResponse<Announcement>> => {
     return api.post<Announcement>('/announcements', data);
   },

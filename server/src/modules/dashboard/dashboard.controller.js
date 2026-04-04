@@ -4,17 +4,17 @@ import { sendSuccess, sendError } from '../../utils/response.js';
 // GET /dashboard
 export const getDashboard = async (req, res) => {
     try {
-        const { id, type } = req.user;
+        const user = req.user;
 
-        switch (type) {
+        switch (user.type) {
             case 'student':
-                return await studentDashboard(id, res);
+                return await studentDashboard(user, res);
             case 'teacher':
-                return await teacherDashboard(id, res);
+                return await teacherDashboard(user, res);
             case 'admin':
-                return await adminDashboard(id, res);
+                return await adminDashboard(user, res);
             default:
-                return await studentDashboard(id, res);
+                return await studentDashboard(user, res);
         }
     } catch (error) {
         console.error('Dashboard error:', error);
@@ -653,8 +653,11 @@ export const getManagerOverview = async (req, res) => {
     }
 };
 
-async function studentDashboard(userId, res) {
+async function studentDashboard(currentUser, res) {
     try {
+        const userId = currentUser.id;
+        const collegeId = currentUser.collegeId;
+
         const [
             user,
             enrollments,
@@ -715,6 +718,12 @@ async function studentDashboard(userId, res) {
                 }
             }),
             prisma.announcement.findMany({
+                where: {
+                    OR: [
+                        { collegeId: collegeId },
+                        { isGlobal: true }
+                    ]
+                },
                 take: 5,
                 orderBy: { createdAt: 'desc' },
                 include: {
@@ -904,8 +913,9 @@ function calculateStreak(claims) {
 }
 
 
-async function teacherDashboard(userId, res) {
+async function teacherDashboard(currentUser, res) {
     try {
+        const userId = currentUser.id;
         const [user, totalStudents, totalCourses, recentSubmissions, totalSubmissions, totalGrades, xp] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },
@@ -951,8 +961,9 @@ async function teacherDashboard(userId, res) {
     }
 }
 
-async function adminDashboard(userId, res) {
+async function adminDashboard(currentUser, res) {
     try {
+        const userId = currentUser.id;
         const [user, totalUsers, totalStudents, totalTeachers, totalCourses, totalProducts, totalOrders, recentLogs, systemStats] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: userId },

@@ -9,9 +9,10 @@ import Link from "next/link";
 
 interface AnnouncementsCardProps {
   initialAnnouncements?: Announcement[];
+  collegeId?: string | number;
 }
 
-export function AnnouncementsCard({ initialAnnouncements }: AnnouncementsCardProps) {
+export function AnnouncementsCard({ initialAnnouncements, collegeId }: AnnouncementsCardProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements || []);
   const [loading, setLoading] = useState(!initialAnnouncements);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,8 @@ export function AnnouncementsCard({ initialAnnouncements }: AnnouncementsCardPro
 
     const fetchAnnouncements = async () => {
       try {
-        const response = await announcementApi.getAnnouncements();
+        // Pass the collegeId if provided so the backend knows to filter the results
+        const response = await announcementApi.getAnnouncements(collegeId ? { collegeId } : undefined);
         if (response.success && response.data) {
           setAnnouncements(response.data.slice(0, 5));
         } else {

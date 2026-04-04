@@ -34,13 +34,22 @@ export function getSupabaseClient() {
               options?: {
                 maxAge?: number
                 secure?: boolean
-                sameSite?: 'lax' | 'strict' | 'none'
+                sameSite?: boolean | 'lax' | 'strict' | 'none'
               }
             }>
           ) {
             if (typeof document === 'undefined') return;
             cookiesToSet.forEach(({ name, value, options }) => {
-              document.cookie = `${name}=${value}; path=/; ${options?.maxAge ? `max-age=${options.maxAge}; ` : ''}${options?.secure ? 'secure; ' : ''}${options?.sameSite ? `samesite=${options.sameSite}; ` : ''}`
+              let sameSiteValue = '';
+              if (options?.sameSite !== undefined) {
+                if (typeof options.sameSite === 'boolean') {
+                  sameSiteValue = options.sameSite ? 'strict' : 'lax';
+                } else {
+                  sameSiteValue = options.sameSite;
+                }
+                sameSiteValue = `samesite=${sameSiteValue}; `;
+              }
+              document.cookie = `${name}=${value}; path=/; ${options?.maxAge ? `max-age=${options.maxAge}; ` : ''}${options?.secure ? 'secure; ' : ''}${sameSiteValue}`
             })
           },
         },

@@ -16,6 +16,7 @@ model College {
   createdAt DateTime @default(now())
   address   Address? @relation(fields: [addressId], references: [id])
   users     User[]
+  announcements Announcement[]
   features  Json?    @default("{}")
 
   @@map("college")
@@ -433,11 +434,14 @@ model Library {
 model Announcement {
   id          Int      @id @default(autoincrement())
   userId      String   @map("user_id")
+  collegeId   Int?     @map("college_id")
+  isGlobal    Boolean  @default(false) @map("is_global")
   title       String   @db.VarChar(100)
   description String?
   image       String?
   createdAt   DateTime @default(now()) @map("created_at")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college     College? @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   acknowledged Acknowledged[]
 
   @@map("announcement")

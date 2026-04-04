@@ -73,10 +73,23 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
   const [currentAnnouncementId, setCurrentAnnouncementId] = useState<string | null>(null);
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
 
+  const currentCollegeId = currentUser?.college?.id;
+
+  // Filter announcements to match the search query and ensure they are specific to the user's college
   const filteredAnnouncements = announcements.filter(
-    (a) =>
-      (a.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (a.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+    (a) => {
+      const titleMatch = (a.title?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      const descMatch = (a.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      const matchesQuery = titleMatch || descMatch;
+
+      if (!currentCollegeId) return matchesQuery;
+
+      const collegeId = a.collegeId;
+      const isGlobal = a.isGlobal;
+      const matchesCollege = isGlobal || collegeId === undefined || collegeId === null || collegeId === currentCollegeId;
+
+      return matchesQuery && matchesCollege;
+    }
   );
 
   const handlePost = async () => {
@@ -88,7 +101,9 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
         title: newAnnouncementTitle.trim(),
         description: newAnnouncement.trim(),
         category: "general",
-        image: attachedImage || undefined
+        image: attachedImage || undefined,
+        // Include collegeId so the backend associates this announcement with the correct college
+        ...(currentCollegeId ? { collegeId: currentCollegeId } : {})
       });
       
       if (response.success && response.data) {
@@ -178,14 +193,6 @@ export function AnnouncementsContent({ initialAnnouncements, currentUser }: Anno
           <div>
             <h2 className="text-3xl font-extrabold tracking-tight">Announcements</h2>
             <p className="text-muted-foreground mt-1">Stay updated with the latest news from your faculty.</p>
-          </div>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 bg-card border border-border shadow-sm rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors">
-              Filter
-            </button>
-            <button className="px-4 py-2 bg-card border border-border shadow-sm rounded-xl text-sm font-medium hover:bg-muted/50 transition-colors">
-              Mark all read
-            </button>
           </div>
         </div>
 

@@ -8,8 +8,7 @@ declare const process: any;
 
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-// FIX: Supabase user IDs are plain UUIDs (no underscores), so the old split('_')[1]
-// always returned undefined → every wallet got id "wallet_", causing PK conflicts.
+
 const walletIdForUserId = (userId: string) => `wallet_${userId}`;
 
 const getRandomItem = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -798,17 +797,20 @@ async function main() {
     console.log(`✅ ${cartCount} Cart items and ${orderCount} Orders created.`);
 
     console.log("📢 Seeding Announcements...");
+    const collegeID=getRandomItem(colleges).id;
     const announcements = [
-      { title: "Welcome to BBrains!", desc: "Start earning XP and climb the leaderboard today!" },
-      { title: "Mid-Term Projects", desc: "Check your assignments section for upcoming project deadlines." },
-      { title: "Marketplace Expansion", desc: "New magical items have been added to the marketplace. Buy now!" },
-      { title: "System Maintenance", desc: "The portal will be down for maintenance this Sunday from 2 AM to 4 AM." },
+      { title: "Welcome to BBrains!", desc: "Start earning XP and climb the leaderboard today!", isGlobal: true },
+      { title: "Mid-Term Projects", desc: "Check your assignments section for upcoming project deadlines.", isGlobal: false },
+      { title: "Marketplace Expansion", desc: "New magical items have been added to the marketplace. Buy now!", isGlobal: true },
+      { title: "System Maintenance", desc: "The portal will be down for maintenance this Sunday from 2 AM to 4 AM.", isGlobal: true },
     ];
 
     for (const a of announcements) {
       await prisma.announcement.create({
         data: {
           userId: getRandomItem(admins).id,
+          collegeId: a.isGlobal ? null : collegeID,
+          isGlobal: a.isGlobal,
           title: a.title,
           description: a.desc,
         }
