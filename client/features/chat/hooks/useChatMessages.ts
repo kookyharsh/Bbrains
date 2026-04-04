@@ -81,6 +81,7 @@ export function useChatMessages() {
     const [hasMore, setHasMore] = useState(true)
     const [isConnected, setIsConnected] = useState(false)
     const [currentUserId, setCurrentUserId] = useState<string>('')
+    const [chatRoomId, setChatRoomId] = useState<string>('default')
     const [searchResults, setSearchResults] = useState<ChatMessageDisplay[]>([])
     const [isSearching, setIsSearching] = useState(false)
 
@@ -90,6 +91,10 @@ export function useChatMessages() {
             const userResp = await dashboardApi.getUser()
             if (userResp.success && userResp.data) {
                 setCurrentUserId(userResp.data.id)
+                const collegeId = (userResp.data as any).college?.id;
+                if (collegeId) {
+                    setChatRoomId(`global_${collegeId}`);
+                }
             }
 
             const response = await chatApi.getMessages(undefined, 50)
@@ -201,15 +206,20 @@ export function useChatMessages() {
 
     useEffect(() => {
         fetchMessages()
+    }, [fetchMessages])
+
+    useEffect(() => {
+        if (!chatRoomId) return;
 
         const channel = supabase
-            .channel('chat_room')
+            .channel(`chat_room_${chatRoomId}`)
             .on(
                 'postgres_changes',
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'chat_messages'
+                    table: 'chat_messages',
+                    filter: `chat_id=eq.${chatRoomId}`
                 },
                 (payload: { eventType: "INSERT" | "UPDATE" | "DELETE"; new: ChatRealtimeMessage; old: { id: string } }) => {
                     if (payload.eventType === 'INSERT') {
@@ -230,7 +240,7 @@ export function useChatMessages() {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [fetchMessages])
+    }, [chatRoomId])
 
     return {
         messages,

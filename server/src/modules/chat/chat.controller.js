@@ -42,9 +42,13 @@ const updateMessageSchema = z.object({
     mentions: z.array(z.string().trim().min(1).max(64)).max(50).optional(),
 });
 
-const normalizeChatId = (value) => {
-    const chatId = String(value || DEFAULT_CHAT_ROOM).trim();
-    return chatId ? chatId.slice(0, MAX_CHAT_ID_LENGTH) : DEFAULT_CHAT_ROOM;
+const normalizeChatId = (value, req = null) => {
+    const defaultRoom = req?.user?.collegeId ? `global_${req.user.collegeId}` : DEFAULT_CHAT_ROOM;
+    let explicitId = String(value || "").trim();
+    if (!explicitId || explicitId === "default") {
+        explicitId = defaultRoom;
+    }
+    return explicitId && explicitId !== "default" ? explicitId.slice(0, MAX_CHAT_ID_LENGTH) : defaultRoom;
 };
 
 const normalizeMentions = (mentions = []) => {
@@ -104,7 +108,7 @@ const normalizeMessageRecord = (msg) => {
 export const getChatMessages = async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10), 1), 500);
-        const chatId = req.query.chatId || 'default';
+        const chatId = normalizeChatId(req.query.chatId, req);
         const before = req.query.before;
 
         const whereClause = { chatId };
@@ -152,7 +156,7 @@ export const getChatMessages = async (req, res) => {
 export const searchChatMessages = async (req, res) => {
     try {
         const limit = Math.min(Math.max(parseInt(String(req.query.limit || "50"), 10), 1), 100);
-        const chatId = normalizeChatId(req.query.chatId);
+        const chatId = normalizeChatId(req.query.chatId, req);
         const query = String(req.query.q || "").trim();
 
         if (!query) {
@@ -241,7 +245,7 @@ export const createChatMessage = async (req, res) => {
     try {
         const validated = createMessageSchema.parse(req.body ?? {});
         const content = String(validated.content || "").trim();
-        const chatId = normalizeChatId(validated.chatId);
+        const chatId = normalizeChatId(validated.chatId, req);
         const mentions = normalizeMentions(validated.mentions);
         const replyTo = validated.replyTo ? String(validated.replyTo).trim() : null;
         const attachments = validated.attachments || [];

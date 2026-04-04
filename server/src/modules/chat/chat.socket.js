@@ -20,9 +20,12 @@ const extractMentions = (content = "") => {
     return Array.from(mentions);
 };
 
-const normalizeChatRoom = (value) => {
-    const room = String(value || DEFAULT_CHAT_ROOM).trim();
-    if (!room) return DEFAULT_CHAT_ROOM;
+const normalizeChatRoom = (value, identity = null) => {
+    const defaultRoom = identity?.collegeId ? `global_${identity.collegeId}` : DEFAULT_CHAT_ROOM;
+    let room = String(value || "").trim();
+    if (!room || room === "default") {
+        room = defaultRoom;
+    }
     return room.slice(0, 120);
 };
 
@@ -47,6 +50,7 @@ const loadChatIdentity = async (userId, dbUser = null) => {
             id: true,
             username: true,
             type: true,
+            collegeId: true,
             userDetails: {
                 select: {
                     avatar: true,
@@ -86,7 +90,8 @@ const loadChatIdentity = async (userId, dbUser = null) => {
         pronouns: pronounBySex[user.userDetails?.sex] || "they/them",
         grade,
         roles,
-        type: user.type
+        type: user.type,
+        collegeId: user.collegeId
     };
 };
 
@@ -163,7 +168,6 @@ export const initChatSocket = (server) => {
         }
     });
     const io = ioInstance; // Keep local ref
-    //
 
     io.use(async (socket, next) => {
         try {
@@ -192,7 +196,7 @@ export const initChatSocket = (server) => {
                     return;
                 }
 
-                const roomName = normalizeChatRoom(payload.chatId);
+                const roomName = normalizeChatRoom(payload.chatId, socket.data.user);
                 const previousRoom = socket.data.roomName;
 
                 if (previousRoom && previousRoom !== roomName) {

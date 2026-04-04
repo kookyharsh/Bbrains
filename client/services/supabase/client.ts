@@ -27,7 +27,17 @@ export function getSupabaseClient() {
               return { name, value: v.join('=') }
             })
           },
-          setAll(cookiesToSet: any[]) {
+          setAll(
+            cookiesToSet: Array<{
+              name: string
+              value: string
+              options?: {
+                maxAge?: number
+                secure?: boolean
+                sameSite?: 'lax' | 'strict' | 'none'
+              }
+            }>
+          ) {
             if (typeof document === 'undefined') return;
             cookiesToSet.forEach(({ name, value, options }) => {
               document.cookie = `${name}=${value}; path=/; ${options?.maxAge ? `max-age=${options.maxAge}; ` : ''}${options?.secure ? 'secure; ' : ''}${options?.sameSite ? `samesite=${options.sameSite}; ` : ''}`

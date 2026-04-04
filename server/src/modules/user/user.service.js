@@ -136,6 +136,7 @@ const getUserDetailsByID = async (id) => {
             type: true,
             college: {
                 select: {
+                    id: true,
                     name: true,
                     regNo: true,
                 },
