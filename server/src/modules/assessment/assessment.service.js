@@ -43,6 +43,7 @@ const mapCourseForSetup = (course, teacherSubjects) => {
         id: course.id,
         name: course.name,
         standard: course.standard,
+        collegeId: course.collegeId,
         subjects: courseSubjects,
         availableSubjects: availableSubjects.length > 0 ? availableSubjects : (teacherSubjects.length > 0 ? teacherSubjects : courseSubjects),
         studentCount: course._count?.enrollments ?? 0,
@@ -50,37 +51,38 @@ const mapCourseForSetup = (course, teacherSubjects) => {
 };
 
 const getTeacherAndCourses = async (teacherId) => {
-    const [teacher, courses] = await Promise.all([
-        prisma.user.findUnique({
-            where: { id: teacherId },
-            select: {
-                id: true,
-                type: true,
-                userDetails: {
-                    select: {
-                        teacherSubjects: true,
-                    },
+    const teacher = await prisma.user.findUnique({
+        where: { id: teacherId },
+        select: {
+            id: true,
+            type: true,
+            collegeId: true,
+            userDetails: {
+                select: {
+                    teacherSubjects: true,
                 },
             },
-        }),
-        prisma.course.findMany({
-            include: {
-                _count: {
-                    select: {
-                        enrollments: true,
-                    },
-                },
-            },
-            orderBy: [
-                { standard: 'asc' },
-                { name: 'asc' },
-            ],
-        }),
-    ]);
+        },
+    });
 
     if (!teacher) {
         throw new NotFoundError('Teacher');
     }
+
+    const courses = await prisma.course.findMany({
+        where: teacher.collegeId ? { collegeId: teacher.collegeId } : undefined,
+        include: {
+            _count: {
+                select: {
+                    enrollments: true,
+                },
+            },
+        },
+        orderBy: [
+            { standard: 'asc' },
+            { name: 'asc' },
+        ],
+    });
 
     return { teacher, courses };
 };
@@ -210,6 +212,7 @@ const assessmentInclude = {
             id: true,
             name: true,
             standard: true,
+            collegeId: true,
         },
     },
     createdBy: {
@@ -263,6 +266,7 @@ const prepareAssessmentPayload = async (teacherId, payload) => {
         select: {
             id: true,
             type: true,
+            collegeId: true,
             userDetails: {
                 select: {
                     teacherSubjects: true,
@@ -281,12 +285,17 @@ const prepareAssessmentPayload = async (teacherId, payload) => {
             id: true,
             name: true,
             standard: true,
+            collegeId: true,
             subjects: true,
         },
     });
 
     if (!course) {
         throw new NotFoundError('Class');
+    }
+
+    if (Number(course.collegeId ?? 0) !== Number(teacher.collegeId ?? 0)) {
+        throw new ForbiddenError('You can only create assessments for classes in your college');
     }
 
     const teacherSubjects = resolveTeacherSubjects(teacher);
@@ -362,11 +371,20 @@ export const updateAssessmentWithResults = async (assessmentId, currentUser, pay
         select: {
             id: true,
             createdById: true,
+            course: {
+                select: {
+                    collegeId: true,
+                },
+            },
         },
     });
 
     if (!existing) {
         throw new NotFoundError('Assessment');
+    }
+
+    if (Number(existing.course?.collegeId ?? 0) !== Number(currentUser.collegeId ?? 0)) {
+        throw new ForbiddenError('You can only update assessments in your college');
     }
 
     const isAdmin = currentUser.type === 'admin';
@@ -427,9 +445,20 @@ export const updateAssessmentWithResults = async (assessmentId, currentUser, pay
 
 export const getTeacherAssessments = async (currentUser) => {
     ensureAssessmentModelsAvailable();
-    const where = currentUser.type === 'admin'
-        ? {}
-        : { createdById: currentUser.id };
+    const where = currentUser.type === 'teacher'
+        ? {
+            createdById: currentUser.id,
+            course: {
+                collegeId: currentUser.collegeId,
+            },
+        }
+        : currentUser.collegeId
+            ? {
+                course: {
+                    collegeId: currentUser.collegeId,
+                },
+            }
+            : {};
 
     return await prisma.assessment.findMany({
         where,
@@ -450,6 +479,10 @@ export const getAssessmentById = async (assessmentId, currentUser) => {
 
     if (!assessment) {
         throw new NotFoundError('Assessment');
+    }
+
+    if (Number(assessment.course?.collegeId ?? 0) !== Number(currentUser.collegeId ?? 0)) {
+        throw new ForbiddenError('You are not allowed to view this assessment');
     }
 
     if (currentUser.type !== 'admin' && currentUser.type !== 'manager' && assessment.createdById !== currentUser.id) {

@@ -44,6 +44,7 @@ model User {
   orders             Order[]
   products           Product[]
   submissions        Submission[]
+  createdAssignments Assignment[]          @relation("AssignmentCreator")
   transactions       TransactionHistory[]
   library            Library[]
   college            College              @relation(fields: [collegeId], references: [id])
@@ -62,6 +63,7 @@ model User {
   classTeacherCourse Course?              @relation("CourseClassTeacher")
   assessments        Assessment[]         @relation("AssessmentCreator")
   assessmentResults  AssessmentResult[]   @relation("AssessmentStudent")
+  reviewedSubmissions Submission[]        @relation("SubmissionReviewer")
   reviews            Review[]
   acknowledged      Acknowledged[]
 
@@ -117,6 +119,7 @@ model Course {
   studentCapacity Int?                @map("student_capacity")
   classTeacherId  String?             @unique @map("class_teacher_id")
   subjects        Json?
+  subjectProgress Json?               @map("subject_progress")
   timetable       Json?
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
@@ -145,14 +148,17 @@ model Enrollment {
 model Assignment {
   id          Int          @id @default(autoincrement()) @map("assignment_id")
   courseId    Int          @map("course_id")
+  createdById String?      @map("created_by_id")
   title       String       @db.VarChar(100)
   description String?      @db.VarChar(255)
   content     String?
   file        String?
+  rewardPoints Int         @default(0) @map("reward_points")
   dueDate     DateTime     @map("due_date") @db.Date
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   course      Course       @relation(fields: [courseId], references: [id])
+  createdBy   User?        @relation("AssignmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
   grades      Grade[]
   submissions Submission[]
 
@@ -165,9 +171,15 @@ model Submission {
   userId       String     @map("user_id")
   filePath     String     @map("file_path") @db.VarChar(255)
   content      String?    @db.Text
+  reviewStatus String     @default("submitted") @map("review_status") @db.VarChar(20)
+  reviewRemark String?    @map("review_remark") @db.VarChar(255)
+  reviewedAt   DateTime?  @map("reviewed_at")
+  reviewedBy   String?    @map("reviewed_by")
+  xpAwardedAt  DateTime?  @map("xp_awarded_at")
   submittedAt  DateTime   @default(now()) @map("submitted_at")
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
   user         User       @relation(fields: [userId], references: [id])
+  reviewer     User?      @relation("SubmissionReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
 
   @@index([assignmentId])
   @@index([userId])

@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getSidebarGroups, resolveRole } from "./sidebarData"
 import type { Role } from "./sidebarData"
 import { UserProfileCard } from "../user-profile-card"
-import { useNotifications } from "../providers/notification-provider"
+import { useChatUnreadCount } from "@/hooks/use-chat-unread-count"
 
 interface AppSidebarProps {
     user?: {
@@ -38,10 +38,10 @@ export function AppSidebar({ user }: AppSidebarProps) {
     const pathname = usePathname()
     const { state } = useSidebar()
     const isCollapsed = state === "collapsed"
-    const { unreadCount } = useNotifications()
+    const isChatRoute = pathname === "/chat" || pathname.startsWith("/chat/")
+    const { unreadCount: chatUnreadCount } = useChatUnreadCount(user?.id, isChatRoute)
 
     const [showProfileCard, setShowProfileCard] = useState(false)
-    const [userStatus, setUserStatus] = useState<"online" | "idle" | "do-not-disturb" | "offline">("online")
 
     const userRoles = user?.roles || [user?.type || "student"]
     const resolvedRoles = resolveRole(userRoles) as Role[]
@@ -89,14 +89,14 @@ export function AppSidebar({ user }: AppSidebarProps) {
                                                     >
                                                         <div className="relative">
                                                             <item.icon className={`${isCollapsed ? "h-5.5 w-5.5" : "h-5 w-5"} shrink-0 ${isActive ? "text-white" : ""}`} />
-                                                            {isChat && unreadCount > 0 && isCollapsed && (
+                                                            {isChat && chatUnreadCount > 0 && isCollapsed && (
                                                                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
                                                             )}
                                                         </div>
                                                         <span className="text-[13px] group-data-[collapsible=icon]:hidden flex-1">{item.title}</span>
-                                                        {isChat && unreadCount > 0 && !isCollapsed && (
+                                                        {isChat && chatUnreadCount > 0 && !isCollapsed && (
                                                             <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full group-data-[collapsible=icon]:hidden">
-                                                                {unreadCount}
+                                                                {chatUnreadCount}
                                                             </span>
                                                         )}
                                                     </Link>

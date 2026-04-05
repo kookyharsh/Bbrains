@@ -11,7 +11,7 @@ export interface EventCalenderProps {
 }
 
 export function EventCalender({ events = [] }: EventCalenderProps) {
-    const [value, onChange] = useState<any>(new Date());
+    const [value, onChange] = useState<Date | Date[] | null>(new Date());
 
     return (
         <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm h-full">            

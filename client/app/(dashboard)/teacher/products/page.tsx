@@ -138,9 +138,7 @@ export default function ProductsApprovalPage() {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {products.map((product) => {
-                        // Cast product to any locally to read metadata
-                        const pData = product as any;
-                        const productType = pData.metadata?.productType || pData.productType || "physical";
+                        const productType = product.metadata?.productType || product.productType || "physical";
 
                         return (
                             <Card key={product.id} className="group overflow-hidden rounded-[1.5rem] border-border/40 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
@@ -208,9 +206,8 @@ export default function ProductsApprovalPage() {
                       <VisuallyHidden>Product Details</VisuallyHidden>
                     </SheetTitle>
                     {selectedProduct && (() => {
-                        const pData = selectedProduct as any;
-                        const metadata = pData.metadata || {};
-                        const productType = metadata.productType || pData.productType || "physical";
+                        const metadata = selectedProduct.metadata || {};
+                        const productType = metadata.productType || selectedProduct.productType || "physical";
                         
                         return (
                             <>
@@ -314,7 +311,7 @@ export default function ProductsApprovalPage() {
                     <DialogHeader>
                         <DialogTitle className="text-xl font-black text-red-600">Reject Product</DialogTitle>
                         <DialogDescription className="font-medium">
-                            Are you sure you want to reject <span className="font-bold text-foreground">"{selectedProduct?.name}"</span>?
+                            Are you sure you want to reject <span className="font-bold text-foreground">&quot;{selectedProduct?.name}&quot;</span>?
                         </DialogDescription>
                     </DialogHeader>
                     

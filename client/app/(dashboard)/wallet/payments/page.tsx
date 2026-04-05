@@ -68,6 +68,12 @@ interface Payment {
   details?: PaymentDetails;
 }
 
+function mapTransactionStatus(status: Transaction["status"]): Payment["status"] {
+  if (status === "success") return "completed";
+  if (status === "pending") return "pending";
+  return "failed";
+}
+
 const mockMarketOrders: PaymentDetails[] = [
   {
     id: "ORD-001",
@@ -175,7 +181,7 @@ export default function PaymentHistoryPage() {
           id: String(t.id),
           type: "wallet" as const,
           amount: t.type === "credit" ? Math.abs(Number(t.amount)) : -Math.abs(Number(t.amount)),
-          status: (t.status === "success" ? "completed" : t.status === "pending" ? "pending" : "failed") as any,
+          status: mapTransactionStatus(t.status),
           description: t.note || "Wallet Transaction",
           createdAt: t.transactionDate,
         }));

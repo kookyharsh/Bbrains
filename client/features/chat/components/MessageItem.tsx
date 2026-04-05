@@ -3,6 +3,7 @@
 import React, { useMemo } from "react"
 import { Copy, Pencil, Reply, Trash2 } from "lucide-react"
 import type { Message } from "@/features/chat/data"
+import type { ChatAttachment } from "@/services/api/client"
 import { ChatImagePreview } from "@/components/chat-image-preview"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -115,7 +116,7 @@ export const MessageItem = React.memo(function MessageItem({
 
                 {attachments.length > 0 && (
                     <div className="mt-2 grid gap-2">
-                        {attachments.map((att: any, idx: number) => (
+                        {attachments.map((att: ChatAttachment, idx: number) => (
                             <ChatImagePreview
                                 key={`${msg.id}-att-${idx}`}
                                 attachment={att}

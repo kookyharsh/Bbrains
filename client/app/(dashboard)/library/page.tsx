@@ -21,8 +21,7 @@ export default function LibraryPage() {
       setLoading(true);
       const response = await libraryApi.getLibrary(undefined, 1, 100);
       if (response.success && response.data) {
-        const data = (response.data as any)?.data || response.data;
-        setItems(Array.isArray(data) ? data : []);
+        setItems(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error("Failed to fetch library:", error);

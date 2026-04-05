@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { getAuthedClient, courseApi, type AssessmentCourseOption } from "@/services/api/client"
-import type { ApiAssignment, ApiSubmission, ApiGrade } from "@/lib/types/api"
+import { assignmentApi, courseApi, getAuthedClient, type AssessmentCourseOption } from "@/services/api/client"
+import type { ApiAssignment, ApiSubmission, ApiUser } from "@/lib/types/api"
 
-type FilterType = "all" | "submitted" | "late" | "notSubmitted"
+type FilterType = "all" | "submitted" | "completed" | "incomplete" | "notSubmitted"
 
 interface AssignmentFormData {
   title: string
@@ -13,27 +13,25 @@ interface AssignmentFormData {
   courseId: string
   dueDate: string
   file: string
+  rewardPoints: string
 }
 
-const emptyAssignmentForm: AssignmentFormData = {
-  title: "",
-  description: "",
-  courseId: "",
-  dueDate: "",
-  file: "",
-}
+type CourseStudentEnrollment = {
+  user?: ApiUser | null
+} & Partial<ApiUser>
 
-function isLate(submittedAt: string, dueDate: string): boolean {
-  if (!dueDate || !submittedAt) return false
-  return new Date(submittedAt) > new Date(dueDate)
+function isLate(submittedAt: string, dueDate: string) {
+  if (!submittedAt || !dueDate) return false
+  const dueDateEnd = new Date(dueDate)
+  dueDateEnd.setHours(23, 59, 59, 999)
+  return new Date(submittedAt) > dueDateEnd
 }
 
 export function useGrading() {
   const [assignments, setAssignments] = useState<ApiAssignment[]>([])
   const [courses, setCourses] = useState<AssessmentCourseOption[]>([])
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>("")
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState("")
   const [submissions, setSubmissions] = useState<ApiSubmission[]>([])
-  const [grades, setGrades] = useState<ApiGrade[]>([])
   const [courseStudents, setCourseStudents] = useState<{ id: string; username: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingSubs, setLoadingSubs] = useState(false)
@@ -41,7 +39,7 @@ export function useGrading() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all")
 
   const selectedAssignment = useMemo(
-    () => assignments.find((a) => String(a.id) === selectedAssignmentId) ?? null,
+    () => assignments.find((assignment) => String(assignment.id) === selectedAssignmentId) ?? null,
     [assignments, selectedAssignmentId]
   )
 
@@ -55,8 +53,8 @@ export function useGrading() {
       ])
       setAssignments(assignmentRes.data.data ?? [])
       setCourses(courseRes.data.data ?? [])
-    } catch (e) {
-      console.error(e)
+    } catch (error) {
+      console.error(error)
       toast.error("Failed to load assignments")
     } finally {
       setLoading(false)
@@ -69,12 +67,43 @@ export function useGrading() {
 
   const loadCourseStudents = useCallback(async (courseId: number) => {
     try {
-      const res = await courseApi.getCourseStudents(courseId)
-      if (res.success && res.data) {
-        setCourseStudents(res.data.map((u) => ({ id: u.id, username: u.username ?? "Unknown Student" })))
+      const response = await courseApi.getCourseStudents(courseId) as {
+        success: boolean
+        data?: CourseStudentEnrollment[]
+        message?: string
       }
-    } catch (e) {
-      console.error(e)
+      if (!response.success || !response.data) {
+        setCourseStudents([])
+        return
+      }
+
+      setCourseStudents(
+        response.data
+          .map((entry) => {
+            const student = entry.user ?? entry
+            const fullName = [
+              student.userDetails?.firstName,
+              student.userDetails?.lastName,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim()
+
+            const id = student.id
+            if (!id) {
+              return null
+            }
+
+            return {
+              id,
+              username: fullName || student.username || "Unknown Student",
+            }
+          })
+          .filter((student): student is { id: string; username: string } => Boolean(student))
+      )
+    } catch (error) {
+      console.error(error)
+      setCourseStudents([])
     }
   }, [])
 
@@ -82,30 +111,30 @@ export function useGrading() {
     async (assignmentId: string) => {
       if (!assignmentId) {
         setSubmissions([])
-        setGrades([])
         setCourseStudents([])
         return
       }
+
       try {
         setLoadingSubs(true)
-        const client = await getAuthedClient()
-        const assignment = assignments.find((a) => String(a.id) === assignmentId)
+        const assignment = assignments.find((item) => String(item.id) === assignmentId)
+
         if (assignment?.courseId) {
           await loadCourseStudents(assignment.courseId)
+        } else {
+          setCourseStudents([])
         }
-        const [subRes, gradeRes] = await Promise.all([
-          client.get<{ success: boolean; data: ApiSubmission[] }>(
-            `/academic/submissions/${assignmentId}`
-          ),
-          client.get<{ success: boolean; data: ApiGrade[] }>(
-            `/grades/assignment/${assignmentId}`
-          ),
-        ])
-        setSubmissions(subRes.data.data ?? [])
-        setGrades(gradeRes.data.data ?? [])
-      } catch (e) {
-        console.error(e)
-        toast.error("Failed to load submissions")
+
+        const response = await assignmentApi.getAssignmentSubmissions(Number(assignmentId))
+        if (!response.success || !response.data) {
+          throw new Error(response.message || "Failed to load submissions")
+        }
+
+        setSubmissions(response.data)
+      } catch (error) {
+        console.error(error)
+        toast.error(error instanceof Error ? error.message : "Failed to load submissions")
+        setSubmissions([])
       } finally {
         setLoadingSubs(false)
       }
@@ -114,98 +143,125 @@ export function useGrading() {
   )
 
   const handleSelectAssignment = useCallback(
-    (id: string) => {
-      setSelectedAssignmentId(id)
+    (assignmentId: string) => {
+      setSelectedAssignmentId(assignmentId)
       setActiveFilter("all")
-      void loadSubmissions(id)
+      void loadSubmissions(assignmentId)
     },
     [loadSubmissions]
   )
 
-  const gradeMap = useMemo(
-    () => new Map(grades.map((g) => [g.userId, g])),
-    [grades]
-  )
-
   const submittedUserIds = useMemo(
-    () => new Set(submissions.map((s) => s.userId)),
+    () => new Set(submissions.map((submission) => submission.userId)),
     [submissions]
   )
 
   const notSubmittedStudents = useMemo(
-    () => courseStudents.filter((s) => !submittedUserIds.has(s.id)),
+    () => courseStudents.filter((student) => !submittedUserIds.has(student.id)),
     [courseStudents, submittedUserIds]
-  )
-
-  const onTimeSubmissions = useMemo(
-    () =>
-      selectedAssignment
-        ? submissions.filter(
-            (s) => !isLate(s.submittedAt, selectedAssignment.dueDate)
-          )
-        : [],
-    [submissions, selectedAssignment]
-  )
-
-  const lateSubmissions = useMemo(
-    () =>
-      selectedAssignment
-        ? submissions.filter((s) => isLate(s.submittedAt, selectedAssignment.dueDate))
-        : [],
-    [submissions, selectedAssignment]
   )
 
   const counts = useMemo(
     () => ({
       all: submissions.length + notSubmittedStudents.length,
-      submitted: onTimeSubmissions.length,
-      late: lateSubmissions.length,
+      submitted: submissions.filter((submission) => submission.reviewStatus === "submitted" || !submission.reviewStatus).length,
+      completed: submissions.filter((submission) => submission.reviewStatus === "completed").length,
+      incomplete: submissions.filter((submission) => submission.reviewStatus === "incomplete").length,
       notSubmitted: notSubmittedStudents.length,
     }),
-    [submissions, onTimeSubmissions, lateSubmissions, notSubmittedStudents]
+    [submissions, notSubmittedStudents]
   )
 
   const filteredSubmissions = useMemo(() => {
     if (!selectedAssignment) return []
+
     switch (activeFilter) {
       case "submitted":
-        return onTimeSubmissions
-      case "late":
-        return lateSubmissions
+        return submissions.filter((submission) => submission.reviewStatus === "submitted" || !submission.reviewStatus)
+      case "completed":
+        return submissions.filter((submission) => submission.reviewStatus === "completed")
+      case "incomplete":
+        return submissions.filter((submission) => submission.reviewStatus === "incomplete")
       case "notSubmitted":
         return []
       default:
         return submissions
     }
-  }, [activeFilter, submissions, onTimeSubmissions, lateSubmissions, selectedAssignment])
+  }, [activeFilter, selectedAssignment, submissions])
 
   const filteredNotSubmitted = useMemo(
     () => (activeFilter === "all" || activeFilter === "notSubmitted" ? notSubmittedStudents : []),
     [activeFilter, notSubmittedStudents]
   )
 
-  const createAssignment = useCallback(
-    async (data: AssignmentFormData) => {
+  const createAssignment = useCallback(async (data: AssignmentFormData) => {
+    try {
+      setSubmitting(true)
+      const client = await getAuthedClient()
+      const payload = {
+        title: data.title.trim(),
+        description: data.description.trim() || undefined,
+        courseId: Number(data.courseId),
+        dueDate: data.dueDate || undefined,
+        file: data.file || undefined,
+        rewardPoints: Math.max(0, Number(data.rewardPoints || 0)),
+      }
+      const response = await client.post<{ success: boolean; data: ApiAssignment }>("/academic/assignments", payload)
+      setAssignments((current) => [response.data.data, ...current])
+      toast.success("Assignment created")
+      return true
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to create assignment")
+      return false
+    } finally {
+      setSubmitting(false)
+    }
+  }, [])
+
+  const updateAssignment = useCallback(async (id: number, data: AssignmentFormData) => {
+    try {
+      setSubmitting(true)
+      const client = await getAuthedClient()
+      const payload = {
+        title: data.title.trim(),
+        description: data.description.trim() || undefined,
+        courseId: Number(data.courseId),
+        dueDate: data.dueDate || undefined,
+        file: data.file || undefined,
+        rewardPoints: Math.max(0, Number(data.rewardPoints || 0)),
+      }
+      const response = await client.put<{ success: boolean; data: ApiAssignment }>(`/academic/assignments/${id}`, payload)
+      setAssignments((current) => current.map((assignment) => (assignment.id === id ? response.data.data : assignment)))
+      toast.success("Assignment updated")
+      return true
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to update assignment")
+      return false
+    } finally {
+      setSubmitting(false)
+    }
+  }, [])
+
+  const reviewSubmission = useCallback(
+    async (submissionId: number, data: { reviewStatus: "completed" | "incomplete"; reviewRemark?: string }) => {
       try {
         setSubmitting(true)
-        const client = await getAuthedClient()
-        const payload = {
-          title: data.title.trim(),
-          description: data.description.trim() || undefined,
-          courseId: Number(data.courseId),
-          dueDate: data.dueDate || undefined,
-          file: data.file || undefined,
+        const response = await assignmentApi.reviewSubmission(submissionId, data)
+        if (!response.success || !response.data) {
+          throw new Error(response.message || "Failed to review submission")
         }
-        const res = await client.post<{ success: boolean; data: ApiAssignment }>(
-          "/academic/assignments",
-          payload
+
+        setSubmissions((current) =>
+          current.map((submission) => (submission.id === submissionId ? response.data! : submission))
         )
-        setAssignments((prev) => [res.data.data, ...prev])
-        toast.success("Assignment created")
+
+        toast.success(data.reviewStatus === "completed" ? "Submission marked completed" : "Submission marked incomplete")
         return true
-      } catch (e) {
-        console.error(e)
-        toast.error("Failed to create assignment")
+      } catch (error) {
+        console.error(error)
+        toast.error(error instanceof Error ? error.message : "Failed to review submission")
         return false
       } finally {
         setSubmitting(false)
@@ -214,94 +270,25 @@ export function useGrading() {
     []
   )
 
-  const updateAssignment = useCallback(
-    async (id: number, data: AssignmentFormData) => {
-      try {
-        setSubmitting(true)
-        const client = await getAuthedClient()
-        const payload = {
-          title: data.title.trim(),
-          description: data.description.trim() || undefined,
-          courseId: Number(data.courseId),
-          dueDate: data.dueDate || undefined,
-          file: data.file || undefined,
-        }
-        const res = await client.put<{ success: boolean; data: ApiAssignment }>(
-          `/academic/assignments/${id}`,
-          payload
-        )
-        setAssignments((prev) =>
-          prev.map((a) => (a.id === id ? res.data.data : a))
-        )
-        toast.success("Assignment updated")
-        return true
-      } catch (e) {
-        console.error(e)
-        toast.error("Failed to update assignment")
-        return false
-      } finally {
-        setSubmitting(false)
-      }
-    },
-    []
-  )
+  const selectedAssignmentSummary = useMemo(() => {
+    if (!selectedAssignment) return null
 
-  const submitGrade = useCallback(
-    async (userId: string, assignmentId: number, grade: string) => {
-      try {
-        setSubmitting(true)
-        const client = await getAuthedClient()
-        const res = await client.post<{ success: boolean; data: ApiGrade }>("/grades", {
-          userId,
-          assignmentId,
-          grade,
-        })
-        setGrades((prev) => [...prev, res.data.data])
-        toast.success("Grade assigned")
-        return true
-      } catch (e) {
-        console.error(e)
-        toast.error("Failed to assign grade")
-        return false
-      } finally {
-        setSubmitting(false)
-      }
-    },
-    []
-  )
-
-  const updateGrade = useCallback(
-    async (gradeId: number, grade: string) => {
-      try {
-        setSubmitting(true)
-        const client = await getAuthedClient()
-        const res = await client.put<{ success: boolean; data: ApiGrade }>(
-          `/grades/${gradeId}`,
-          { grade }
-        )
-        setGrades((prev) => prev.map((g) => (g.id === gradeId ? res.data.data : g)))
-        toast.success("Grade updated")
-        return true
-      } catch (e) {
-        console.error(e)
-        toast.error("Failed to update grade")
-        return false
-      } finally {
-        setSubmitting(false)
-      }
-    },
-    []
-  )
+    return {
+      reviewQueueCount: submissions.filter((submission) => submission.reviewStatus === "submitted" || !submission.reviewStatus).length,
+      completedCount: submissions.filter((submission) => submission.reviewStatus === "completed").length,
+      incompleteCount: submissions.filter((submission) => submission.reviewStatus === "incomplete").length,
+      lateCount: submissions.filter((submission) => isLate(submission.submittedAt, selectedAssignment.dueDate)).length,
+    }
+  }, [selectedAssignment, submissions])
 
   return {
     assignments,
     courses,
     selectedAssignmentId,
     selectedAssignment,
+    selectedAssignmentSummary,
     handleSelectAssignment,
     submissions,
-    grades,
-    gradeMap,
     courseStudents,
     loading,
     loadingSubs,
@@ -313,8 +300,7 @@ export function useGrading() {
     filteredNotSubmitted,
     createAssignment,
     updateAssignment,
-    submitGrade,
-    updateGrade,
+    reviewSubmission,
   }
 }
 

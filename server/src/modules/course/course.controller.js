@@ -41,8 +41,28 @@ const createCourseSchema = z.object({
 
 const updateCourseSchema = createCourseSchema.partial();
 
+const isDatabaseConnectionError = (error) => {
+    if (!error) return false;
+
+    const knownCodes = new Set(['EACCES', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT']);
+    if (knownCodes.has(error.code)) {
+        return true;
+    }
+
+    if (error.name === 'PrismaClientInitializationError') {
+        return true;
+    }
+
+    const message = typeof error.message === 'string' ? error.message : '';
+    return /connect\s+(EACCES|ECONNREFUSED|ENOTFOUND|ETIMEDOUT)/i.test(message);
+};
+
 const getCourseOperationErrorMessage = (error, fallbackMessage) => {
     if (!error) return fallbackMessage;
+
+    if (isDatabaseConnectionError(error)) {
+        return 'Database connection failed. Check DATABASE_URL, database availability, and network access, then try again.';
+    }
 
     if (error.code === 'P2022') {
         return 'Course schema is outdated. Apply the latest database migration and try again.';
@@ -68,6 +88,10 @@ const getStatusCode = (error, fallbackStatus = 500) => {
         return error.statusCode;
     }
 
+    if (isDatabaseConnectionError(error)) {
+        return 503;
+    }
+
     if (typeof error?.code === 'string' && error.code === 'P2025') {
         return 404;
     }
@@ -79,7 +103,7 @@ const getStatusCode = (error, fallbackStatus = 500) => {
 export const createCourse = async (req, res) => {
     try {
         const validated = createCourseSchema.parse(req.body);
-        const course = await createCourseRecord(validated);
+        const course = await createCourseRecord(validated, req.user);
         await createAuditLog(req.user.id, 'ACADEMIC', 'CREATE', 'Course', course.id);
         return sendCreated(res, course, 'Course created successfully');
     } catch (error) {
@@ -136,7 +160,7 @@ export const deleteCourse = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid course ID', 400);
-        await deleteCourseRecord(id);
+        await deleteCourseRecord(id, req.user);
         await createAuditLog(req.user.id, 'ACADEMIC', 'DELETE', 'Course', id);
         return sendSuccess(res, null, 'Course deleted successfully');
     } catch (error) {
@@ -162,9 +186,9 @@ export const listCourseAssignments = async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) return sendError(res, 'Invalid course ID', 400);
-        const assignments = await getCourseAssignments(id);
+        const assignments = await getCourseAssignments(id, req.user);
         return sendSuccess(res, assignments);
     } catch (error) {
-        return sendError(res, 'Failed to fetch assignments', 500);
+        return sendError(res, getCourseOperationErrorMessage(error, 'Failed to fetch assignments'), getStatusCode(error));
     }
 };

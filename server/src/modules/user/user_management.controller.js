@@ -63,6 +63,15 @@ const formatZodErrors = (error) => {
 };
 
 const resolveCollegeId = async (requestedCollegeId, fallbackCollegeId) => {
+    if (
+        requestedCollegeId !== undefined &&
+        requestedCollegeId !== null &&
+        fallbackCollegeId &&
+        Number(requestedCollegeId) !== Number(fallbackCollegeId)
+    ) {
+        throw new Error('You can only manage users within your own college');
+    }
+
     const collegeId = requestedCollegeId ?? fallbackCollegeId;
 
     if (!collegeId) {
@@ -81,7 +90,24 @@ const resolveCollegeId = async (requestedCollegeId, fallbackCollegeId) => {
     return college.id;
 };
 
-const syncTeacherClassTeacherAssignment = async (tx, teacherId, nextCourseId) => {
+const findCourseInCollege = async (tx, courseId, collegeId, notFoundMessage) => {
+    const course = await tx.course.findUnique({
+        where: { id: Number(courseId) },
+        select: {
+            id: true,
+            collegeId: true,
+            classTeacherId: true,
+        }
+    });
+
+    if (!course || Number(course.collegeId ?? 0) !== Number(collegeId)) {
+        throw new Error(notFoundMessage);
+    }
+
+    return course;
+};
+
+const syncTeacherClassTeacherAssignment = async (tx, teacherId, nextCourseId, collegeId) => {
     await tx.course.updateMany({
         where: { classTeacherId: teacherId },
         data: { classTeacherId: null }
@@ -89,17 +115,7 @@ const syncTeacherClassTeacherAssignment = async (tx, teacherId, nextCourseId) =>
 
     if (!nextCourseId) return;
 
-    const course = await tx.course.findUnique({
-        where: { id: Number(nextCourseId) },
-        select: {
-            id: true,
-            classTeacherId: true,
-        }
-    });
-
-    if (!course) {
-        throw new Error('Selected class was not found');
-    }
+    const course = await findCourseInCollege(tx, nextCourseId, collegeId, 'Selected class was not found for this college');
 
     if (course.classTeacherId && course.classTeacherId !== teacherId) {
         throw new Error('This class already has a class teacher assigned');
@@ -400,7 +416,13 @@ export const addManager = async (req, res) => {
 export const updateTeacher = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await prisma.user.findUnique({ where: { id } });
+        const user = await prisma.user.findFirst({
+            where: {
+                id,
+                type: 'teacher',
+                collegeId: req.user.collegeId,
+            }
+        });
         if (!user || user.type !== 'teacher') return sendError(res, 'Teacher not found', 404);
 
         const {
@@ -414,12 +436,15 @@ export const updateTeacher = async (req, res) => {
             teacherSubjects,
             classTeacherCourseId,
         } = req.body;
+        const effectiveCollegeId = collegeId !== undefined
+            ? await resolveCollegeId(collegeId, req.user.collegeId)
+            : user.collegeId;
 
         await prisma.$transaction(async (tx) => {
             await tx.user.update({
                 where: { id },
                 data: {
-                    ...(collegeId ? { collegeId: Number(collegeId) } : {}),
+                    ...(effectiveCollegeId ? { collegeId: Number(effectiveCollegeId) } : {}),
                     userDetails: {
                         upsert: {
                             create: {
@@ -446,7 +471,7 @@ export const updateTeacher = async (req, res) => {
             });
 
             if (classTeacherCourseId !== undefined) {
-                await syncTeacherClassTeacherAssignment(tx, id, classTeacherCourseId || null);
+                await syncTeacherClassTeacherAssignment(tx, id, classTeacherCourseId || null, effectiveCollegeId);
             }
         });
 
@@ -464,7 +489,13 @@ export const updateTeacher = async (req, res) => {
 export const updateStudent = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await prisma.user.findUnique({ where: { id } });
+        const user = await prisma.user.findFirst({
+            where: {
+                id,
+                type: 'student',
+                collegeId: req.user.collegeId,
+            }
+        });
         if (!user || user.type !== 'student') return sendError(res, 'Student not found', 404);
 
         const {
@@ -477,12 +508,15 @@ export const updateStudent = async (req, res) => {
             collegeId,
             classId,
         } = req.body;
+        const effectiveCollegeId = collegeId !== undefined
+            ? await resolveCollegeId(collegeId, req.user.collegeId)
+            : user.collegeId;
 
         await prisma.$transaction(async (tx) => {
             await tx.user.update({
                 where: { id },
                 data: {
-                    ...(collegeId ? { collegeId: Number(collegeId) } : {}),
+                    ...(effectiveCollegeId ? { collegeId: Number(effectiveCollegeId) } : {}),
                     userDetails: {
                         upsert: {
                             create: {
@@ -508,14 +542,7 @@ export const updateStudent = async (req, res) => {
 
             if (classId !== undefined) {
                 const nextCourseId = Number(classId);
-                const course = await tx.course.findUnique({
-                    where: { id: nextCourseId },
-                    select: { id: true }
-                });
-
-                if (!course) {
-                    throw new Error('Selected class was not found');
-                }
+                await findCourseInCollege(tx, nextCourseId, effectiveCollegeId, 'Selected class was not found for this college');
 
                 await tx.enrollment.deleteMany({
                     where: { userId: id }

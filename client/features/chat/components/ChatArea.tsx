@@ -30,7 +30,7 @@ export function ChatArea() {
                             <span className="font-semibold text-gray-900 dark:text-white">Jane Smith</span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">Yesterday at 14:30</span>
                         </div>
-                        <p className="text-gray-700 dark:text-gray-300 text-sm">Hey everyone! Has anyone started on the new computer science assignment yet? I'm finding the second part a bit tricky.</p>
+                        <p className="text-gray-700 dark:text-gray-300 text-sm">Hey everyone! Has anyone started on the new computer science assignment yet? I&apos;m finding the second part a bit tricky.</p>
                     </div>
                     {/* Hover Actions */}
                     <div className="absolute top-0 right-4 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm rounded-lg flex items-center divide-x divide-gray-200 dark:divide-gray-700">

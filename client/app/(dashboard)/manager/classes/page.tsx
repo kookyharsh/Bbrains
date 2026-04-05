@@ -692,6 +692,7 @@ export default function ManagerClassesPage() {
       </Dialog>
 
       <TimetableEditorDialog
+        key={`${timetableDialogOpen ? "open" : "closed"}:${editingClassId ?? "new"}:${form.timetable.length}:${subjectSuggestions.join("|")}`}
         open={timetableDialogOpen}
         onOpenChange={setTimetableDialogOpen}
         initialEntries={form.timetable}

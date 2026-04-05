@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
@@ -18,8 +18,9 @@ interface GradeDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   studentName: string
-  existingGrade?: string
-  onSubmit: (grade: string) => Promise<boolean>
+  existingStatus?: "completed" | "incomplete" | "submitted"
+  existingRemark?: string | null
+  onSubmit: (payload: { reviewStatus: "completed" | "incomplete"; reviewRemark?: string }) => Promise<boolean>
   submitting: boolean
 }
 
@@ -27,31 +28,22 @@ export function GradeDialog({
   open,
   onOpenChange,
   studentName,
-  existingGrade,
+  existingStatus,
+  existingRemark,
   onSubmit,
   submitting,
 }: GradeDialogProps) {
-  const [grade, setGrade] = useState(existingGrade ?? "")
-  const [error, setError] = useState("")
-  const isEditing = !!existingGrade
-
-  useEffect(() => {
-    setGrade(existingGrade ?? "")
-    setError("")
-  }, [existingGrade, open])
-
-  function validate(): boolean {
-    if (!grade.trim()) {
-      setError("Grade is required")
-      return false
-    }
-    setError("")
-    return true
-  }
+  const [reviewStatus, setReviewStatus] = useState<"completed" | "incomplete">(
+    () => (existingStatus === "incomplete" ? "incomplete" : "completed")
+  )
+  const [reviewRemark, setReviewRemark] = useState(() => existingRemark ?? "")
 
   async function handleSubmit() {
-    if (!validate()) return
-    const success = await onSubmit(grade.trim())
+    const success = await onSubmit({
+      reviewStatus,
+      reviewRemark: reviewRemark.trim() || undefined,
+    })
+
     if (success) {
       onOpenChange(false)
     }
@@ -59,64 +51,61 @@ export function GradeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
-            {isEditing ? "Edit Grade" : "Assign Grade"}
-          </DialogTitle>
+          <DialogTitle className="text-xl font-bold">Review Submission</DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? `Update grade for ${studentName}.`
-              : `Assign a grade to ${studentName}.`}
+            Mark {studentName}&apos;s submission as completed or incomplete and leave an optional remark.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="grade-input">
-              Grade <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="grade-input"
-              value={grade}
-              onChange={(e) => {
-                setGrade(e.target.value)
-                if (error) setError("")
-              }}
-              placeholder="e.g. A+, B, 85, Pass"
-              className={error ? "border-destructive" : ""}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !submitting) {
-                  void handleSubmit()
-                }
-              }}
+            <Label htmlFor="review-status">Review Status</Label>
+            <select
+              id="review-status"
+              value={reviewStatus}
+              onChange={(event) => setReviewStatus(event.target.value as "completed" | "incomplete")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="completed">Completed</option>
+              <option value="incomplete">Incomplete</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="review-remark">Remark (Optional)</Label>
+            <Textarea
+              id="review-remark"
+              value={reviewRemark}
+              onChange={(event) => setReviewRemark(event.target.value)}
+              placeholder={
+                reviewStatus === "completed"
+                  ? "Nice work. Add any note the student should see."
+                  : "Explain what needs to be fixed before resubmitting."
+              }
+              rows={4}
+              maxLength={255}
             />
-            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
         </div>
 
         <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={submitting}
-            className="bg-brand-purple hover:bg-brand-purple/90 text-white"
+            className="bg-brand-purple text-white hover:bg-brand-purple/90"
           >
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
-            ) : isEditing ? (
-              "Update Grade"
             ) : (
-              "Assign Grade"
+              "Save Review"
             )}
           </Button>
         </DialogFooter>

@@ -91,7 +91,7 @@ export function useChatMessages() {
             const userResp = await dashboardApi.getUser()
             if (userResp.success && userResp.data) {
                 setCurrentUserId(userResp.data.id)
-                const collegeId = (userResp.data as any).college?.id;
+                const collegeId = userResp.data.college?.id;
                 if (collegeId) {
                     setChatRoomId(`global_${collegeId}`);
                 }
@@ -161,7 +161,7 @@ export function useChatMessages() {
         }
     }, []);
 
-    const sendMessage = async (content: string, attachments: any[] = [], mentions: string[] = [], replyToId?: string) => {
+    const sendMessage = async (content: string, attachments: ChatAttachment[] = [], mentions: string[] = [], replyToId?: string) => {
         try {
             const response = await chatApi.sendMessage(content, attachments, mentions, replyToId)
             if (!response.success || !response.data) {

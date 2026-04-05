@@ -6,11 +6,11 @@
   "scripts": {
     "postinstall": "prisma generate",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js",
+    "start": "nodemon src/server.js",
     "db:seed": "tsx ./prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "7.4.0",
+    "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.98.0",

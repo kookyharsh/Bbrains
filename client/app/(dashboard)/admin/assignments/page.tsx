@@ -7,6 +7,7 @@ import { CrudDrawer } from "@/features/admin/components/CrudDrawer"
 import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { FormInput, FormSelect, FormTextarea } from "@/features/admin/components/form"
+import { toast } from "sonner"
 import type { ApiAssignment, ApiCourse } from "@/lib/types/api"
 
 function fmtDate(s: string) {
@@ -15,6 +16,21 @@ function fmtDate(s: string) {
 
 interface AssignmentForm { description: string; title: string; courseId: string; dueDate: string }
 const emptyAssForm: AssignmentForm = { title: "", description: "", courseId: "", dueDate: "" }
+
+function getRequestErrorMessage(error: unknown, fallback: string) {
+    if (typeof error === "object" && error !== null) {
+        const maybeResponse = (error as { response?: { data?: { message?: string } } }).response
+        if (typeof maybeResponse?.data?.message === "string" && maybeResponse.data.message.trim()) {
+            return maybeResponse.data.message
+        }
+    }
+
+    if (error instanceof Error && error.message.trim()) {
+        return error.message
+    }
+
+    return fallback
+}
 
 export default function AssignmentsPage() {
     const [assignments, setAssignments] = useState<ApiAssignment[]>([])
@@ -33,16 +49,28 @@ export default function AssignmentsPage() {
             const c = await getAuthedClient()
             const [aRes, cRes] = await Promise.all([
                 c.get<{ success: boolean; data: ApiAssignment[] }>("/academic/assignments"),
-                c.get<{ success: boolean; data: ApiCourse[] }>("/courses"),
+                c.get<{ success: boolean; data: ApiCourse[] }>("/courses?limit=100"),
             ])
-            setAssignments(aRes.data.data)
-            setCourses(cRes.data.data)
-        } catch (e) { console.error(e) } finally { setLoading(false) }
+
+            setAssignments(Array.isArray(aRes.data.data) ? aRes.data.data : [])
+            setCourses(Array.isArray(cRes.data.data) ? cRes.data.data : [])
+        } catch (error) {
+            console.error(error)
+            toast.error(getRequestErrorMessage(error, "Failed to load assignments"))
+        } finally { setLoading(false) }
     }, [])
 
     useEffect(() => { load() }, [load])
 
-    function openCreate() { setEditing(null); setForm(emptyAssForm); setModalOpen(true) }
+    function openCreate() {
+        if (courses.length === 0) {
+            toast.error("Create a class first before adding an assignment")
+            return
+        }
+        setEditing(null)
+        setForm(emptyAssForm)
+        setModalOpen(true)
+    }
     function openEdit(a: ApiAssignment) {
         setEditing(a)
         setForm({ title: a.title, description: a.description ?? "", courseId: String(a.courseId), dueDate: a.dueDate?.slice(0, 10) ?? "" })
@@ -50,7 +78,10 @@ export default function AssignmentsPage() {
     }
 
     async function handleSubmit() {
-        if (!form.title.trim() || !form.courseId) return
+        if (!form.title.trim() || !form.courseId) {
+            toast.error("Assignment title and class are required")
+            return
+        }
         try {
             setSubmitting(true)
             const c = await getAuthedClient()
@@ -58,12 +89,17 @@ export default function AssignmentsPage() {
             if (editing) {
                 const r = await c.put<{ success: boolean; data: ApiAssignment }>(`/academic/assignments/${editing.id}`, payload)
                 setAssignments((prev) => prev.map((a) => a.id === editing.id ? r.data.data : a))
+                toast.success("Assignment updated")
             } else {
                 const r = await c.post<{ success: boolean; data: ApiAssignment }>("/academic/assignments", payload)
                 setAssignments((prev) => [r.data.data, ...prev])
+                toast.success("Assignment created")
             }
             setModalOpen(false)
-        } catch (e) { console.error(e) } finally { setSubmitting(false) }
+        } catch (error) {
+            console.error(error)
+            toast.error(getRequestErrorMessage(error, editing ? "Failed to update assignment" : "Failed to create assignment"))
+        } finally { setSubmitting(false) }
     }
 
     async function handleDelete() {
@@ -74,7 +110,11 @@ export default function AssignmentsPage() {
             await c.delete(`/academic/assignments/${deleteTarget.id}`)
             setAssignments((prev) => prev.filter((a) => a.id !== deleteTarget.id))
             setDeleteTarget(null)
-        } catch (e) { console.error(e) } finally { setDeleting(false) }
+            toast.success("Assignment deleted")
+        } catch (error) {
+            console.error(error)
+            toast.error(getRequestErrorMessage(error, "Failed to delete assignment"))
+        } finally { setDeleting(false) }
     }
 
     return (

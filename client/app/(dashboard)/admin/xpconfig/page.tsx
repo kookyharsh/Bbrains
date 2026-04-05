@@ -2,18 +2,18 @@
 
 import React, { useState, useEffect } from "react"
 import { Plus, Pencil, Trash2 } from "lucide-react"
-import { xpApi } from "@/services/api/client"
+import { xpApi, type LevelThreshold } from "@/services/api/client"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { DataTable } from "@/features/admin/components/DataTable"
 import { CrudModal } from "@/features/admin/components/CrudModal"
 import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
 
 export default function XpConfigPage() {
-    const [levels, setLevels] = useState<any[]>([])
+    const [levels, setLevels] = useState<LevelThreshold[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
-    const [selectedLevel, setSelectedLevel] = useState<any>(null)
+    const [selectedLevel, setSelectedLevel] = useState<LevelThreshold | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [formData, setFormData] = useState({ levelNumber: "", requiredXp: "" })
 
@@ -22,8 +22,7 @@ export default function XpConfigPage() {
         try {
             const res = await xpApi.getLevels()
             if (res.success) {
-                const levelsData = (res.data as any)?.data || res.data;
-                setLevels(Array.isArray(levelsData) ? levelsData : []);
+                setLevels(Array.isArray(res.data) ? res.data : []);
             }
         } catch (error) {
             console.error("Error fetching levels:", error)
@@ -36,7 +35,7 @@ export default function XpConfigPage() {
         fetchLevels()
     }, [])
 
-    const handleOpenModal = (level?: any) => {
+    const handleOpenModal = (level?: LevelThreshold) => {
         if (level) {
             setSelectedLevel(level)
             setFormData({ levelNumber: level.levelNumber.toString(), requiredXp: level.requiredXp.toString() })
@@ -100,7 +99,7 @@ export default function XpConfigPage() {
                 columns={columns}
                 data={levels}
                 loading={isLoading}
-                onDelete={(row) => { setSelectedLevel(row); setIsConfirmOpen(true); }}
+                onDelete={(row) => { setSelectedLevel(row as LevelThreshold); setIsConfirmOpen(true); }}
 
             />
 
@@ -108,7 +107,10 @@ export default function XpConfigPage() {
                 open={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title={selectedLevel ? "Edit Level" : "Add Level"}
-                onSubmit={async () => await handleSubmit(new Event('submit') as any)}
+                onSubmit={async () => {
+                    const syntheticEvent = { preventDefault: () => {} } as React.FormEvent
+                    await handleSubmit(syntheticEvent)
+                }}
                 submitting={submitting}
             >
                 <div className="space-y-4">

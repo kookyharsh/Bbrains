@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Hash, Users, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import type { ChatMessageDisplay } from "@/features/chat/hooks/useChatMessages"
 
 interface ChannelHeaderProps {
     channelName: string
@@ -13,7 +14,7 @@ interface ChannelHeaderProps {
     isConnected: boolean
     onToggleMembers: () => void
     onSearch?: (query: string) => void
-    searchResults?: any[]
+    searchResults?: ChatMessageDisplay[]
     isSearching?: boolean
     onClearSearch?: () => void
     searchQuery?: string
@@ -35,15 +36,12 @@ export function ChannelHeader({
     onOpenSearch,
     isSearchOpen
 }: ChannelHeaderProps) {
-    const [localQuery, setLocalQuery] = useState(searchQuery || "")
-
-    useEffect(() => {
-        setLocalQuery(searchQuery || "")
-    }, [searchQuery])
+    const [draftQuery, setDraftQuery] = useState(searchQuery || "")
+    const localQuery = searchQuery ?? draftQuery
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
-        setLocalQuery(value)
+        setDraftQuery(value)
     }
 
     const handleSearchSubmit = (e: React.FormEvent) => {
@@ -55,7 +53,7 @@ export function ChannelHeader({
     }
 
     const handleClearSearch = () => {
-        setLocalQuery("")
+        setDraftQuery("")
         if (onClearSearch) {
             onClearSearch()
         }

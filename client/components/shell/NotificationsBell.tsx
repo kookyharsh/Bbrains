@@ -1,55 +1,30 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React from "react"
 import { 
-    Bell, Check, Calendar, Trophy, Megaphone, 
+    Bell, Calendar, Trophy, Megaphone, 
     Settings, MessageSquare, GraduationCap, Info
 } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { notificationApi, Notification } from "@/services/api/client"
 import { formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useNotifications } from "@/components/providers/notification-provider"
 
 export function NotificationsBell() {
-    const [notifications, setNotifications] = useState<Notification[]>([])
-    const [unreadCount, setUnreadCount] = useState(0)
-    const [loading, setLoading] = useState(false)
+    const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
     const router = useRouter()
-
-    const fetchNotifications = useCallback(async () => {
-        try {
-            const res = await notificationApi.getNotifications()
-            if (res.success && res.data) {
-                setNotifications(res.data.notifications)
-                setUnreadCount(res.data.unreadCount)
-            }
-        } catch (error) {
-            // Silently handle network errors - don't log to console
-            // The UI will show empty notifications
-        }
-    }, [])
-
-    useEffect(() => {
-        fetchNotifications()
-        // Optional: Polling for new notifications
-        const interval = setInterval(fetchNotifications, 60000) // Every minute
-        return () => clearInterval(interval)
-    }, [fetchNotifications])
 
     const handleMarkRead = async (id: number, relatedId?: string, type?: string) => {
         try {
-            await notificationApi.markRead(id)
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
-            setUnreadCount(prev => Math.max(0, prev - 1))
+            await markRead(id)
             
             // Navigate based on type
             if (type === 'attendance') router.push('/dashboard')
@@ -63,9 +38,7 @@ export function NotificationsBell() {
 
     const handleMarkAllRead = async () => {
         try {
-            await notificationApi.markAllRead()
-            setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })))
-            setUnreadCount(0)
+            await markAllRead()
         } catch (error) {
             console.error("Failed to mark all as read:", error)
         }

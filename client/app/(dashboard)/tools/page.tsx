@@ -117,7 +117,7 @@ export default function ToolsPage() {
               </div>
               <h3 className="font-semibold text-foreground mb-1">More Tools Coming Soon</h3>
               <p className="text-sm text-muted-foreground max-w-[200px]">
-                We're working on adding more useful tools for students.
+                We&apos;re working on adding more useful tools for students.
               </p>
             </CardContent>
           </Card>

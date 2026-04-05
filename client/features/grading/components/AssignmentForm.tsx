@@ -30,6 +30,7 @@ interface AssignmentFormProps {
     courseId: string
     dueDate: string
     file: string
+    rewardPoints: string
   }) => Promise<boolean>
   submitting: boolean
 }
@@ -43,22 +44,33 @@ export function AssignmentForm({
   submitting,
 }: AssignmentFormProps) {
   const isEditing = !!assignment
+  const getInitialFormState = () => ({
+    title: assignment?.title ?? "",
+    description: assignment?.description ?? "",
+    courseId: String(assignment?.courseId ?? ""),
+    dueDate: assignment?.dueDate?.slice(0, 10) ?? "",
+    file: assignment?.file ?? "",
+    rewardPoints: String(assignment?.rewardPoints ?? 0),
+  })
 
-  const [title, setTitle] = useState(assignment?.title ?? "")
-  const [description, setDescription] = useState(assignment?.description ?? "")
-  const [courseId, setCourseId] = useState(String(assignment?.courseId ?? ""))
-  const [dueDate, setDueDate] = useState(assignment?.dueDate?.slice(0, 10) ?? "")
-  const [file, setFile] = useState(assignment?.file ?? "")
+  const [title, setTitle] = useState(() => getInitialFormState().title)
+  const [description, setDescription] = useState(() => getInitialFormState().description)
+  const [courseId, setCourseId] = useState(() => getInitialFormState().courseId)
+  const [dueDate, setDueDate] = useState(() => getInitialFormState().dueDate)
+  const [file, setFile] = useState(() => getInitialFormState().file)
+  const [rewardPoints, setRewardPoints] = useState(() => getInitialFormState().rewardPoints)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const { uploadFile, isUploading } = useCloudinaryUpload()
 
   function resetForm() {
-    setTitle(assignment?.title ?? "")
-    setDescription(assignment?.description ?? "")
-    setCourseId(String(assignment?.courseId ?? ""))
-    setDueDate(assignment?.dueDate?.slice(0, 10) ?? "")
-    setFile(assignment?.file ?? "")
+    const nextState = getInitialFormState()
+    setTitle(nextState.title)
+    setDescription(nextState.description)
+    setCourseId(nextState.courseId)
+    setDueDate(nextState.dueDate)
+    setFile(nextState.file)
+    setRewardPoints(nextState.rewardPoints)
     setErrors({})
   }
 
@@ -88,6 +100,7 @@ export function AssignmentForm({
     const newErrors: Record<string, string> = {}
     if (!title.trim()) newErrors.title = "Title is required"
     if (!courseId) newErrors.courseId = "Course is required"
+    if (Number(rewardPoints || 0) < 0) newErrors.rewardPoints = "Reward points cannot be negative"
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -101,6 +114,7 @@ export function AssignmentForm({
       courseId,
       dueDate,
       file,
+      rewardPoints,
     })
 
     if (success) {
@@ -189,6 +203,25 @@ export function AssignmentForm({
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assignment-reward-points">Reward Points</Label>
+            <Input
+              id="assignment-reward-points"
+              type="number"
+              min={0}
+              value={rewardPoints}
+              onChange={(e) => {
+                setRewardPoints(e.target.value)
+                if (errors.rewardPoints) setErrors((prev) => ({ ...prev, rewardPoints: "" }))
+              }}
+              placeholder="0"
+              className={errors.rewardPoints ? "border-destructive" : ""}
+            />
+            {errors.rewardPoints ? (
+              <p className="text-xs text-destructive">{errors.rewardPoints}</p>
+            ) : null}
           </div>
 
           <div className="space-y-2">

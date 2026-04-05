@@ -48,6 +48,18 @@ import { ChatSidebarRight } from "./ChatSidebarRight";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
 import { supabase } from "@/services/supabase/client";
 
+type ChatUserRow = {
+  id: string;
+  username: string;
+  type?: string | null;
+};
+
+type ChatUserDetailRow = {
+  user_id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
 // ── Helpers ──
 
 function formatTime(date: Date) {
@@ -101,8 +113,8 @@ export default function ChatView() {
         .select("user_id, first_name, last_name");
 
       if (users) {
-        const members = users.map((u: any) => {
-          const d = details?.find((det: any) => det.user_id === u.id);
+        const members = (users as ChatUserRow[]).map((u) => {
+          const d = (details as ChatUserDetailRow[] | null)?.find((det) => det.user_id === u.id);
           return {
             id: u.id,
             name: d ? `${d.first_name} ${d.last_name}`.trim() : u.username,

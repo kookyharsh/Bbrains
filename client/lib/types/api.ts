@@ -29,13 +29,25 @@ export interface ApiUser {
 export interface ApiAssignment {
     id: number
     courseId: number
+    createdById?: string | null
     title: string
     description?: string
     content?: string
     file?: string // Added missing file property
+    rewardPoints?: number
     dueDate: string
     createdAt: string
-    course?: { name: string }
+    course?: { id?: number; name: string; standard?: string }
+    createdBy?: {
+        id: string
+        username: string
+        userDetails?: {
+            firstName?: string
+            lastName?: string
+        }
+    } | null
+    submission?: ApiSubmission
+    status?: string
     _count?: { submissions: number }
 }
 
@@ -66,6 +78,12 @@ export interface ApiProduct {
     approval: "pending" | "approved" | "rejected"
     createdAt: string
     creator?: { username: string; type: string }
+    productType?: "digital" | "physical"
+    metadata?: {
+        productType?: "digital" | "physical"
+        rejectionReason?: string
+        [key: string]: unknown
+    }
 }
 
 export interface ApiRole {
@@ -152,9 +170,41 @@ export interface ApiSubmission {
     assignmentId: number
     userId: string
     filePath: string
+    content?: string | null
+    reviewStatus?: "submitted" | "completed" | "incomplete"
+    reviewRemark?: string | null
+    reviewedAt?: string | null
+    reviewedBy?: string | null
+    xpAwardedAt?: string | null
     submittedAt: string
-    user?: { username: string }
-    assignment?: { title: string }
+    user?: {
+        id?: string
+        username: string
+        email?: string
+        userDetails?: {
+            firstName?: string
+            lastName?: string
+            avatar?: string | null
+        }
+    }
+    reviewer?: {
+        id?: string
+        username: string
+        userDetails?: {
+            firstName?: string
+            lastName?: string
+        }
+    } | null
+    assignment?: {
+        id?: number
+        title: string
+        description?: string
+        dueDate?: string
+        file?: string
+        rewardPoints?: number
+        courseId?: number
+        course?: { name: string; standard?: string }
+    }
 }
 
 export interface ApiGrade {
@@ -190,16 +240,16 @@ export interface DashboardData {
     present: number;
     absent: number;
     percentage: number;
-    records?: any[];
+    records?: Array<Record<string, unknown>>;
   };
-  leaderboard: any[];
+  leaderboard: Array<Record<string, unknown>>;
   announcements: ApiAnnouncement[];
   recentGrades?: {
     assignment: { title: string };
     grade: string | number;
     gradedAt: string;
   }[];
-  events: any[];
+  events: Array<Record<string, unknown>>;
   streak: {
     current: number;
     longest: number;

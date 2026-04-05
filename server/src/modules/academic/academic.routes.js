@@ -2,7 +2,7 @@ import express from 'express';
 import {
     createAssignmentHandler, getAssignmentsHandler, getAssignmentHandler,
     updateAssignmentHandler, deleteAssignmentHandler,
-    submitAssignmentHandler, getSubmissionsHandler, getMySubmissionsHandler,
+    submitAssignmentHandler, getSubmissionsHandler, getMySubmissionsHandler, reviewSubmissionHandler,
     createAnnouncementHandler, getAnnouncementsHandler, deleteAnnouncementHandler
 } from './academic.controller.js';
 import verifyToken from '../../middleware/auth.middleware.js';
@@ -11,16 +11,17 @@ import authorize from '../../middleware/authorize.js';
 const router = express.Router();
 
 // Assignments
-router.post('/assignments', verifyToken, authorize('teacher', 'admin'), createAssignmentHandler);
+router.post('/assignments', verifyToken, authorize('teacher', 'admin', 'manager'), createAssignmentHandler);
 router.get('/assignments', verifyToken, getAssignmentsHandler);
 router.get('/assignments/:id', verifyToken, getAssignmentHandler);
-router.put('/assignments/:id', verifyToken, authorize('teacher', 'admin'), updateAssignmentHandler);
-router.delete('/assignments/:id', verifyToken, authorize('teacher', 'admin'), deleteAssignmentHandler);
+router.put('/assignments/:id', verifyToken, authorize('teacher', 'admin', 'manager'), updateAssignmentHandler);
+router.delete('/assignments/:id', verifyToken, authorize('teacher', 'admin', 'manager'), deleteAssignmentHandler);
 
 // Submissions
 router.post('/submissions', verifyToken, submitAssignmentHandler);
 router.get('/submissions/me', verifyToken, getMySubmissionsHandler);
-router.get('/submissions/:assignmentId', verifyToken, authorize('teacher', 'admin'), getSubmissionsHandler);
+router.get('/submissions/:assignmentId', verifyToken, authorize('teacher', 'admin', 'manager'), getSubmissionsHandler);
+router.patch('/submissions/:submissionId/review', verifyToken, authorize('teacher', 'admin', 'manager'), reviewSubmissionHandler);
 
 // Announcements
 router.post('/announcements', verifyToken, authorize('teacher', 'admin'), createAnnouncementHandler);

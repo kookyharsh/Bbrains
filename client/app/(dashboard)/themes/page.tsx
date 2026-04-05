@@ -79,7 +79,7 @@ export default function ThemesPage() {
       } else {
         toast.error(response.message || 'Purchase failed. Please try again.')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Purchase failed. Please try again.')
       console.error('Purchase error:', error)
     } finally {
@@ -300,7 +300,7 @@ export default function ThemesPage() {
         
        {userThemes.filter(tid => !themes.find(t => t.id === tid && !t.isBuiltIn)).length === 0 && (
           <p className="text-center text-muted-foreground py-8">
-            You haven't purchased any themes yet. Browse the marketplace above to get started!
+            You haven&apos;t purchased any themes yet. Browse the marketplace above to get started!
           </p>
         )}
       </div>

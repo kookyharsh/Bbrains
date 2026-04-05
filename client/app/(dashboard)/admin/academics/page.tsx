@@ -1,25 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AcademicsControls } from "./_components/AcademicsControls";
 import { CoursesTable } from "./_components/CoursesTable";
 import { StudentsTable } from "./_components/StudentsTable";
 import { AssignmentsTable } from "./_components/AssignmentsTable";
-import { AcademicsDialog } from "./_components/AcademicsDialog";
 import { DeleteDialog } from "./_components/DeleteDialog";
-import { courseApi, userApi, assignmentApi } from "@/services/api/client";
+import { api, courseApi, userApi, assignmentApi } from "@/services/api/client";
 import { Course, AdminAssignment, Student } from "./_types";
 import { BookOpen, ClipboardList, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AcademicsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState("courses");
   const [search, setSearch] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
-  const [dialogType, setDialogType] = useState<"course" | "assignment" | "student">("course");
   const [deleteId, setDeleteId] = useState<number | string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -52,11 +52,54 @@ export default function AcademicsPage() {
   }, [fetchData]);
 
   const handleAddClick = () => {
-    if (tab === "courses") setDialogType("course");
-    else if (tab === "students") setDialogType("student");
-    else setDialogType("assignment");
-    setShowDialog(true);
+    if (tab === "courses") {
+      router.push("/dashboard/manager/classes");
+      return;
+    }
+
+    if (tab === "students") {
+      router.push("/dashboard/admin/students");
+      return;
+    }
+
+    router.push("/dashboard/admin/assignments");
   };
+
+  const handleDelete = useCallback(async () => {
+    if (deleteId === null) return;
+
+    try {
+      setDeleting(true);
+
+      if (tab === "courses") {
+        const response = await courseApi.deleteCourse(deleteId);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to delete course");
+        }
+        setCourses((current) => current.filter((course) => String(course.id) !== String(deleteId)));
+      } else if (tab === "assignments") {
+        const response = await api.delete(`/academic/assignments/${deleteId}`);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to delete assignment");
+        }
+        setAssignments((current) => current.filter((assignment) => String(assignment.id) !== String(deleteId)));
+      } else {
+        const response = await api.delete(`/user/delete/${deleteId}`);
+        if (!response.success) {
+          throw new Error(response.message || "Failed to delete student");
+        }
+        setStudents((current) => current.filter((student) => String(student.id) !== String(deleteId)));
+      }
+
+      toast.success(`${tab === "courses" ? "Course" : tab === "assignments" ? "Assignment" : "Student"} deleted`);
+      setDeleteId(null);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteId, tab]);
 
   const statCards = [
     {
@@ -169,16 +212,11 @@ export default function AcademicsPage() {
         </TabsContent>
       </Tabs>
 
-      <AcademicsDialog 
-        open={showDialog} 
-        onOpenChange={setShowDialog} 
-        type={dialogType} 
-        courses={courses} 
-      />
-
       <DeleteDialog 
         deleteId={deleteId} 
         onClose={() => setDeleteId(null)} 
+        onConfirm={handleDelete}
+        confirming={deleting}
       />
     </div>
   );

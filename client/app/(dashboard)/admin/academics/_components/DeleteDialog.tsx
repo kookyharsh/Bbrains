@@ -12,9 +12,11 @@ import {
 interface DeleteDialogProps {
   deleteId: number | string | null;
   onClose: () => void;
+  onConfirm: () => void;
+  confirming?: boolean;
 }
 
-export function DeleteDialog({ deleteId, onClose }: DeleteDialogProps) {
+export function DeleteDialog({ deleteId, onClose, onConfirm, confirming = false }: DeleteDialogProps) {
   return (
     <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
@@ -25,10 +27,11 @@ export function DeleteDialog({ deleteId, onClose }: DeleteDialogProps) {
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            onClick={onClose} 
+            onClick={onConfirm}
+            disabled={confirming}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Delete
+            {confirming ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

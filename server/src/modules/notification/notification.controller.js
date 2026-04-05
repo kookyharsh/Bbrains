@@ -6,6 +6,14 @@ import {
 } from './notification.service.js';
 import { sendSuccess, sendError } from '../../utils/response.js';
 
+const getStatusCode = (error, fallbackStatus = 500) => {
+    if (typeof error?.statusCode === 'number') {
+        return error.statusCode;
+    }
+
+    return fallbackStatus;
+};
+
 export const getNotifications = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -23,7 +31,7 @@ export const getNotifications = async (req, res) => {
         return sendSuccess(res, { notifications, unreadCount });
     } catch (error) {
         console.error('Get notifications error:', error);
-        return sendError(res, 'Failed to fetch notifications', 500);
+        return sendError(res, error?.message || 'Failed to fetch notifications', getStatusCode(error));
     }
 };
 
@@ -34,11 +42,15 @@ export const markAsRead = async (req, res) => {
         
         if (!id) return sendError(res, 'Notification ID is required', 400);
         
-        await markNotificationAsRead(userId, id);
+        const result = await markNotificationAsRead(userId, id);
+        if (!result?.count) {
+            return sendError(res, 'Notification not found', 404);
+        }
+
         return sendSuccess(res, null, 'Notification marked as read');
     } catch (error) {
         console.error('Mark notification read error:', error);
-        return sendError(res, 'Failed to mark notification as read', 500);
+        return sendError(res, error?.message || 'Failed to mark notification as read', getStatusCode(error));
     }
 };
 
@@ -49,7 +61,7 @@ export const markAllRead = async (req, res) => {
         return sendSuccess(res, null, 'All notifications marked as read');
     } catch (error) {
         console.error('Mark all read error:', error);
-        return sendError(res, 'Failed to mark all notifications as read', 500);
+        return sendError(res, error?.message || 'Failed to mark all notifications as read', getStatusCode(error));
     }
 };
 
@@ -60,6 +72,6 @@ export const getUnreadNotificationCount = async (req, res) => {
         return sendSuccess(res, { count });
     } catch (error) {
         console.error('Get unread count error:', error);
-        return sendError(res, 'Failed to get unread count', 500);
+        return sendError(res, error?.message || 'Failed to get unread count', getStatusCode(error));
     }
 };

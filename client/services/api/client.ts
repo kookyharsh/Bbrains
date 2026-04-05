@@ -192,6 +192,19 @@ export interface User {
   } | null;
 }
 
+export interface UserDetailsRecord {
+  id?: string;
+  userId?: string;
+  firstName?: string;
+  lastName?: string;
+  avatar?: string | null;
+  sex?: string;
+  dob?: string;
+  phone?: string;
+  bio?: string;
+  address?: Record<string, unknown> | null;
+}
+
 export interface DashboardData {
   user: User;
   stats: {
@@ -591,26 +604,47 @@ export interface ChatMemberProfile {
 
 export interface Assignment {
   id: number;
+  createdById?: string | null;
   title: string;
   description?: string;
   dueDate: string;
   courseId: number;
   file?: string;
+  rewardPoints: number;
   course?: {
+    id?: number;
     name: string;
+    standard?: string;
   };
+  createdBy?: {
+    id: string;
+    username: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  } | null;
   status?: string;
   submission?: {
     id: number;
     filePath: string;
-    content?: string;
+    content?: string | null;
     submittedAt: string;
+    reviewStatus?: "submitted" | "completed" | "incomplete";
+    reviewRemark?: string | null;
+    reviewedAt?: string | null;
+    reviewedBy?: string | null;
+    xpAwardedAt?: string | null;
+    reviewer?: {
+      username: string;
+      userDetails?: {
+        firstName?: string;
+        lastName?: string;
+      };
+    } | null;
   };
-  grade?: {
-    id: number;
-    grade: string;
-    gradedAt: string;
-    gradedBy: string;
+  _count?: {
+    submissions?: number;
   };
 }
 
@@ -690,15 +724,47 @@ export const userApi = {
     dob?: string; 
     phone?: string; 
     bio?: string;
-  }): Promise<ApiResponse<any>> => {
-    return api.put<any>('/user/me/details', data);
+  }): Promise<ApiResponse<UserDetailsRecord>> => {
+    return api.put<UserDetailsRecord>('/user/me/details', data);
   },
 };
 
 export interface AssignmentSubmission {
   assignmentId: number;
-  content: string;
+  content?: string;
   fileUrl?: string;
+}
+
+export interface AssignmentReviewSubmission {
+  id: number;
+  assignmentId: number;
+  userId: string;
+  filePath: string;
+  content?: string | null;
+  submittedAt: string;
+  reviewStatus?: "submitted" | "completed" | "incomplete";
+  reviewRemark?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  xpAwardedAt?: string | null;
+  user?: {
+    id: string;
+    username: string;
+    email?: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+      avatar?: string | null;
+    };
+  };
+  reviewer?: {
+    id: string;
+    username: string;
+    userDetails?: {
+      firstName?: string;
+      lastName?: string;
+    };
+  } | null;
 }
 
 export const assignmentApi = {
@@ -709,11 +775,20 @@ export const assignmentApi = {
   getAssignmentDetails: async (id: number): Promise<ApiResponse<Assignment>> => {
     return api.get<Assignment>(`/academic/assignments/${id}`);
   },
-  getMySubmissions: async (): Promise<ApiResponse<any[]>> => {
-    return api.get<any[]>('/academic/submissions/me');
+  submitAssignment: async (data: AssignmentSubmission): Promise<ApiResponse<AssignmentReviewSubmission>> => {
+    return api.post<AssignmentReviewSubmission>('/academic/submissions', data);
   },
-  submitAssignment: async (data: AssignmentSubmission): Promise<ApiResponse<any>> => {
-    return api.post('/academic/submissions', data);
+  getMySubmissions: async (): Promise<ApiResponse<AssignmentReviewSubmission[]>> => {
+    return api.get<AssignmentReviewSubmission[]>('/academic/submissions/me');
+  },
+  getAssignmentSubmissions: async (assignmentId: number): Promise<ApiResponse<AssignmentReviewSubmission[]>> => {
+    return api.get<AssignmentReviewSubmission[]>(`/academic/submissions/${assignmentId}`);
+  },
+  reviewSubmission: async (
+    submissionId: number,
+    data: { reviewStatus: "completed" | "incomplete"; reviewRemark?: string }
+  ): Promise<ApiResponse<AssignmentReviewSubmission>> => {
+    return api.patch<AssignmentReviewSubmission>(`/academic/submissions/${submissionId}/review`, data);
   },
 };
 
@@ -832,8 +907,13 @@ export const achievementApi = {
 };
 
 export const courseApi = {
-  getCourses: async (): Promise<ApiResponse<Course[]>> => {
-    return api.get<Course[]>('/courses');
+  getCourses: async (params?: { page?: number; limit?: number; search?: string }): Promise<ApiResponse<Course[]>> => {
+    const query = new URLSearchParams();
+    query.set("limit", String(params?.limit ?? 100));
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.search) query.set("search", params.search);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return api.get<Course[]>(`/courses${suffix}`);
   },
   getCourse: async (id: string | number): Promise<ApiResponse<Course>> => {
     return api.get<Course>(`/courses/${id}`);
@@ -1020,6 +1100,12 @@ export interface SystemConfig {
     updatedAt: string;
 }
 
+export interface PublicSystemConfigs {
+    maintenanceMode: boolean;
+    welcomeMessage: string;
+    allowSignups: boolean;
+}
+
 export const configApi = {
     getConfigs: async (): Promise<ApiResponse<SystemConfig[]>> => {
         return api.get('/config');
@@ -1030,8 +1116,8 @@ export const configApi = {
     deleteConfig: async (key: string): Promise<ApiResponse<void>> => {
         return api.delete(`/config/${key}`);
     },
-    getPublicConfigs: async (): Promise<ApiResponse<any>> => {
-        return api.get('/config/public');
+    getPublicConfigs: async (): Promise<ApiResponse<PublicSystemConfigs>> => {
+        return api.get<PublicSystemConfigs>('/config/public');
     }
 };
 
@@ -1092,6 +1178,8 @@ export interface ProductMetadata {
   themeConfig?: Record<string, unknown>;
   version?: string;
   downloads?: number;
+  productType?: 'digital' | 'physical';
+  rejectionReason?: string;
 }
 
 export interface Product {
@@ -1142,6 +1230,11 @@ export interface Order {
     username: string;
     userDetails?: { firstName?: string; lastName?: string; avatar?: string | null };
   };
+}
+
+export interface CartItem {
+  productId: number;
+  quantity: number;
 }
 
 export interface SalesData {
@@ -1216,8 +1309,8 @@ export const marketApi = {
   buyNow: async (productId: number, quantity: number, pin: string): Promise<ApiResponse<{ order: Order; qrCode?: string }>> => {
     return api.post<{ order: Order; qrCode?: string }>('/market/buy-now', { productId, quantity, pin });
   },
-  getCart: async (): Promise<ApiResponse<unknown[]>> => {
-    return api.get<unknown[]>('/market/cart');
+  getCart: async (): Promise<ApiResponse<CartItem[]>> => {
+    return api.get<CartItem[]>('/market/cart');
   },
   addToCart: async (productId: number, quantity: number): Promise<ApiResponse<void>> => {
     return api.post<void>('/market/cart', { productId, quantity });
@@ -1311,12 +1404,12 @@ export const themeApi = {
 };
 
 export const chatApi = {
-  getMessages: async (chatId?: string, limit = 50, before?: string): Promise<ApiResponse<any[]>> => {
+  getMessages: async (chatId?: string, limit = 50, before?: string): Promise<ApiResponse<ChatMessageRecord[]>> => {
     const query = new URLSearchParams();
     if (chatId) query.append('chatId', chatId);
     query.append('limit', String(limit));
     if (before) query.append('before', before);
-    return api.get<any[]>(`/chat/messages?${query.toString()}`);
+    return api.get<ChatMessageRecord[]>(`/chat/messages?${query.toString()}`);
   },
   getMembers: async (): Promise<ApiResponse<ChatMemberProfile[]>> => {
     return api.get<ChatMemberProfile[]>(`/chat/members`);
@@ -1343,10 +1436,10 @@ export const chatApi = {
   editMessage: async (id: string, content: string, mentions: string[] = []): Promise<ApiResponse<ChatMessageRecord>> => {
     return api.put<ChatMessageRecord>(`/chat/messages/${id}`, { content, mentions });
   },
-  searchMessages: async (query: string, limit = 50): Promise<ApiResponse<any[]>> => {
+  searchMessages: async (query: string, limit = 50): Promise<ApiResponse<ChatMessageRecord[]>> => {
     const params = new URLSearchParams();
     params.append('q', query);
     params.append('limit', String(limit));
-    return api.get<any[]>(`/chat/messages/search?${params.toString()}`);
+    return api.get<ChatMessageRecord[]>(`/chat/messages/search?${params.toString()}`);
   }
 };

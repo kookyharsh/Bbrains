@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardContent } from "@/components/dashboard-content";
-import { marketApi, Product } from "@/services/api/client";
+import { marketApi, Product, type CartItem } from "@/services/api/client";
 
 const encodeImageUrl = (url: string) => {
   try {
@@ -135,8 +135,7 @@ export default function MarketPage() {
       setLoading(true);
       const response = await marketApi.getProducts(1, 100);
       if (response.success && response.data) {
-        const productsData = (response.data as any)?.data || response.data;
-        setProducts(Array.isArray(productsData) ? productsData : []);
+        setProducts(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -147,14 +146,14 @@ export default function MarketPage() {
   }, []);
 
   const fetchCart = useCallback(async () => {
-    try {
-      const response = await marketApi.getCart();
-      if (response.success && Array.isArray(response.data)) {
-        const cartObj: Record<number, number> = {};
-        (response.data as any[]).forEach((item: any) => {
-          cartObj[item.productId] = item.quantity;
-        });
-        setCart(cartObj);
+      try {
+        const response = await marketApi.getCart();
+        if (response.success && Array.isArray(response.data)) {
+          const cartObj: Record<number, number> = {};
+          response.data.forEach((item: CartItem) => {
+            cartObj[item.productId] = item.quantity;
+          });
+          setCart(cartObj);
       }
     } catch (error) {
       console.error("Failed to fetch cart:", error);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 // Mock wallet hook - replace with actual wallet implementation
 export interface Wallet {
@@ -7,23 +7,23 @@ export interface Wallet {
   pinSet?: boolean;
 }
 
-export function useWallet() {
-  const [wallet, setWallet] = useState<Wallet | null>(null)
-  const [loading, setLoading] = useState(true)
+const readStoredWallet = (): Wallet | null => {
+  if (typeof window === "undefined") return null
 
-  useEffect(() => {
-    // TODO: Replace with actual wallet implementation
-    // For now, check if we have wallet data in localStorage or from API
-    const storedWallet = localStorage.getItem('wallet')
-    if (storedWallet) {
-      try {
-        setWallet(JSON.parse(storedWallet))
-      } catch (e) {
-        console.error('Failed to parse wallet from localStorage', e)
-      }
-    }
-    setLoading(false)
-  }, [])
+  const storedWallet = localStorage.getItem('wallet')
+  if (!storedWallet) return null
+
+  try {
+    return JSON.parse(storedWallet) as Wallet
+  } catch (error) {
+    console.error('Failed to parse wallet from localStorage', error)
+    return null
+  }
+}
+
+export function useWallet() {
+  const [wallet, setWallet] = useState<Wallet | null>(() => readStoredWallet())
+  const loading = false
 
   // Mock function to update wallet balance
   const updateBalance = (amount: number) => {
@@ -35,7 +35,7 @@ export function useWallet() {
   }
 
   // Mock function to set wallet (for when user connects wallet)
-  const setWalletData = (walletData: any) => {
+  const setWalletData = (walletData: Wallet) => {
     localStorage.setItem('wallet', JSON.stringify(walletData))
     setWallet(walletData)
   }

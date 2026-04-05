@@ -1,28 +1,28 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { User } from "@/services/api/client"
 
+const readStoredUser = (): User | null => {
+  if (typeof window === "undefined") return null
+
+  const storedUser = localStorage.getItem('user')
+  if (!storedUser) return null
+
+  try {
+    return JSON.parse(storedUser) as User
+  } catch (error) {
+    console.error('Failed to parse user from localStorage', error)
+    return null
+  }
+}
+
 // Mock user hook - replace with actual auth implementation
 export function useUser() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // TODO: Replace with actual auth implementation
-    // For now, check if we have a user in localStorage or from auth provider
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        console.error('Failed to parse user from localStorage', e)
-      }
-    }
-    setLoading(false)
-  }, [])
+  const [user, setUser] = useState<User | null>(() => readStoredUser())
+  const loading = false
 
   // Mock login function for development
-  const login = (userData: any) => {
+  const login = (userData: User) => {
     localStorage.setItem('user', JSON.stringify(userData))
     setUser(userData)
   }

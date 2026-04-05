@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, QrCode, Loader2, BookOpen, ArrowLeft, ShoppingCart, CheckCircle2, Clock, ExternalLink } from "lucide-react";
+import { Package, QrCode, Loader2, BookOpen, ArrowLeft, ShoppingCart, CheckCircle2, Clock, ExternalLink, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardContent } from "@/components/dashboard-content";
 import { orderApi, Order } from "@/services/api/client";
@@ -27,8 +27,7 @@ export default function OrdersPage() {
         setLoading(true);
         const resp = await orderApi.getOrders(1, 100);
         if (resp.success && resp.data) {
-          const data = (resp.data as any)?.data || resp.data;
-          setOrders(Array.isArray(data) ? data : []);
+          setOrders(Array.isArray(resp.data) ? resp.data : []);
         }
       } catch (error) {
         console.error("Failed to fetch orders:", error);
@@ -40,7 +39,7 @@ export default function OrdersPage() {
     fetchOrders();
   }, []);
 
-  const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+  const statusConfig: Record<string, { label: string; color: string; icon: LucideIcon }> = {
     order_placed: { label: "Order Placed", color: "bg-amber-500/10 text-amber-500 border-amber-500/20", icon: Clock },
     completed: { label: "Completed", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: CheckCircle2 },
     delivered: { label: "Delivered", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", icon: CheckCircle2 },
@@ -188,7 +187,17 @@ export default function OrdersPage() {
   );
 }
 
-function OrderCard({ order, statusConfig, onView, onShowQR }: { order: Order; statusConfig: any; onView: () => void; onShowQR: () => void }) {
+function OrderCard({
+  order,
+  statusConfig,
+  onView,
+  onShowQR,
+}: {
+  order: Order;
+  statusConfig: Record<string, { label: string; color: string; icon: LucideIcon }>;
+  onView: () => void;
+  onShowQR: () => void;
+}) {
   const config = statusConfig[order.status] || { label: order.status, color: "bg-slate-500/10 text-slate-500", icon: Package };
   const Icon = config.icon;
 

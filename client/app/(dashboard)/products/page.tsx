@@ -71,8 +71,7 @@ export default function ProductsPage() {
       setLoading(true);
       const response = await marketApi.getMyProducts();
       if (response.success && response.data) {
-        const productsData = (response.data as any)?.data || response.data;
-        setProducts(Array.isArray(productsData) ? productsData : []);
+        setProducts(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -119,7 +118,16 @@ export default function ProductsPage() {
 
     try {
       setIsSubmitting(true);
-      const data: any = {
+      const data: {
+        name: string;
+        description: string;
+        price: number;
+        stock: number;
+        imageUrl: string;
+        productType?: "digital" | "physical";
+        fileUrl?: string;
+        fileType?: string;
+      } = {
         name: form.name,
         description: form.description,
         price: Number(form.price),
@@ -312,7 +320,7 @@ export default function ProductsPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {products.map((product: any) => (
+            {products.map((product) => (
               <Card key={product.id} className="rounded-xl border-white/5 bg-white/[0.02] hover:border-white/10 transition-all">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
@@ -738,7 +746,7 @@ export default function ProductsPage() {
               </div>
               <AlertDialogTitle className="text-2xl font-black tracking-tight text-white">Delete Product?</AlertDialogTitle>
               <AlertDialogDescription className="text-base font-medium text-white/40">
-                This will permanently delete "{selectedProduct?.name}". This action cannot be undone.
+                This will permanently delete &quot;{selectedProduct?.name}&quot;. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-6 gap-3">

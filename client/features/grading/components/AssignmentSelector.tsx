@@ -3,12 +3,12 @@
 import {
   Combobox,
   ComboboxContent,
+  ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-  ComboboxEmpty,
 } from "@/components/ui/combobox"
-import { Calendar, BookOpen } from "lucide-react"
+import { BookOpen, Calendar } from "lucide-react"
 import type { ApiAssignment } from "@/lib/types/api"
 
 function fmtDate(value: string) {
@@ -32,15 +32,11 @@ export function AssignmentSelector({
   onChange,
   loading,
 }: AssignmentSelectorProps) {
-  const selected = assignments.find((a) => String(a.id) === value)
+  const selected = assignments.find((assignment) => String(assignment.id) === value)
 
   return (
-    <Combobox value={value} onValueChange={(v) => onChange(v ?? "")}>
-      <ComboboxInput
-        placeholder={loading ? "Loading assignments..." : "Search assignments..."}
-        disabled={loading}
-        showClear
-      >
+    <Combobox value={value} onValueChange={(nextValue) => onChange(nextValue ?? "")}>
+      <ComboboxInput placeholder={loading ? "Loading assignments..." : "Search assignments..."} disabled={loading} showClear>
         <ComboboxContent>
           <ComboboxList>
             {assignments.map((assignment) => (
@@ -48,18 +44,18 @@ export function AssignmentSelector({
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium">{assignment.title}</span>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {assignment.course?.name && (
+                    {assignment.course?.name ? (
                       <span className="flex items-center gap-1">
                         <BookOpen className="size-3" />
                         {assignment.course.name}
                       </span>
-                    )}
-                    {assignment.dueDate && (
+                    ) : null}
+                    {assignment.dueDate ? (
                       <span className="flex items-center gap-1">
                         <Calendar className="size-3" />
                         Due {fmtDate(assignment.dueDate)}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </ComboboxItem>
@@ -68,12 +64,12 @@ export function AssignmentSelector({
           </ComboboxList>
         </ComboboxContent>
       </ComboboxInput>
-      {selected && (
+      {selected ? (
         <div className="mt-2 text-xs text-muted-foreground">
           Selected: <span className="font-medium text-foreground">{selected.title}</span>
-          {selected.course?.name && ` • ${selected.course.name}`}
+          {selected.course?.name ? ` • ${selected.course.name}` : ""}
         </div>
-      )}
+      ) : null}
     </Combobox>
   )
 }

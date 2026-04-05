@@ -3,7 +3,7 @@
 import * as React from "react"
 import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "next-themes"
 import { useEffect, useLayoutEffect } from "react"
-import { allThemes, isBuiltInTheme } from "@/themes"
+import { allThemes, type ThemeDefinition } from "@/themes"
 import { useUser } from "@/hooks/use-user"
 import { libraryApi } from "@/services/api/client"
 
@@ -37,7 +37,7 @@ function useThemesInternal() {
         try {
           const response = await libraryApi.getLibrary('theme', 1, 100)
           if (response.success && response.data) {
-            const purchasedThemeIds = response.data.map((item: any) => String(item.productId))
+            const purchasedThemeIds = response.data.map((item) => String(item.productId))
             setUserThemes(prev => {
               const combined = [...new Set([...prev, ...purchasedThemeIds])]
               localStorage.setItem(`user-${user.id}-themes`, JSON.stringify(combined))
@@ -67,7 +67,7 @@ function useThemesInternal() {
   }
   
   const hasThemeAccess = (themeId: string) => {
-    if (isBuiltInTheme(themeId as any)) return true
+    if (allThemes.some((theme) => theme.id === themeId && theme.isBuiltIn)) return true
     return userThemes.includes(themeId)
   }
   
@@ -81,7 +81,7 @@ function useThemesInternal() {
 }
 
 interface ThemeContextProps {
-  themes: any[]
+  themes: ThemeDefinition[]
   userThemes: string[]
   hasThemeAccess: (themeId: string) => boolean
   addTheme: (themeId: string) => void
@@ -95,23 +95,22 @@ const ThemeContext = React.createContext<ThemeContextProps | null>(null)
 export function ThemeProvider({ children, ...props }: React.ComponentProps<typeof NextThemesProvider>) {
   const { themes, userThemes, hasThemeAccess, addTheme, isLoaded: themesLoaded } = useThemesInternal()
   const { setTheme: setNextTheme, resolvedTheme } = useNextTheme()
-  const [currentTheme, setCurrentTheme] = React.useState<string | null>(null)
-  const [mounted, setMounted] = React.useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    const savedTheme = localStorage.getItem('theme-preference')
-    if (savedTheme && hasThemeAccess(savedTheme)) {
-      setCurrentTheme(savedTheme)
-    } else {
-      setCurrentTheme(resolvedTheme === 'dark' ? 'dark' : 'light')
-    }
-  }, [themesLoaded, hasThemeAccess, resolvedTheme])
+  const [currentTheme, setCurrentTheme] = React.useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return localStorage.getItem('theme-preference')
+  })
+  const mounted = typeof window !== "undefined"
+  const effectiveTheme =
+    currentTheme && hasThemeAccess(currentTheme)
+      ? currentTheme
+      : resolvedTheme === 'dark'
+        ? 'dark'
+        : 'light'
 
   useLayoutEffect(() => {
-    if (!mounted || !currentTheme) return
+    if (!mounted || !effectiveTheme) return
     
-    const themeDef = themes.find(t => t.id === currentTheme)
+    const themeDef = themes.find(t => t.id === effectiveTheme)
     if (!themeDef) return
     
     const root = document.documentElement
@@ -129,9 +128,9 @@ export function ThemeProvider({ children, ...props }: React.ComponentProps<typeo
     root.classList.add(`theme-${currentTheme}`)
     
     setNextTheme(themeDef.isDark ? 'dark' : 'light')
-    localStorage.setItem('theme-preference', currentTheme)
+    localStorage.setItem('theme-preference', effectiveTheme)
     
-  }, [currentTheme, themes, mounted, setNextTheme])
+  }, [effectiveTheme, themes, mounted, setNextTheme])
 
   const setTheme = (themeId: string) => {
     if (hasThemeAccess(themeId)) {
@@ -144,7 +143,7 @@ export function ThemeProvider({ children, ...props }: React.ComponentProps<typeo
     userThemes,
     hasThemeAccess,
     addTheme,
-    currentTheme,
+    currentTheme: effectiveTheme,
     setTheme,
     isLoaded: themesLoaded && mounted
   }

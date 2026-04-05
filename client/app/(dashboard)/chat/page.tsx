@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, useSyncExternalStore } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Hash, Search } from "lucide-react";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useChatMessages } from "@/features/chat/hooks/useChatMessages";
 import { useNotifications } from "@/components/providers/notification-provider";
 import { useCloudinaryUpload } from "@/hooks/use-cloudinary-upload";
+import { markChatSeen } from "@/hooks/use-chat-unread-count";
 import { chatApi, type ChatMemberProfile } from "@/services/api/client";
 
 // Components
@@ -49,15 +50,13 @@ export default function ChatPage() {
 
   // State
   const [message, setMessage] = useState("");
-  const [showMembers, setShowMembers] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    if (window.innerWidth >= 768) {
-      setShowMembers(true);
-    }
-  }, []);
+  const [showMembers, setShowMembers] = useState<boolean | null>(null);
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+  const membersPanelOpen = showMembers ?? (isMounted ? window.innerWidth >= 768 : false);
   const [profileUser, setProfileUser] = useState<Member | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
@@ -145,6 +144,13 @@ export default function ChatPage() {
     }
     return () => clearTimeout(timer);
   }, [messages.length, markAllRead]);
+
+  useEffect(() => {
+    if (!currentUserId) return
+
+    const latestMessageTimestamp = messages[messages.length - 1]?.createdAt ?? new Date().toISOString()
+    markChatSeen(currentUserId, latestMessageTimestamp)
+  }, [currentUserId, messages]);
 
   // Handlers
   const handleSend = useCallback(async () => {
@@ -319,7 +325,9 @@ export default function ChatPage() {
     setMessage("");
   }, []);
   const onCancelReply = useCallback(() => setReplyingMsg(null), []);
-const onToggleMembers = useCallback(() => setShowMembers(!showMembers), [showMembers]);
+  const onToggleMembers = useCallback(() => {
+    setShowMembers((current) => !(current ?? (window.innerWidth >= 768)));
+  }, []);
 
   const onMembersSidebarClose = useCallback(() => setShowMembers(false), []);
   const onMembersSidebarOpenProfile = useCallback((userId: string) => {
@@ -364,9 +372,9 @@ const onToggleMembers = useCallback(() => setShowMembers(!showMembers), [showMem
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card md:rounded-xl md:border md:shadow-sm">
-      <ChannelHeader 
-        channelName="Global Chat"
-        showMembers={showMembers}
+        <ChannelHeader 
+          channelName="Global Chat"
+          showMembers={membersPanelOpen}
         messageCount={messages.length}
         isConnected={isConnected}
         onToggleMembers={onToggleMembers}
@@ -502,7 +510,7 @@ const onToggleMembers = useCallback(() => setShowMembers(!showMembers), [showMem
           />
         </div>
 
-        {isMounted && showMembers && (
+        {isMounted && membersPanelOpen && (
           <>
             <ChatSidebarRight 
               members={membersList} 

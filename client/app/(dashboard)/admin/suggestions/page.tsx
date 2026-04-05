@@ -107,7 +107,7 @@ export default function SuggestionsPage() {
             key: "status",
             label: "Status",
             render: (row: Suggestion) => {
-                const config: Record<string, any> = {
+                const config: Record<Suggestion["status"], { icon: React.ReactNode; class: string }> = {
                     pending: { icon: <Clock className="size-3 mr-1" />, class: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
                     reviewed: { icon: <Search className="size-3 mr-1" />, class: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
                     implemented: { icon: <CheckCircle2 className="size-3 mr-1" />, class: "bg-green-500/10 text-green-500 border-green-500/20" },

@@ -1,17 +1,19 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Clock, CheckCircle, AlertTriangle, XCircle } from "lucide-react"
+import { CheckCircle, ClipboardCheck, RotateCcw, XCircle } from "lucide-react"
 
-type FilterType = "all" | "submitted" | "late" | "notSubmitted"
+type FilterType = "all" | "submitted" | "completed" | "incomplete" | "notSubmitted"
 
 interface SubmissionFiltersProps {
   counts: {
     all: number
     submitted: number
-    late: number
+    completed: number
+    incomplete: number
     notSubmitted: number
   }
   active: FilterType
@@ -21,7 +23,7 @@ interface SubmissionFiltersProps {
 const filterConfig: {
   key: FilterType
   label: string
-  icon: React.ReactNode
+  icon: ReactNode
   color: string
 }[] = [
   {
@@ -32,15 +34,21 @@ const filterConfig: {
   },
   {
     key: "submitted",
-    label: "Submitted",
+    label: "Awaiting Review",
+    icon: <ClipboardCheck className="size-3.5" />,
+    color: "text-amber-600",
+  },
+  {
+    key: "completed",
+    label: "Completed",
     icon: <CheckCircle className="size-3.5" />,
     color: "text-green-600",
   },
   {
-    key: "late",
-    label: "Late",
-    icon: <AlertTriangle className="size-3.5" />,
-    color: "text-amber-600",
+    key: "incomplete",
+    label: "Needs Rework",
+    icon: <RotateCcw className="size-3.5" />,
+    color: "text-orange-600",
   },
   {
     key: "notSubmitted",

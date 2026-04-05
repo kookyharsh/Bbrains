@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { notificationApi, Notification } from "@/services/api/client"
-import { supabase } from "@/services/supabase/client"
 
 interface NotificationContextType {
     notifications: Notification[]
@@ -36,35 +35,39 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }, [])
 
     useEffect(() => {
-        fetchNotifications()
+        void fetchNotifications()
 
-        // Set up real-time subscription for new notifications
-        const channel = supabase
-            .channel('public:notification')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'notification'
-                },
-                (payload: any) => {
-                    // Check if the notification is for the current user
-                    // We need the current user ID here. 
-                    // For now, let's just re-fetch to be safe and simple
-                    fetchNotifications()
-                }
-            )
-            .subscribe()
+        const interval = window.setInterval(() => {
+            void fetchNotifications()
+        }, 30000)
+
+        const handleWindowFocus = () => {
+            void fetchNotifications()
+        }
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                void fetchNotifications()
+            }
+        }
+
+        window.addEventListener("focus", handleWindowFocus)
+        document.addEventListener("visibilitychange", handleVisibilityChange)
 
         return () => {
-            supabase.removeChannel(channel)
+            window.clearInterval(interval)
+            window.removeEventListener("focus", handleWindowFocus)
+            document.removeEventListener("visibilitychange", handleVisibilityChange)
         }
     }, [fetchNotifications])
 
     const markRead = useCallback(async (id: number) => {
         try {
-            await notificationApi.markRead(id)
+            const response = await notificationApi.markRead(id)
+            if (!response.success) {
+                return
+            }
+
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, readAt: new Date().toISOString() } : n))
             setUnreadCount(prev => Math.max(0, prev - 1))
         } catch {
@@ -74,7 +77,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const markAllRead = useCallback(async () => {
         try {
-            await notificationApi.markAllRead()
+            const response = await notificationApi.markAllRead()
+            if (!response.success) {
+                return
+            }
+
             setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })))
             setUnreadCount(0)
         } catch {

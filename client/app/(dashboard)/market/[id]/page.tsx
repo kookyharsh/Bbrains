@@ -111,10 +111,10 @@ export default function MarketProductDetail() {
     async function fetchProduct(pid: number) {
       try {
         setLoading(true);
-        const resp: any = await marketApi.getProduct(pid);
-        const data = resp?.data ?? resp;
+        const resp = await marketApi.getProduct(pid);
+        const data = resp.data;
         if (data) {
-          setProduct(data as Product);
+          setProduct(data);
         } else {
           setProduct(null);
         }

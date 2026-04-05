@@ -364,6 +364,23 @@ const createManagedUser = async (data) => {
 
     try {
         await prisma.$transaction(async (tx) => {
+            const findCourseInCollege = async (courseId, notFoundMessage) => {
+                const course = await tx.course.findUnique({
+                    where: { id: Number(courseId) },
+                    select: {
+                        id: true,
+                        collegeId: true,
+                        classTeacherId: true,
+                    }
+                });
+
+                if (!course || Number(course.collegeId ?? 0) !== Number(collegeId)) {
+                    throw new Error(notFoundMessage);
+                }
+
+                return course;
+            };
+
             await tx.user.create({
                 data: {
                     id: userId,
@@ -442,14 +459,7 @@ const createManagedUser = async (data) => {
             }
 
             if (type === 'student' && classId) {
-                const course = await tx.course.findUnique({
-                    where: { id: Number(classId) },
-                    select: { id: true }
-                });
-
-                if (!course) {
-                    throw new Error('Selected class was not found');
-                }
+                const course = await findCourseInCollege(classId, 'Selected class was not found for this college');
 
                 await tx.enrollment.create({
                     data: {
@@ -460,17 +470,10 @@ const createManagedUser = async (data) => {
             }
 
             if (type === 'teacher' && classTeacherCourseId) {
-                const course = await tx.course.findUnique({
-                    where: { id: Number(classTeacherCourseId) },
-                    select: {
-                        id: true,
-                        classTeacherId: true,
-                    }
-                });
-
-                if (!course) {
-                    throw new Error('Selected class teacher assignment was not found');
-                }
+                const course = await findCourseInCollege(
+                    classTeacherCourseId,
+                    'Selected class teacher assignment was not found for this college'
+                );
 
                 if (course.classTeacherId && course.classTeacherId !== userId) {
                     throw new Error('This class already has a class teacher assigned');

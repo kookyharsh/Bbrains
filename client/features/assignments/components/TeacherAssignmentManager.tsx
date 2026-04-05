@@ -23,6 +23,7 @@ type AssignmentForm = {
   courseId: string
   dueDate: string
   file: string
+  rewardPoints: string
 }
 
 const emptyForm: AssignmentForm = {
@@ -31,6 +32,7 @@ const emptyForm: AssignmentForm = {
   courseId: "",
   dueDate: "",
   file: "",
+  rewardPoints: "0",
 }
 
 function fmtDate(value: string) {
@@ -39,6 +41,25 @@ function fmtDate(value: string) {
     month: "short",
     year: "numeric",
   })
+}
+
+function getRequestErrorMessage(error: unknown, fallback: string) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object"
+  ) {
+    const response = error.response as { data?: { message?: string; error?: string } }
+    return response.data?.message || response.data?.error || fallback
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
 }
 
 export function TeacherAssignmentManager() {
@@ -56,18 +77,29 @@ export function TeacherAssignmentManager() {
   const { uploadFile, isUploading } = useCloudinaryUpload()
 
   const load = useCallback(async () => {
+    setLoading(true)
     try {
-      setLoading(true)
       const client = await getAuthedClient()
-      const [assignmentResponse, courseResponse] = await Promise.all([
+      const [assignmentResult, courseResult] = await Promise.allSettled([
         client.get<{ success: boolean; data: ApiAssignment[] }>("/academic/assignments"),
         client.get<{ success: boolean; data: AssessmentCourseOption[] }>("/courses?limit=100"),
       ])
-      setAssignments(assignmentResponse.data.data || [])
-      setCourses(courseResponse.data.data || [])
-    } catch (error) {
-      console.error(error)
-      toast.error("Failed to load assignments")
+
+      if (assignmentResult.status === "fulfilled") {
+        setAssignments(assignmentResult.value.data.data || [])
+      } else {
+        console.error(assignmentResult.reason)
+        setAssignments([])
+        toast.error(getRequestErrorMessage(assignmentResult.reason, "Failed to load assignments"))
+      }
+
+      if (courseResult.status === "fulfilled") {
+        setCourses(courseResult.value.data.data || [])
+      } else {
+        console.error(courseResult.reason)
+        setCourses([])
+        toast.error(getRequestErrorMessage(courseResult.reason, "Failed to load classes"))
+      }
     } finally {
       setLoading(false)
     }
@@ -91,6 +123,7 @@ export function TeacherAssignmentManager() {
       courseId: String(assignment.courseId),
       dueDate: assignment.dueDate?.slice(0, 10) ?? "",
       file: assignment.file || "",
+      rewardPoints: String(assignment.rewardPoints ?? 0),
     })
     setModalOpen(true)
   }
@@ -117,6 +150,11 @@ export function TeacherAssignmentManager() {
       return
     }
 
+    if (Number(form.rewardPoints || 0) < 0) {
+      toast.error("Reward points cannot be negative")
+      return
+    }
+
     try {
       setSubmitting(true)
       const client = await getAuthedClient()
@@ -126,6 +164,7 @@ export function TeacherAssignmentManager() {
         courseId: Number(form.courseId),
         dueDate: form.dueDate || undefined,
         file: form.file || undefined,
+        rewardPoints: Math.max(0, Number(form.rewardPoints || 0)),
       }
 
       if (editing) {
@@ -242,6 +281,11 @@ export function TeacherAssignmentManager() {
                       Due {fmtDate(assignment.dueDate)}
                     </div>
                   )}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-xs">
+                      {assignment.rewardPoints ?? 0} point{(assignment.rewardPoints ?? 0) === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-1 border-t border-border/50">
@@ -307,6 +351,14 @@ export function TeacherAssignmentManager() {
           type="date"
           value={form.dueDate}
           onChange={(event) => setForm((current) => ({ ...current, dueDate: event.target.value }))}
+        />
+        <FormInput
+          label="Reward Points"
+          type="number"
+          min={0}
+          value={form.rewardPoints}
+          onChange={(event) => setForm((current) => ({ ...current, rewardPoints: event.target.value }))}
+          placeholder="0"
         />
 
         <div className="space-y-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -44,12 +44,9 @@ export function TimetableEditorDialog({
   onSave,
   saving = false,
 }: TimetableEditorDialogProps) {
-  const [draftEntries, setDraftEntries] = useState<ClassTimetableEntry[]>([createEmptyEntry()]);
-
-  useEffect(() => {
-    if (!open) return;
-    setDraftEntries(initialEntries.length ? initialEntries : [createEmptyEntry()]);
-  }, [initialEntries, open]);
+  const [draftEntries, setDraftEntries] = useState<ClassTimetableEntry[]>(
+    () => (initialEntries.length ? initialEntries : [createEmptyEntry()])
+  );
 
   const entriesByDay = useMemo(
     () =>

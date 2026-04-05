@@ -40,7 +40,7 @@ export default function ApprovalsPage() {
     }, [])
 
     const userRole = user?.type ?? "student"
-    const hasAccess = userRole === "admin" || userRole === "teacher" || (user as any)?.role === "admin"
+    const hasAccess = userRole === "admin" || userRole === "teacher" || user?.roles?.some((entry) => entry.role?.name === "admin") === true
 
     useEffect(() => {
         if (loadingAuth || !hasAccess) {

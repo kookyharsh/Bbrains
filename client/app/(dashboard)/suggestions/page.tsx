@@ -102,7 +102,7 @@ export default function SuggestionsPage() {
                     <Card className="lg:col-span-1 h-fit border-brand-orange/20 shadow-lg shadow-brand-orange/5">
                         <CardHeader>
                             <CardTitle className="text-lg">Submit New Idea</CardTitle>
-                            <CardDescription>What's on your mind?</CardDescription>
+                            <CardDescription>What&apos;s on your mind?</CardDescription>
                         </CardHeader>
                         <form onSubmit={handleSubmit}>
                             <CardContent className="space-y-4">

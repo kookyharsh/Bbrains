@@ -45,8 +45,7 @@ export default function MyProductsPage() {
       setLoading(true);
       const response = await marketApi.getMyProducts();
       if (response.success && response.data) {
-        const productsData = (response.data as any)?.data || response.data;
-        setProducts(Array.isArray(productsData) ? productsData : []);
+        setProducts(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -65,7 +64,7 @@ export default function MyProductsPage() {
     setSelectedProduct(null);
   };
 
-  const handleEditClick = (product: any) => {
+  const handleEditClick = (product: Product) => {
     setSelectedProduct(product);
     setForm({
       name: product.name,
@@ -94,7 +93,7 @@ export default function MyProductsPage() {
         imageUrl: form.imageUrl,
       };
 
-      const isPending = (selectedProduct as any).approval === 'pending';
+      const isPending = selectedProduct.approval === 'pending';
       const response = isPending 
         ? await marketApi.updateProduct(selectedProduct.id, data)
         : await marketApi.requestEditReview(selectedProduct.id, data);
@@ -205,7 +204,7 @@ export default function MyProductsPage() {
                 <Package className="w-10 h-10 text-muted-foreground opacity-50" />
               </div>
               <h3 className="text-xl font-bold mb-2">No Products Found</h3>
-              <p className="text-muted-foreground max-w-sm mb-8">You haven't listed any products yet. Start selling to the campus community today!</p>
+              <p className="text-muted-foreground max-w-sm mb-8">You haven&apos;t listed any products yet. Start selling to the campus community today!</p>
               <Button variant="outline" onClick={() => setShowAddDialog(true)} className="rounded-xl border-2 font-bold px-8">
                 Create Your First Listing
               </Button>
@@ -213,7 +212,7 @@ export default function MyProductsPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product: any) => (
+            {products.map((product) => (
               <Card key={product.id} className="group overflow-hidden rounded-[2rem] border-white/5 bg-white/[0.02] backdrop-blur-sm hover:border-brand-orange/30 transition-all duration-300">
                 <div className="aspect-square relative bg-white/[0.03] p-4 flex items-center justify-center overflow-hidden">
                   {product.image ? (
@@ -411,10 +410,10 @@ export default function MyProductsPage() {
                   </div>
                   <div>
                     <DialogTitle className="text-2xl font-black tracking-tight">
-                      {(selectedProduct as any)?.approval === 'approved' ? 'Request Edit Review' : 'Update Asset'}
+                      {selectedProduct?.approval === 'approved' ? 'Request Edit Review' : 'Update Asset'}
                     </DialogTitle>
                     <DialogDescription className="font-medium text-white/40">
-                      {(selectedProduct as any)?.approval === 'approved' 
+                      {selectedProduct?.approval === 'approved' 
                         ? 'Approved products require admin review for updates.' 
                         : 'Modify specifications for your marketplace entry'}
                     </DialogDescription>
@@ -527,7 +526,7 @@ export default function MyProductsPage() {
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    {(selectedProduct as any)?.approval === 'approved' ? 'Submit Review Request' : 'Save Changes'}
+                    {selectedProduct?.approval === 'approved' ? 'Submit Review Request' : 'Save Changes'}
                   </>
                 )}
               </Button>

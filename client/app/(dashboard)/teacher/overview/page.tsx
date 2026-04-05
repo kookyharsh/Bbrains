@@ -43,6 +43,7 @@ type TeacherDashboardUser = {
   lastName?: string;
   username?: string;
   teacherSubjects?: string[];
+  collegeId?: string | number;
 };
 
 type TeacherDashboardResponse = {
@@ -189,7 +190,7 @@ export default function OverviewPage() {
         const partialFailures: string[] = [];
 
         setTeacherName(fullName || teacherProfile?.username || "Teacher");
-        setCollegeId((teacherProfile as any)?.collegeId);
+        setCollegeId(teacherProfile?.collegeId);
         setTeacherSubjects(Array.isArray(profileUser?.teacherSubjects) ? profileUser.teacherSubjects : []);
         setCourses(nextCourses);
         setAnnouncements(

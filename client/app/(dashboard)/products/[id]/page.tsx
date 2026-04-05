@@ -51,15 +51,15 @@ export default function ProductDetailPage() {
   const { uploadFile, isUploading } = useCloudinaryUpload();
 
   const fetchProduct = useCallback(async () => {
-    try {
-      setLoading(true);
-      const resp = await marketApi.getProduct(productId);
-      if (resp.success && resp.data) {
-        const data = (resp.data as any)?.data || resp.data;
-        setProduct(data);
-        const imgs: string[] = [];
-        if (data.image) imgs.push(data.image);
-        if (data.metadata?.previewImages) imgs.push(...data.metadata.previewImages);
+      try {
+        setLoading(true);
+        const resp = await marketApi.getProduct(productId);
+        if (resp.success && resp.data) {
+          const data = resp.data;
+          setProduct(data);
+          const imgs: string[] = [];
+          if (data.image) imgs.push(data.image);
+          if (data.metadata?.previewImages) imgs.push(...data.metadata.previewImages);
         setImages([...new Set(imgs)]);
       } else {
         toast.error("Product not found");
@@ -161,7 +161,7 @@ export default function ProductDetailPage() {
   const status = statusConfig[product.approval] || statusConfig.draft;
   const isLowStock = product.productType === 'physical' && product.stock > 0 && product.stock <= 5;
   const isOutOfStock = product.productType === 'physical' && product.stock <= 0;
-  const rejectionReason = (product as any).metadata?.rejectionReason;
+  const rejectionReason = product.metadata?.rejectionReason;
 
   return (
     <DashboardContent>
@@ -336,7 +336,7 @@ export default function ProductDetailPage() {
               <div className="w-16 h-16 bg-red-500/10 rounded-3xl flex items-center justify-center">
                 <Trash2 className="w-8 h-8 text-red-400" />
               </div>
-              <AlertDialogTitle className="text-2xl font-black tracking-tight text-white">Delete "{product.name}"?</AlertDialogTitle>
+              <AlertDialogTitle className="text-2xl font-black tracking-tight text-white">Delete &quot;{product.name}&quot;?</AlertDialogTitle>
               <AlertDialogDescription className="text-base font-medium text-white/40">This action cannot be undone. All associated data will be permanently removed.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="mt-6 gap-3">

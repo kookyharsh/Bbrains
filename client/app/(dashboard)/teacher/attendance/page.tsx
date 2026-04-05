@@ -1,19 +1,17 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { Check, X, Clock, Loader2, Calendar as CalendarIcon, Save, History, Search } from "lucide-react"
+import { Check, X, Clock, Loader2, Calendar as CalendarIcon, History, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { 
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+    Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog"
 import { 
     Popover, PopoverContent, PopoverTrigger 
 } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { attendanceApi, AttendanceRecord } from "@/services/api/client"
@@ -30,11 +28,35 @@ interface StudentAttendance extends ApiUser {
     isUpdating?: boolean
 }
 
+type CourseStudentEnrollment = {
+    user: ApiUser
+}
+
+function getRequestErrorMessage(error: unknown, fallback: string) {
+    if (typeof error === "object" && error !== null) {
+        const maybeResponse = "response" in error ? error.response : null
+
+        if (typeof maybeResponse === "object" && maybeResponse !== null && "data" in maybeResponse) {
+            const data = maybeResponse.data
+            if (typeof data === "object" && data !== null && "message" in data && typeof data.message === "string") {
+                return data.message
+            }
+        }
+
+        if ("message" in error && typeof error.message === "string" && error.message.trim()) {
+            return error.message
+        }
+    }
+
+    return fallback
+}
+
 export default function AttendancePage() {
     const [date, setDate] = useState<Date>(new Date())
     const [students, setStudents] = useState<StudentAttendance[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
+    const [assignedCourse, setAssignedCourse] = useState<ApiUser["classTeacherCourse"]>(null)
     
     // For History View
     const [historyOpen, setHistoryOpen] = useState(false)
@@ -46,14 +68,22 @@ export default function AttendancePage() {
         try {
             setLoading(true)
             const client = await getAuthedClient()
+            const profileRes = await client.get<{ success: boolean; data: ApiUser }>("/user/me")
+            const classTeacherCourse = profileRes.data.data?.classTeacherCourse ?? null
+            setAssignedCourse(classTeacherCourse)
+
+            if (!classTeacherCourse?.id) {
+                setStudents([])
+                return
+            }
             
-            // 1. Fetch all students
-            const studentsRes = await client.get<{ success: boolean; data: ApiUser[] }>("/user/students")
-            const allStudents: StudentAttendance[] = studentsRes.data.data.map(s => ({ ...s }))
-            
-            // 2. Fetch all attendance records for the selected date in one request
             const formattedDate = format(date, "yyyy-MM-dd")
-            const attendanceRes = await attendanceApi.getAttendanceByDate(formattedDate)
+            const [studentsRes, attendanceRes] = await Promise.all([
+                client.get<{ success: boolean; data: CourseStudentEnrollment[] }>(`/courses/${classTeacherCourse.id}/students`),
+                attendanceApi.getAttendanceByDate(formattedDate),
+            ])
+
+            const allStudents: StudentAttendance[] = (studentsRes.data.data || []).map(({ user }) => ({ ...user }))
             const attendanceMap = new Map(
                 (attendanceRes.success && attendanceRes.data ? attendanceRes.data : []).map((record) => [
                     String((record as AttendanceRecord & { userId?: string }).userId ?? ""),
@@ -72,7 +102,7 @@ export default function AttendancePage() {
             setStudents(allStudents)
         } catch (error) {
             console.error("Failed to fetch attendance data:", error)
-            toast.error("Failed to load attendance data")
+            toast.error(getRequestErrorMessage(error, "Failed to load attendance data"))
         } finally {
             setLoading(false)
         }
@@ -100,12 +130,12 @@ export default function AttendancePage() {
                 throw new Error(res.message)
             }
             
-            toast.success(`Marked ${status} for ${studentId}`)
+            toast.success("Attendance updated")
         } catch (error) {
             console.error("Failed to mark attendance:", error)
-            toast.error("Failed to save attendance")
+            toast.error(getRequestErrorMessage(error, "Failed to save attendance"))
             // Revert on error if needed or just re-fetch
-            fetchStudentsAndAttendance()
+            void fetchStudentsAndAttendance()
         } finally {
             setStudents(prev => prev.map(s => 
                 s.id === studentId ? { ...s, isUpdating: false } : s
@@ -114,14 +144,13 @@ export default function AttendancePage() {
     }
 
     const markAllPresent = async () => {
-        const unmarked = students.filter(s => !s.currentStatus)
-        if (unmarked.length === 0) {
-            toast.info("All students already have a status")
+        if (students.length === 0) {
+            toast.info("No students available to mark")
             return
         }
 
         const request = attendanceApi.markAttendanceBulk({
-            studentIds: unmarked.map((student) => student.id),
+            studentIds: students.map((student) => student.id),
             date: format(date, "yyyy-MM-dd"),
             status: "present",
         }).then((response) => {
@@ -131,9 +160,7 @@ export default function AttendancePage() {
 
             setStudents((prev) =>
                 prev.map((student) =>
-                    student.currentStatus
-                        ? student
-                        : { ...student, currentStatus: "present" }
+                    ({ ...student, currentStatus: "present" })
                 )
             )
 
@@ -161,7 +188,7 @@ export default function AttendancePage() {
                 setHistoryRecords(res.data)
             }
         } catch (error) {
-            toast.error("Failed to load history")
+            toast.error(getRequestErrorMessage(error, "Failed to load history"))
         } finally {
             setHistoryLoading(false)
         }
@@ -179,13 +206,24 @@ export default function AttendancePage() {
         late: students.filter(s => s.currentStatus === "late").length,
         unmarked: students.filter(s => !s.currentStatus).length
     }
+    const hasAssignedClass = Boolean(assignedCourse?.id)
+    const isSearching = searchQuery.trim().length > 0
+    const emptyStateMessage = isSearching
+        ? "No students found matching your search."
+        : !hasAssignedClass
+            ? "No class is assigned to you as class teacher yet, so attendance is unavailable."
+            : "No students are enrolled in your assigned class yet."
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <SectionHeader 
                     title="Attendance Management" 
-                    subtitle={`Manage daily attendance for your students`}
+                    subtitle={
+                        hasAssignedClass
+                            ? `Manage daily attendance for ${assignedCourse?.name ?? "your assigned class"}.`
+                            : "Manage daily attendance for the class assigned to you as class teacher."
+                    }
                 />
                 
                 <div className="flex items-center gap-2">
@@ -205,7 +243,7 @@ export default function AttendancePage() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <Button onClick={markAllPresent} disabled={loading || stats.unmarked === 0}>
+                    <Button onClick={markAllPresent} disabled={loading || !hasAssignedClass || students.length === 0}>
                         Mark All Present
                     </Button>
                 </div>
@@ -222,13 +260,21 @@ export default function AttendancePage() {
             <Card>
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-bold">Student List</CardTitle>
+                        <div className="space-y-1">
+                            <CardTitle className="text-lg font-bold">Student List</CardTitle>
+                            <CardDescription>
+                                {hasAssignedClass
+                                    ? `Showing students from ${assignedCourse?.name}${assignedCourse?.standard ? ` (${assignedCourse.standard})` : ""}.`
+                                    : "Only your class-teacher assignment can take attendance here."}
+                            </CardDescription>
+                        </div>
                         <div className="relative w-64">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search students..."
                                 className="pl-8"
                                 value={searchQuery}
+                                disabled={loading || !hasAssignedClass}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
@@ -255,7 +301,7 @@ export default function AttendancePage() {
                                     {filteredStudents.length === 0 ? (
                                         <tr>
                                             <td colSpan={4} className="py-8 text-center text-muted-foreground">
-                                                No students found matching your search.
+                                                {emptyStateMessage}
                                             </td>
                                         </tr>
                                     ) : (
