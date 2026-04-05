@@ -81,26 +81,11 @@ export function LoginForm({
           if (userResp.success && userResp.data) {
             const normalizedUser = {
               ...userResp.data,
-              collegeId: (userResp.data as any).collegeId ?? userResp.data.college?.id,
+              collegeId: userResp.data.college?.id,
             }
             localStorage.setItem('user', JSON.stringify(normalizedUser))
 
-            const role = userResp.data.type as string
-            const isManager = (userResp.data.roles || []).some((entry) =>
-              entry?.role?.name?.toLowerCase().includes('manager')
-            )
-
-          if (role === 'superadmin') {
-            router.push('/superadmin/overview')
-          } else if (role === 'admin') {
-            router.push('/admin/overview')
-          } else if (isManager) {
-            router.push('/manager/overview')
-          } else if (role === 'teacher') {
-            router.push('/teacher/overview')
-          } else {
             router.push('/dashboard')
-          }
         } else {
           router.push('/dashboard')
         }
