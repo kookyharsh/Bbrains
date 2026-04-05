@@ -1,8 +1,11 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 // Centralized, single instance for both login and API calls
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// Prefer the classic anon key; fall back to publishable if that’s what’s configured.
+const SUPABASE_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 let _supabaseClient: ReturnType<typeof createBrowserClient> | null = null;
 
@@ -10,11 +13,17 @@ export function getSupabaseClient() {
   if (typeof window === 'undefined') {
     return null;
   }
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    throw new Error(
+      'Supabase env missing: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).'
+    );
+  }
   
   if (!_supabaseClient) {
     _supabaseClient = createBrowserClient(
       SUPABASE_URL,
-      SUPABASE_ANON_KEY,
+      SUPABASE_KEY,
       {
         auth: {
           persistSession: true,

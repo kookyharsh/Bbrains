@@ -9,13 +9,17 @@ import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { FormInput, FormTextarea } from "@/features/admin/components/form"
 import type { ApiAnnouncement } from "@/lib/types/api"
 import { toast } from "sonner"
-import { Megaphone } from "lucide-react"
+import { Megaphone, Lock } from "lucide-react"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 function fmtDate(s: string) {
     return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
 }
 
 export default function AnnouncementsPage() {
+    const canCreateAnnouncement = useHasPermission("create_announcement")
+    const canManageAnnouncement = useHasPermission("manage_announcement")
+    const canManage = canCreateAnnouncement || canManageAnnouncement
     const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([])
     const [loading, setLoading] = useState(true)
     const [modalOpen, setModalOpen] = useState(false)
@@ -23,6 +27,16 @@ export default function AnnouncementsPage() {
     const [form, setForm] = useState({ title: "", description: "" })
     const [submitting, setSubmitting] = useState(false)
     const [deleting, setDeleting] = useState(false)
+
+    if (!canManage) {
+        return (
+            <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Lock className="size-10 opacity-40" />
+                <p className="text-sm font-medium">Access Denied</p>
+                <p className="text-xs">You need "Create Announcement" or "Manage Announcement" permission to view this page.</p>
+            </div>
+        )
+    }
 
     const load = useCallback(async () => {
         try {

@@ -11,12 +11,14 @@ import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/app/(dashboard)/market/approvals/_features/market/types"
 import { fetchPendingProducts, approveRejectProduct } from "@/app/(dashboard)/market/approvals/_features/market/data"
 import { dashboardApi, type User as ApiUser } from "@/services/api/client"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 interface PendingProduct extends Product {
     creatorName: string
 }
 
 export default function ApprovalsPage() {
+    const canManageProduct = useHasPermission("manage_product")
     const [user, setUser] = useState<ApiUser | null>(null)
     const [products, setProducts] = useState<PendingProduct[]>([])
     const [loading, setLoading] = useState(true)
@@ -36,17 +38,22 @@ export default function ApprovalsPage() {
                 setLoadingAuth(false)
             }
         }
-        loadUser()
+        void loadUser()
     }, [])
 
     const userRole = user?.type ?? "student"
-    const hasAccess = userRole === "admin" || userRole === "teacher" || user?.roles?.some((entry) => entry.role?.name === "admin") === true
+    const hasAccess =
+        canManageProduct ||
+        userRole === "admin" ||
+        userRole === "teacher" ||
+        user?.roles?.some((entry) => entry.role?.name === "admin") === true
 
     useEffect(() => {
         if (loadingAuth || !hasAccess) {
             if (!loadingAuth) setLoading(false)
             return
         }
+
         async function load() {
             try {
                 setLoading(true)
@@ -58,7 +65,8 @@ export default function ApprovalsPage() {
                 setLoading(false)
             }
         }
-        load()
+
+        void load()
     }, [hasAccess, loadingAuth])
 
     async function handleDecision(productId: string, status: "approved" | "rejected") {
@@ -96,8 +104,7 @@ export default function ApprovalsPage() {
 
     return (
         <div className="flex h-full w-full flex-col overflow-hidden bg-background">
-            {/* ── Header ── */}
-            <div className="shrink-0 border-b border-border bg-background px-4 py-4 space-y-2">
+            <div className="shrink-0 space-y-2 border-b border-border bg-background px-4 py-4">
                 <div className="flex items-center gap-3">
                     <Link href="/market">
                         <Button variant="ghost" size="icon" className="size-8">
@@ -112,8 +119,7 @@ export default function ApprovalsPage() {
                 </div>
             </div>
 
-            {/* ── Pending List ── */}
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted">
                 {products.length > 0 ? (
                     products.map((product) => {
                         const isProcessing = processing === product.id
@@ -121,16 +127,16 @@ export default function ApprovalsPage() {
                             <Card key={product.id} className="overflow-hidden transition-all hover:shadow-md">
                                 <CardContent className="p-4">
                                     <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-sm font-bold text-foreground line-clamp-1">
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="line-clamp-1 text-sm font-bold text-foreground">
                                                 {product.name}
                                             </h3>
-                                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                                                 {product.description || "No description"}
                                             </p>
-                                            <div className="flex items-center gap-4 mt-2">
+                                            <div className="mt-2 flex items-center gap-4">
                                                 <span className="text-sm font-bold text-foreground">
-                                                    ₹{product.price.toLocaleString()}
+                                                    Rs.{product.price.toLocaleString()}
                                                 </span>
                                                 <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                                                     <User className="size-3" />
@@ -139,12 +145,11 @@ export default function ApprovalsPage() {
                                             </div>
                                         </div>
 
-                                        {/* ── Action buttons ── */}
-                                        <div className="flex items-center gap-2 shrink-0">
+                                        <div className="flex shrink-0 items-center gap-2">
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                                                className="gap-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950"
                                                 disabled={isProcessing}
                                                 onClick={() => handleDecision(product.id, "rejected")}
                                             >
@@ -176,9 +181,9 @@ export default function ApprovalsPage() {
                     })
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                        <Package className="size-10 mb-3 opacity-40" />
+                        <Package className="mb-3 size-10 opacity-40" />
                         <p className="text-sm font-medium">No pending items</p>
-                        <p className="text-xs mt-1">All products have been reviewed</p>
+                        <p className="mt-1 text-xs">All products have been reviewed</p>
                     </div>
                 )}
             </div>

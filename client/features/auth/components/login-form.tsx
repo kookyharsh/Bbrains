@@ -76,13 +76,19 @@ export function LoginForm({
       
       try {
         const { dashboardApi } = await import('@/services/api/client')
-        const userResp = await dashboardApi.getUser()
-        
-        if (userResp.success && userResp.data) {
-          const role = userResp.data.type as string
-          const isManager = (userResp.data.roles || []).some((entry) =>
-            entry?.role?.name?.toLowerCase().includes('manager')
-          )
+          const userResp = await dashboardApi.getUser()
+         
+          if (userResp.success && userResp.data) {
+            const normalizedUser = {
+              ...userResp.data,
+              collegeId: (userResp.data as any).collegeId ?? userResp.data.college?.id,
+            }
+            localStorage.setItem('user', JSON.stringify(normalizedUser))
+
+            const role = userResp.data.type as string
+            const isManager = (userResp.data.roles || []).some((entry) =>
+              entry?.role?.name?.toLowerCase().includes('manager')
+            )
 
           if (role === 'superadmin') {
             router.push('/superadmin/overview')

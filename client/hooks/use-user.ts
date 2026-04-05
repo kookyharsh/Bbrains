@@ -1,35 +1,71 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
-import { User } from "@/services/api/client"
+import { dashboardApi, User } from "@/services/api/client"
 
-const readStoredUser = (): User | null => {
+type NormalizedUser = User & { collegeId?: number }
+
+function normalizeUser(user: User | (User & { collegeId?: number })): NormalizedUser {
+  const anyUser = user as User & { collegeId?: number }
+  return {
+    ...user,
+    collegeId: anyUser.collegeId ?? user.college?.id,
+  }
+}
+
+const readStoredUser = (): NormalizedUser | null => {
   if (typeof window === "undefined") return null
 
-  const storedUser = localStorage.getItem('user')
+  const storedUser = localStorage.getItem("user")
   if (!storedUser) return null
 
   try {
-    return JSON.parse(storedUser) as User
+    return normalizeUser(JSON.parse(storedUser) as User)
   } catch (error) {
-    console.error('Failed to parse user from localStorage', error)
+    console.error("Failed to parse user from localStorage", error)
     return null
   }
 }
 
-// Mock user hook - replace with actual auth implementation
 export function useUser() {
-  const [user, setUser] = useState<User | null>(() => readStoredUser())
-  const loading = false
+  const [user, setUser] = useState<NormalizedUser | null>(() => readStoredUser())
+  const [loading, setLoading] = useState(true)
 
-  // Mock login function for development
-  const login = (userData: User) => {
-    localStorage.setItem('user', JSON.stringify(userData))
-    setUser(userData)
+  useEffect(() => {
+    let mounted = true
+
+    const init = async () => {
+      try {
+        const userResp = await dashboardApi.getUser()
+        if (!mounted) return
+
+        if (userResp.success && userResp.data) {
+          const normalized = normalizeUser(userResp.data)
+          setUser(normalized)
+          localStorage.setItem("user", JSON.stringify(normalized))
+        } else {
+          localStorage.removeItem("user")
+          setUser(null)
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+
+    void init()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const login = (userData: User | NormalizedUser) => {
+    const normalized = normalizeUser(userData)
+    localStorage.setItem("user", JSON.stringify(normalized))
+    setUser(normalized)
   }
 
-  // Mock logout function
   const logout = () => {
-    localStorage.removeItem('user')
+    localStorage.removeItem("user")
     setUser(null)
   }
 
@@ -37,6 +73,6 @@ export function useUser() {
     user,
     loading,
     login,
-    logout
+    logout,
   }
 }

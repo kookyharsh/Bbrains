@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { CheckCircle2, Search, XCircle, Clock, Trash2, Eye } from "lucide-react"
+import { CheckCircle2, Search, XCircle, Clock, Trash2, Eye, Lock } from "lucide-react"
 import { suggestionApi, Suggestion } from "@/services/api/client"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { DataTable } from "@/features/admin/components/DataTable"
@@ -16,6 +16,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 function formatDate(dateString: string) {
     return new Date(dateString).toLocaleDateString("en-IN", {
@@ -26,10 +27,21 @@ function formatDate(dateString: string) {
 }
 
 export default function SuggestionsPage() {
+    const canManageSuggestions = useHasPermission("manage_suggestions")
     const [suggestions, setSuggestions] = useState<Suggestion[]>([])
     const [loading, setLoading] = useState(true)
     const [selected, setSelected] = useState<Suggestion | null>(null)
     const [viewOpen, setViewOpen] = useState(false)
+
+    if (!canManageSuggestions) {
+        return (
+            <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Lock className="size-10 opacity-40" />
+                <p className="text-sm font-medium">Access Denied</p>
+                <p className="text-xs">You need the "Manage Suggestions" permission to view this page.</p>
+            </div>
+        )
+    }
 
     const fetchSuggestions = async () => {
         setLoading(true)

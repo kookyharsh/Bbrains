@@ -59,8 +59,12 @@ function AvatarFallback({
   className,
   name,
   children,
+  showInitials = false,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Fallback> & { name?: string }) {
+}: React.ComponentProps<typeof AvatarPrimitive.Fallback> & {
+  name?: string
+  showInitials?: boolean
+}) {
   const context = React.useContext(AvatarContext)
   const [rotation, setRotation] = React.useState({ x: 0, y: 0 })
   const [isHovered, setIsHovered] = React.useState(false)
@@ -139,7 +143,7 @@ function AvatarFallback({
           />
         </div>
       </div>
-      {children && (
+      {showInitials && children && (
         <span className="relative z-10 flex items-center justify-center text-white drop-shadow-md pointer-events-none">
           {children}
         </span>

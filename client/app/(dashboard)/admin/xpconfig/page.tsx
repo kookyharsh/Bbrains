@@ -1,14 +1,16 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Lock } from "lucide-react"
 import { xpApi, type LevelThreshold } from "@/services/api/client"
 import { SectionHeader } from "@/features/admin/components/SectionHeader"
 import { DataTable } from "@/features/admin/components/DataTable"
 import { CrudModal } from "@/features/admin/components/CrudModal"
 import { ConfirmDialog } from "@/features/admin/components/ConfirmDialog"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 export default function XpConfigPage() {
+    const canManageInstitution = useHasPermission("manage_institution")
     const [levels, setLevels] = useState<LevelThreshold[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -17,23 +19,38 @@ export default function XpConfigPage() {
     const [submitting, setSubmitting] = useState(false)
     const [formData, setFormData] = useState({ levelNumber: "", requiredXp: "" })
 
-    const fetchLevels = async () => {
-        setIsLoading(true)
-        try {
-            const res = await xpApi.getLevels()
-            if (res.success) {
-                setLevels(Array.isArray(res.data) ? res.data : []);
-            }
-        } catch (error) {
-            console.error("Error fetching levels:", error)
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
     useEffect(() => {
-        fetchLevels()
-    }, [])
+        if (!canManageInstitution) {
+            setIsLoading(false)
+            return
+        }
+
+        const fetchLevels = async () => {
+            setIsLoading(true)
+            try {
+                const res = await xpApi.getLevels()
+                if (res.success) {
+                    setLevels(Array.isArray(res.data) ? res.data : [])
+                }
+            } catch (error) {
+                console.error("Error fetching levels:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        void fetchLevels()
+    }, [canManageInstitution])
+
+    if (!canManageInstitution) {
+        return (
+            <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3 text-muted-foreground">
+                <Lock className="size-10 opacity-40" />
+                <p className="text-sm font-medium">Access Denied</p>
+                <p className="text-xs">You need the &quot;Manage Institution&quot; permission to view this page.</p>
+            </div>
+        )
+    }
 
     const handleOpenModal = (level?: LevelThreshold) => {
         if (level) {
@@ -46,11 +63,25 @@ export default function XpConfigPage() {
         setIsModalOpen(true)
     }
 
+    const refreshLevels = async () => {
+        setIsLoading(true)
+        try {
+            const res = await xpApi.getLevels()
+            if (res.success) {
+                setLevels(Array.isArray(res.data) ? res.data : [])
+            }
+        } catch (error) {
+            console.error("Error fetching levels:", error)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        const levelNum = parseInt(formData.levelNumber)
-        const reqXp = parseInt(formData.requiredXp)
-        
+        const levelNum = parseInt(formData.levelNumber, 10)
+        const reqXp = parseInt(formData.requiredXp, 10)
+
         setSubmitting(true)
         try {
             if (selectedLevel) {
@@ -59,7 +90,7 @@ export default function XpConfigPage() {
                 await xpApi.createLevel(levelNum, reqXp)
             }
             setIsModalOpen(false)
-            fetchLevels()
+            await refreshLevels()
         } catch (error) {
             console.error("Error saving level:", error)
         } finally {
@@ -72,7 +103,7 @@ export default function XpConfigPage() {
         try {
             await xpApi.deleteLevel(selectedLevel.levelNumber)
             setIsConfirmOpen(false)
-            fetchLevels()
+            await refreshLevels()
         } catch (error) {
             console.error("Error deleting level:", error)
         }
@@ -99,8 +130,10 @@ export default function XpConfigPage() {
                 columns={columns}
                 data={levels}
                 loading={isLoading}
-                onDelete={(row) => { setSelectedLevel(row as LevelThreshold); setIsConfirmOpen(true); }}
-
+                onDelete={(row) => {
+                    setSelectedLevel(row as LevelThreshold)
+                    setIsConfirmOpen(true)
+                }}
             />
 
             <CrudModal
@@ -115,10 +148,10 @@ export default function XpConfigPage() {
             >
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium mb-1">Level Number</label>
+                        <label className="mb-1 block text-sm font-medium">Level Number</label>
                         <input
                             type="number"
-                            className="w-full p-2 bg-background border border-border rounded-lg"
+                            className="w-full rounded-lg border border-border bg-background p-2"
                             value={formData.levelNumber}
                             onChange={(e) => setFormData({ ...formData, levelNumber: e.target.value })}
                             disabled={!!selectedLevel}
@@ -126,17 +159,16 @@ export default function XpConfigPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1">Required XP</label>
+                        <label className="mb-1 block text-sm font-medium">Required XP</label>
                         <input
                             type="number"
-                            className="w-full p-2 bg-background border border-border rounded-lg"
+                            className="w-full rounded-lg border border-border bg-background p-2"
                             value={formData.requiredXp}
                             onChange={(e) => setFormData({ ...formData, requiredXp: e.target.value })}
                             required
                         />
                     </div>
                 </div>
-
             </CrudModal>
 
             <ConfirmDialog

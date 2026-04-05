@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/sidebar"
 import React from 'react'
 import { NotificationProvider } from "@/components/providers/notification-provider"
+import { PermissionsProvider } from "@/components/providers/permissions-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getBaseUrl } from "@/services/api/client"
@@ -143,18 +145,22 @@ async function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <SidebarProvider defaultOpen={true}>
             <NotificationProvider>
-                <div className="flex h-screen w-full overflow-hidden bg-background">
-                    <AppSidebar user={formattedUser} />
+                <PermissionsProvider>
+                    <TooltipProvider>
+                        <div className="flex h-screen w-full overflow-hidden bg-background">
+                            <AppSidebar user={formattedUser} />
 
-                    <SidebarInset className="md:ml-2 flex flex-col h-full overflow-hidden min-w-0 w-full">
-                        <MainNavbar user={formattedUser} />
+                            <SidebarInset className="md:ml-2 flex flex-col h-full overflow-hidden min-w-0 w-full">
+                                <MainNavbar user={formattedUser} />
 
-                        <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-0 md:pb-0">
-                             {children}
-                        </main>
-                        <MobileBottomNav user={formattedUser} />
-                    </SidebarInset>
-                </div>
+                                <main className="scrollbar-hide flex-1 min-h-0 flex flex-col relative overflow-y-auto overflow-x-hidden pb-0 md:pb-0">
+                                     {children}
+                                </main>
+                                <MobileBottomNav user={formattedUser} />
+                            </SidebarInset>
+                        </div>
+                    </TooltipProvider>
+                </PermissionsProvider>
             </NotificationProvider>
 
         </SidebarProvider>

@@ -13,9 +13,12 @@ import { api, courseApi, userApi, assignmentApi } from "@/services/api/client";
 import { Course, AdminAssignment, Student } from "./_types";
 import { BookOpen, ClipboardList, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { useHasPermission } from "@/components/providers/permissions-provider";
 
 export default function AcademicsPage() {
   const router = useRouter();
+  const canCreateCourse = useHasPermission("create_course");
+  const canManageCourse = useHasPermission("manage_course");
   const [tab, setTab] = useState("courses");
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<number | string | null>(null);
@@ -32,13 +35,12 @@ export default function AcademicsPage() {
       const [coursesRes, studentsRes, assignmentsRes] = await Promise.all([
         courseApi.getCourses(),
         userApi.getStudents(),
-        assignmentApi.getAssignments()
+        assignmentApi.getAssignments(),
       ]);
 
       if (coursesRes.success) setCourses(coursesRes.data || []);
       if (studentsRes.success) setStudents(studentsRes.data || []);
       if (assignmentsRes.success) setAssignments(assignmentsRes.data || []);
-
     } catch (error) {
       console.error("Failed to fetch academics data:", error);
       toast.error("Failed to load academic data");
@@ -63,6 +65,10 @@ export default function AcademicsPage() {
     }
 
     router.push("/dashboard/admin/assignments");
+  };
+
+  const handleEditClick = (course: Course) => {
+    router.push(`/dashboard/manager/classes?courseId=${course.id}`);
   };
 
   const handleDelete = useCallback(async () => {
@@ -106,27 +112,27 @@ export default function AcademicsPage() {
       label: "Courses",
       value: courses.length,
       icon: BookOpen,
-      accent: "from-blue-500/20 to-cyan-500/10 border-blue-500/30"
+      accent: "from-blue-500/20 to-cyan-500/10 border-blue-500/30",
     },
     {
       label: "Students",
       value: students.length,
       icon: Users,
-      accent: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30"
+      accent: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30",
     },
     {
       label: "Assignments",
       value: assignments.length,
       icon: ClipboardList,
-      accent: "from-amber-500/20 to-orange-500/10 border-amber-500/30"
+      accent: "from-amber-500/20 to-orange-500/10 border-amber-500/30",
     },
   ];
 
   if (loading && courses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground animate-pulse font-medium">Loading academic records...</p>
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="animate-pulse text-sm font-medium text-muted-foreground">Loading academic records...</p>
       </div>
     );
   }
@@ -135,17 +141,17 @@ export default function AcademicsPage() {
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card via-card to-card/70 p-5 md:p-6">
         <div className="pointer-events-none absolute inset-0 opacity-40">
-          <div className="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
+          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl" />
           <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
         </div>
 
         <div className="relative space-y-4">
           <div className="space-y-1">
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-foreground">Academic Operations</h2>
+            <h2 className="text-2xl font-black tracking-tight text-foreground md:text-3xl">Academic Operations</h2>
             <p className="text-sm text-muted-foreground">Manage courses, enrollments, and assignments from one workspace.</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {statCards.map((stat) => {
               const Icon = stat.icon;
               return (
@@ -172,6 +178,7 @@ export default function AcademicsPage() {
             search={search}
             onSearchChange={setSearch}
             onAddClick={handleAddClick}
+            canAdd={canCreateCourse || canManageCourse}
           />
         </div>
 
@@ -182,6 +189,7 @@ export default function AcademicsPage() {
                 courses={courses}
                 search={search}
                 onDelete={setDeleteId}
+                onEdit={canManageCourse ? handleEditClick : undefined}
               />
             </CardContent>
           </Card>
@@ -190,11 +198,7 @@ export default function AcademicsPage() {
         <TabsContent value="students" className="mt-0">
           <Card className="overflow-hidden rounded-2xl border border-border/70 bg-card/90">
             <CardContent className="p-0">
-              <StudentsTable
-                students={students}
-                search={search}
-                onDelete={(id) => setDeleteId(id)}
-              />
+              <StudentsTable students={students} search={search} onDelete={(id) => setDeleteId(id)} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -202,19 +206,15 @@ export default function AcademicsPage() {
         <TabsContent value="assignments" className="mt-0">
           <Card className="overflow-hidden rounded-2xl border border-border/70 bg-card/90">
             <CardContent className="p-0">
-              <AssignmentsTable
-                assignments={assignments}
-                search={search}
-                onDelete={(id) => setDeleteId(id)}
-              />
+              <AssignmentsTable assignments={assignments} search={search} onDelete={(id) => setDeleteId(id)} />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      <DeleteDialog 
-        deleteId={deleteId} 
-        onClose={() => setDeleteId(null)} 
+      <DeleteDialog
+        deleteId={deleteId}
+        onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         confirming={deleting}
       />

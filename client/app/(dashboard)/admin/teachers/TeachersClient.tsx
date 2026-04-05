@@ -12,12 +12,15 @@ import { TeacherForm } from "./_components/TeacherForm"
 import { fetchTeachers } from "./data"
 import { initForm, emptyTeacherForm, type TeacherForm as TeacherFormType } from "./_types"
 import type { ApiUser } from "./_types"
+import { useHasPermission } from "@/components/providers/permissions-provider"
 
 interface TeachersClientProps {
     initialTeachers: ApiUser[]
 }
 
 export function TeachersClient({ initialTeachers }: TeachersClientProps) {
+    const canCreateTeacher = useHasPermission("create_teacher")
+    const canManageTeacher = useHasPermission("manage_teacher")
     const [teachers, setTeachers] = useState<ApiUser[]>(initialTeachers)
     const [courses, setCourses] = useState<Course[]>([])
     const [loading, setLoading] = useState(false)
@@ -154,18 +157,18 @@ export function TeachersClient({ initialTeachers }: TeachersClientProps) {
             <SectionHeader
                 title="Teachers"
                 subtitle={`${teachers.length} active faculty members`}
-                action={{
+                action={canCreateTeacher || canManageTeacher ? {
                     label: "Add Teacher",
                     icon: <UserCheck className="size-4" />,
                     onClick: openCreate,
-                }}
+                } : undefined}
             />
 
             <TeachersTable
                 loading={loading}
                 data={teachers}
-                onEdit={openEdit}
-                onDelete={setDeleteTarget}
+                onEdit={canManageTeacher ? openEdit : undefined}
+                onDelete={canManageTeacher ? setDeleteTarget : undefined}
             />
 
             <CrudDrawer
