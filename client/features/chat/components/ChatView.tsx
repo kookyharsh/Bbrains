@@ -342,9 +342,9 @@ export default function ChatView() {
                       <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{group.label}</span>
                       <Separator className="flex-1" />
                     </div>
-                    {group.messages.map((msg) => {
+                      {group.messages.map((msg) => {
                       const isMentioned = currentUsername ? msg.mentions?.includes(currentUsername) : false;
-                      const isReplyToMe = msg.replyTo && msg.replyTo.username === currentUsername;
+                      const isReplyToMe = msg.replyTo && typeof msg.replyTo !== 'string' && msg.replyTo.username === currentUsername;
                       const isEditing = editingMsg === msg.id;
                       const isOwn = msg.user.id === currentUserId;
 
@@ -391,9 +391,9 @@ export default function ChatView() {
                               </div>
                             ) : (
                               <>
-                                {msg.replyTo && (
+                                {msg.replyTo && typeof msg.replyTo !== 'string' && (
                                     <p className="mb-1 text-xs text-muted-foreground border-l-2 border-primary pl-2 italic">
-                                      Replying to @{msg.replyTo.username}: {msg.replyTo.content.slice(0, 30)}{msg.replyTo.content.length > 30 ? '...' : ''}
+                                      Replying to @{msg.replyTo.username}: {msg.replyTo.content.slice(0,30)}{msg.replyTo.content.length > 30 ? '...' : ''}
                                     </p>
                                 )}
                                 <p className="text-sm text-foreground/90 wrap-break-word">{renderContent(msg.content, msg.mentions)}</p>

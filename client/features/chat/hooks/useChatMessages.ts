@@ -30,7 +30,7 @@ type ChatRealtimeMessage = {
 }
 
 const formatMessage = (msg: ChatMessageRecord | ChatRealtimeMessage): ChatMessageDisplay => {
-    const createdAt = ('created_at' in msg ? msg.created_at : undefined) || msg.createdAt;
+    const createdAt = (('created_at' in msg ? msg.created_at : undefined) || msg.createdAt) || new Date().toISOString();
     const userId = ('user_id' in msg ? msg.user_id : undefined) || msg.userId;
     const displayName = ('display_name' in msg ? msg.display_name : undefined) || msg.displayName;
     const editedAt = ('edited_at' in msg ? msg.edited_at : undefined) || msg.editedAt;
@@ -44,7 +44,7 @@ const formatMessage = (msg: ChatMessageRecord | ChatRealtimeMessage): ChatMessag
             id: userId || "",
             username: msg.username || "",
             name: displayName || msg.username || "",
-            avatar: msg.avatar,
+            avatar: msg.avatar || "",
             badge: msg.badge,
             badgeColor
         },
@@ -53,7 +53,7 @@ const formatMessage = (msg: ChatMessageRecord | ChatRealtimeMessage): ChatMessag
         date: date.toLocaleDateString(),
         createdAt: date.toISOString(),
         editedAt,
-        replyTo,
+        replyTo: replyTo ? { messageId: "", username: "", content: String(replyTo) } : undefined,
         mentions: msg.mentions || [],
         attachments: msg.attachments || []
     }

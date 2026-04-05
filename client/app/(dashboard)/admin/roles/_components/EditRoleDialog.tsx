@@ -52,7 +52,7 @@ export function EditRoleDialog({
                     <div>
                         <Label>Description</Label>
                         <Input
-                            defaultValue={role?.description}
+                            defaultValue={role?.description ?? ""}
                             placeholder="Role description"
                         />
                     </div>

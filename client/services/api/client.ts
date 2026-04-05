@@ -586,9 +586,13 @@ export interface ChatMessageRecord {
   content: string;
   mentions: string[];
   replyToMessageId?: string | null;
+  replyTo?: string | null;
   attachments: ChatAttachment[];
   createdAt: string;
   updatedAt?: string | null;
+  editedAt?: string | null;
+  badge?: string;
+  badgeColor?: string;
 }
 
 export interface ChatMemberProfile {
@@ -1151,6 +1155,7 @@ export const suggestionApi = {
 };
 
 export interface LevelThreshold {
+  id?: number;
   levelNumber: number;
   requiredXp: number;
 }

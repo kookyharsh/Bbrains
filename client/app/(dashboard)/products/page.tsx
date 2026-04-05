@@ -127,6 +127,7 @@ export default function ProductsPage() {
         productType?: "digital" | "physical";
         fileUrl?: string;
         fileType?: string;
+        metadata?: Record<string, unknown>;
       } = {
         name: form.name,
         description: form.description,

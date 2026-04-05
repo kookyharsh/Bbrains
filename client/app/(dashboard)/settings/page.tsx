@@ -92,7 +92,7 @@ function SettingsTabTrigger({
       )}
     >
       <div className="flex w-full items-center gap-4">
-        <div className="rounded-[16px] border-2 border-hand-pencil bg-white p-2.5 text-hand-pencil">
+        <div className="rounded-3xl border-2 border-hand-pencil bg-white p-2.5 text-hand-pencil">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
@@ -431,7 +431,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardContent maxWidth="max-w-6xl" className="space-y-8">
-      <div className="relative overflow-hidden rounded-[42px] border-[3px] border-hand-pencil bg-hand-paper bg-paper-texture [background-size:18px_18px] p-5 shadow-[10px_10px_0px_0px_rgba(45,45,45,0.12)] md:p-8">
+      <div className="relative overflow-hidden rounded-[42px] border-[3px] border-hand-pencil bg-hand-paper bg-paper-texture bg-size-[18px_18px] p-5 shadow-[10px_10px_0px_0px_rgba(45,45,45,0.12)] md:p-8">
         <div className="absolute -left-10 top-20 h-40 w-40 rounded-full bg-hand-yellow/60 blur-3xl" />
         <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-hand-blue/10 blur-3xl" />
 
@@ -439,7 +439,7 @@ export default function SettingsPage() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-1 flex-col gap-6 md:flex-row md:items-center">
               <div className="relative">
-                <Avatar className="h-28 w-28 rounded-[30px] border-[4px] border-white bg-white shadow-[8px_8px_0px_0px_rgba(45,45,45,0.12)] md:h-32 md:w-32">
+                <Avatar className="h-28 w-28 rounded-[30px] border-4 border-white bg-white shadow-[8px_8px_0px_0px_rgba(45,45,45,0.12)] md:h-32 md:w-32">
                   <AvatarImage src={avatar || undefined} className="object-cover" />
                   <AvatarFallback 
                     name={user?.username}
@@ -561,7 +561,7 @@ export default function SettingsPage() {
                 >
                     <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)]">
                     <div className="rounded-[26px] border-2 border-hand-pencil/15 bg-hand-paper p-5 text-center">
-                      <Avatar className="mx-auto h-28 w-28 items-center justify-center rounded-[28px] border-[4px] border-white bg-white shadow-[6px_6px_0px_0px_rgba(45,45,45,0.10)]">
+                      <Avatar className="mx-auto h-28 w-28 items-center justify-center rounded-[28px] border-4 border-white bg-white shadow-[6px_6px_0px_0px_rgba(45,45,45,0.10)]">
                         <AvatarImage src={avatarSrc} className="object-cover" />
                         <AvatarFallback name={previewUsername} className="bg-hand-blue text-3xl font-bold text-white">
                           {getInitials(user)}
@@ -573,7 +573,7 @@ export default function SettingsPage() {
                       <p className="font-patrick text-base text-hand-pencil/65">@{previewUsername}</p>
                       <label
                         htmlFor="profile-tab-avatar"
-                        className="mt-4 inline-flex cursor-pointer items-center rounded-[16px] border-[3px] border-hand-pencil bg-white px-4 py-2 font-patrick text-base text-hand-pencil shadow-hard-sm"
+                        className="mt-4 inline-flex cursor-pointer items-center rounded-3xl border-[3px] border-hand-pencil bg-white px-4 py-2 font-patrick text-base text-hand-pencil shadow-hard-sm"
                       >
                         <Camera className="mr-2 h-4 w-4" />
                         Change avatar
@@ -838,7 +838,7 @@ export default function SettingsPage() {
                               : "border-hand-pencil/20 bg-white shadow-sm"
                           )}
                         >
-                          <div className="relative aspect-[16/10] overflow-hidden rounded-[22px] border-2 border-hand-pencil/10 bg-hand-paper">
+                          <div className="relative aspect-16/10 overflow-hidden rounded-[22px] border-2 border-hand-pencil/10 bg-hand-paper">
                             {item.image ? (
                               <Image
                                 src={item.image}
@@ -1259,7 +1259,7 @@ function SettingsPageClassicView({
                                 : "border-border/30 bg-card hover:border-border"
                             )}
                           >
-                            <div className="relative aspect-[16/9] overflow-hidden rounded-[1.8rem] bg-muted/30">
+                            <div className="relative aspect-video overflow-hidden rounded-[1.8rem] bg-muted/30">
                               {item.image ? (
                                 <Image
                                   src={item.image}

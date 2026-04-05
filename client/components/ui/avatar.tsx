@@ -78,8 +78,9 @@ function AvatarFallback({
     if (Array.isArray(node)) {
       return node.map(extractText).join("")
     }
-    if (React.isValidElement(node) && node.props.children) {
-      return extractText(node.props.children)
+    const element = node as React.ReactElement<{ children?: React.ReactNode }>
+    if (React.isValidElement(node) && element.props?.children) {
+      return extractText(element.props.children)
     }
     return ""
   }

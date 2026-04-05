@@ -25,8 +25,7 @@ export function AnnouncementsCard({ initialAnnouncements, collegeId }: Announcem
 
     const fetchAnnouncements = async () => {
       try {
-        // Pass the collegeId if provided so the backend knows to filter the results
-        const response = await announcementApi.getAnnouncements(collegeId ? { collegeId } : undefined);
+        const response = await announcementApi.getAnnouncements();
         if (response.success && response.data) {
           setAnnouncements(response.data.slice(0, 5));
         } else {

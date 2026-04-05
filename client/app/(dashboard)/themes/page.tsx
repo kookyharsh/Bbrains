@@ -214,7 +214,7 @@ export default function ThemesPage() {
                   
                   {!hasThemeAccess(theme.id) && (
                     <Button 
-                      onClick={() => handlePurchaseClick(theme.id, theme.price, theme.name)}
+                      onClick={() => theme.price !== undefined && handlePurchaseClick(theme.id, theme.price, theme.name)}
                       disabled={loading}
                       variant="default"
                       size="sm"

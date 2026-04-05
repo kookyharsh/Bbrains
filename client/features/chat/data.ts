@@ -15,11 +15,7 @@ export interface Message {
     date: string
     createdAt: string
     editedAt?: string | null
-    replyTo?: {
-        messageId: string
-        username: string
-        content: string
-    } | null
+    replyTo?: { messageId: string; username: string; content: string } | null | string
     mentions?: string[]
     attachments?: { url: string; type: string; name?: string }[]
 }

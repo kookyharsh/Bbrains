@@ -112,7 +112,7 @@ export default function AuditLogPage() {
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-10 w-10">
-                                                    <AvatarImage src={log.user?.avatar} className="object-cover" />
+                                                    <AvatarImage src={log.user?.avatar ?? undefined} className="object-cover" />
                                                     <AvatarFallback className="bg-brand-purple/10 text-brand-purple text-sm font-semibold">
                                                         {getInitials(log.user?.username ?? log.userId ?? "S")}
                                                     </AvatarFallback>

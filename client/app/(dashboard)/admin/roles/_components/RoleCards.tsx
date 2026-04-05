@@ -38,7 +38,7 @@ export function RoleCards({ roles, onEdit }: RoleCardsProps) {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Users className="w-3 h-3" />
-                                {typeof role === 'string' ? 0 : (role.users ?? 0)} users
+                                {typeof role === 'string' ? 0 : (role._count?.users ?? 0)} users
                             </div>
                             <Badge variant="secondary" className="text-xs">
                                 {permCount} permissions

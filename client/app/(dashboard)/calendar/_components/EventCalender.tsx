@@ -11,14 +11,16 @@ export interface EventCalenderProps {
 }
 
 export function EventCalender({ events = [] }: EventCalenderProps) {
-    const [value, onChange] = useState<Date | Date[] | null>(new Date());
+    const [value, setValue] = useState<Date | Date[] | null>(new Date());
+    const onChange = (val: unknown) => { setValue(val as Date | Date[] | null) }
+    const calendarValue = value instanceof Date ? value : (Array.isArray(value) && value.length > 0 ? value[0] : new Date())
 
     return (
         <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm h-full">            
             <div className="mb-4 flex justify-center">
                 <Calendar 
                     onChange={onChange} 
-                    value={value} 
+                    value={calendarValue} 
                     className="!w-full !border-none !bg-transparent dark:!text-gray-300"
                 />
             </div>

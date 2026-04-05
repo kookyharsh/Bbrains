@@ -48,9 +48,10 @@ export function PermissionMatrix({ roles }: PermissionMatrixProps) {
                                 {roles.map((role) => {
                                     const roleId = typeof role === 'string' ? role : role.id
                                     const rolePerms = typeof role === 'string' ? [] : (role.permissions || [])
+                                    const hasPerm = rolePerms.some((p: { permission: { key: string } }) => p.permission.key === perm)
                                     return (
                                         <TableCell key={roleId} className="text-center">
-                                            {rolePerms.includes(perm) ? (
+                                            {hasPerm ? (
                                                 <span className="text-green-600">✓</span>
                                             ) : (
                                                 <span className="text-muted-foreground">—</span>

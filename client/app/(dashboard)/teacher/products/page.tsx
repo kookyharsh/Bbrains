@@ -206,8 +206,8 @@ export default function ProductsApprovalPage() {
                       <VisuallyHidden>Product Details</VisuallyHidden>
                     </SheetTitle>
                     {selectedProduct && (() => {
-                        const metadata = selectedProduct.metadata || {};
-                        const productType = metadata.productType || selectedProduct.productType || "physical";
+                        const metadata = (selectedProduct.metadata || {}) as { productType?: string; category?: string; [key: string]: unknown };
+                        const productType: string = metadata.productType || selectedProduct.productType || "physical";
                         
                         return (
                             <>
@@ -263,11 +263,11 @@ export default function ProductsApprovalPage() {
                                         </p>
                                     </div>
 
-                                    {productType === "digital" && metadata.fileUrl && (
+                                    {productType === "digital" && !!metadata.fileUrl && (
                                         <div>
                                             <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Digital Asset</h3>
                                             <a 
-                                                href={metadata.fileUrl} 
+                                                href={metadata.fileUrl as string} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center text-sm font-bold text-brand-purple hover:underline bg-brand-purple/5 px-4 py-2 rounded-xl border border-brand-purple/10"

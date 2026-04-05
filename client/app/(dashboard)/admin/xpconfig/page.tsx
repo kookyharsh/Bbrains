@@ -128,7 +128,7 @@ export default function XpConfigPage() {
 
             <DataTable 
                 columns={columns}
-                data={levels}
+                data={levels as { id: number | string }[]}
                 loading={isLoading}
                 onDelete={(row) => {
                     setSelectedLevel(row as LevelThreshold)

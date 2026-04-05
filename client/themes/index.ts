@@ -5,10 +5,11 @@ export interface ThemeDefinition {
   id: ThemeType;
   name: string;
   description: string;
-  preview?: string; // URL or base64 of preview image
-  isBuiltIn: boolean; // Whether this theme is available by default or needs to be purchased
-  isDark: boolean; // Whether this theme is dark or light
-  variables: Record<string, string>; // CSS variable overrides
+  preview?: string;
+  isBuiltIn: boolean;
+  isDark: boolean;
+  variables: Record<string, string>;
+  price?: number;
 }
 
 // Built-in themes (available to all users)

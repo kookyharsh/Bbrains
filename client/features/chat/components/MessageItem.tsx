@@ -104,7 +104,7 @@ export const MessageItem = React.memo(function MessageItem({
                     {msg.editedAt && <span className="text-[10px] text-gray-400">(edited)</span>}
                 </div>
 
-                {msg.replyTo && (
+                {msg.replyTo && typeof msg.replyTo !== 'string' && (
                     <p className="mb-1 text-xs text-muted-foreground border-l-2 border-primary pl-2 italic truncate">
                         Replying to @{msg.replyTo.username}: {msg.replyTo.content}
                     </p>
