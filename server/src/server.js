@@ -56,6 +56,8 @@ const allowedOrigins = [
   "http://localhost:8080",
   "http://100.74.244.98:3000",
   "http://100.74.244.98:5000",
+  process.env.CLIENT_URL,
+  process.env.SERVER_URL,
 ];
 app.use(cors({
   origin: function(origin, callback) {
